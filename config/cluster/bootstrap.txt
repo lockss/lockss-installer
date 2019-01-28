@@ -1,0 +1,11 @@
+org.lockss.platform.localIPAddress=10.35.44.21
+org.lockss.platform.v3.identity=TCP:[10.35.44.21]:9729
+org.lockss.platform.diskSpacePaths=./storage
+org.lockss.platform.accesssubnet=
+org.lockss.platform.tmpDir=/tmp
+org.lockss.platform.logdirectory=./logs
+org.lockss.platform.logfile=daemon
+org.lockss.platform.fqdn=lockss.example.com
+org.lockss.platform.ui.username=lochs
+org.lockss.platform.ui.password=SHA1:ac4fc8fa9930a24c8d002d541c37ca993e1bc40f
+org.lockss.ui.access.ip.include=172.18.0.0/16
