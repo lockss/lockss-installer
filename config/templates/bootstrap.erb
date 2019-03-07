@@ -1,11 +1,11 @@
-org.lockss.platform.localIPAddress=${LOCKSS_IPADDR}
-org.lockss.platform.v3.identity=TCP:[${LOCKSS_IPADDR}]:${LOCKSS_V3_PORT}
-org.lockss.platform.diskSpacePaths=${LOCKSS_DISK_PATHS}
-org.lockss.platform.accesssubnet=${LOCKSS_ACCESS_SUBNET}
-org.lockss.platform.tmpDir=${LOCKSS_TMPDIR}
-org.lockss.platform.logdirectory=$(LOCKSS_LOGDIR)
+org.lockss.platform.localIPAddress=<%= env_lockss_ipaddr %>
+org.lockss.platform.v3.identity=TCP:[<%= env_lockss_ipaddr %>]:<%= env_lockss_v3_port %>
+org.lockss.platform.diskSpacePaths=<%= env_lockss_disk_paths %>
+org.lockss.platform.accesssubnet=<%= env_lockss_access_subnet %>
+org.lockss.platform.tmpDir=<%= env_lockss_tmpdir %>
+org.lockss.platform.logdirectory=<%= env_lockss_logdir %>
 org.lockss.platform.logfile=lockss-stack
-org.lockss.platform.fqdn=${LOCKSS_HOSTNAME}
-org.lockss.platform.ui.username=${LOCKSS_ADMIN_USER}
-org.lockss.platform.ui.password=$LOCKSS_ADMIN_PASSWD
-org.lockss.ui.access.ip.include=$LOCKSS_IPADDR/16
+org.lockss.platform.fqdn=<%= env_lockss_hostname %>
+org.lockss.platform.ui.username=<%= env_lockss_admin_user %>
+org.lockss.platform.ui.password=<%= env_lockss_admin_passwd %>
+org.lockss.ui.access.ip.include=<%= env_lockss_ipaddr %>/16

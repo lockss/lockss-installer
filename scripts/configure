@@ -411,7 +411,7 @@ EOF
             if ! init_cache_dirs ${LOCKSS_DISK_PATHS} $2 ; then
                 exit 1
             fi
-            rm -f $(TMP_CONFIG)
+            rm -f ${TMP_CONFIG}
             echo Done
             CONFIG_OK=Y
 	    FILT_CONFIG=`mktemp /tmp/filtconfig.XXXXX`
@@ -488,5 +488,6 @@ fi
 if [ ${USER_COUNT} -eq 1 ] ; then
     build_config_file ${CONFIG_FILE} ${LOCKSS_USER}
 fi
+
 CONFIG_USER=$(whoami)
 echo ${CONFIG_USER} is configuring
