@@ -1,0 +1,29 @@
+data_sources: [ "defaults" , "file", "environment" ]
+template_sources: [ "file" ]
+
+defaults:
+    bootstrap.erb:
+      target: ../config/cluster/bootstrap.txt
+    cluster.erb:
+      target: ../config/cluster/cluster.txt
+    conf.erb:
+      target: ../config/conf/conf.sh
+      
+environments:
+  jars:
+    LOCKSS_CFG_HOST: localhost
+    LOCKSS_MDQ_HOST: localhost
+    LOCKSS_PGSQL_HOST: localhost
+    LOCKSS_HDFS_HOST: localhost
+    LOCKSS_SOLR_HOST: localhost
+    LOCKSS_REPO_HOST: localhost  
+    LOCKSS_CONFIG_HOST: localhost
+    LOCKSS_DB_SERVER: localhost    
+  docker:
+    LOCKSS_CFG_HOST: lockss-configuration-service
+    LOCKSS_MDQ_HOST: lockss-metadata-service
+    LOCKSS_PGSQL_HOST: lockss-metadata-pgsql
+    LOCKSS_HDFS_HOST: lockss-hdfs
+    LOCKSS_SOLR_HOST: lockss-solr
+    LOCKSS_REPO_HOST: lockss-repo
+    LOCKSS_DB_SERVER: lockss-metadata-pgsql

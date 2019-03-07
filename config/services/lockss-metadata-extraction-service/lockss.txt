@@ -26,17 +26,18 @@
 
 org.lockss.ui.port=24641
 
+
 # The database manager used to store the Archival Unit metadata.
 # Using PostgreSQL.
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
 org.lockss.metadataDbManager.datasource.password=goodPassword
-# set org.lockss.metadataDbManager.datasource.serverName in variant file
+org.lockss.metadataDbManager.datasource.serverName=$(LOCKSS_DB_SERVER)
 
 # The database manager used to store the job queue.
 # Using PostgreSQL.
 org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
 org.lockss.jobDbManager.datasource.password=goodPassword
-# set org.lockss.jobDbManager.datasource.serverName in variant file
+org.lockss.jobDbManager.datasource.serverName=$(LOCKSS_DB_SERVER)
 
 org.lockss.jobManager.enabled=true
 org.lockss.metadataManager.mandatoryFields=publisher;provider

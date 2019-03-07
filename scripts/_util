@@ -30,6 +30,20 @@
 
 _0=$(basename "${0}")
 
+
+##
+## function Check_Docker
+##
+
+Check_Stack()
+{
+  if ! docker stack ls &> /dev/null ; then
+    echo "${_0}: Docker Swarm is not inited"
+    exit 1
+  fi
+}
+
+
 ##
 ## function Check_Docker
 ##
@@ -81,7 +95,7 @@ Wait_For_200()
   fi
   local URL="http://${HOST}:${PORT}/status"
   while true ; do
-    echo -n "Waiting for ${URL} ... " && curl --silent --fail --output /dev/null "${URL}" && echo "succeeded" && break
+    echo "Waiting for ${URL} ... " && curl --silent --fail --output /dev/null "${URL}" && echo "succeeded" && break
     echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
   done
 }
@@ -99,7 +113,106 @@ Wait_For_Port()
     SLEEP='30'
   fi
   while true ; do
-    echo -n "Waiting for ${HOST}:${PORT} ... " && nc -z "${HOST}" "${PORT}" && echo "succeeded" && break
+    echo "Waiting for ${HOST}:${PORT} ... " && nc -z "${HOST}" "${PORT}" && echo "succeeded" && break
     echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
   done
 }
+
+ask_for_input() {
+    echo "$1: [$2] "
+    read ANS
+    if [ "X${ANS}" = "X" ]
+    then
+        ANS=$2
+    fi
+}
+
+ask_for_input_shadow() {
+    echo "$1: [$2] "
+    local STTY_ORIG=`stty -g`
+    stty -echo
+    read ANS
+    stty "$STTY_ORIG"
+    echo
+    if [ "X${ANS}" = "X" ]
+    then
+        ANS=$2
+    fi
+}
+
+is_yes() {
+    local WORD="$1"
+    if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+parse_ip_address() {
+    local INP=$1
+    local OLD_IFS="${IFS}"
+    IFS="."
+    local COUNT=0
+    local GOODCOUNT=0
+    local IPADDR=0
+    for A in ${INP}; do
+      if  ( expr ${A} + 1 >/dev/null 2>&1 ); then
+          if [ ${A} -ge 0 -a ${A} -lt 256 ]; then
+              GOODCOUNT=`expr ${GOODCOUNT} + 1`
+              IPADDR=`expr ${IPADDR} \* 256 + ${A}`
+          fi
+      fi
+      COUNT=`expr ${COUNT} + 1`
+    done
+    IFS="${OLD_IFS}"
+    if [ ${COUNT} != 4 -o ${GOODCOUNT} != 4 ]; then
+        echo 0
+    else
+        echo ${IPADDR}
+    fi
+}
+
+valid_ip_address() {
+    local IPADDR=`parse_ip_address "$1"`
+    if [ ${IPADDR} -eq 0 ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+valid_subnet() {
+    local INP=$1
+    if ! echo ${INP} | grep -s '/' >/dev/null; then
+        oct='[0-9]{1,3}'
+        if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
+            return 0
+        fi
+        return 1
+    fi
+    local NET=`echo ${INP} | sed 's/\/.*//'`
+    local MASK=`echo ${INP} | sed 's/.*\///'`
+    local NETADDR=`parse_ip_address "${NET}"`
+    if [ ${NETADDR} -eq 0 ]; then
+        return 1
+    fi
+    if echo ${MASK} | grep -s '\.' >/dev/null; then
+        local MASKADDR=`parse_ip_address "${MASK}"`
+        if [ ${MASKADDR} -eq 0 ]; then
+            return 1
+        fi
+        # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
+        return 0;
+    else
+        if ! expr ${MASK} + 1 >/dev/null 2>&1; then
+            return 1
+        fi
+        if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
+            return 1
+        fi
+        # should check legal cidr
+        return 0;
+    fi
+}
+

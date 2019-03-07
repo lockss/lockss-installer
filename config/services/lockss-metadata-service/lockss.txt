@@ -30,4 +30,4 @@ org.lockss.ui.port=24651
 # Using PostgreSQL.
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
 org.lockss.metadataDbManager.datasource.password=goodPassword
-# set org.lockss.metadataDbManager.datasource.serverName in variant file
+org.lockss.metadataDbManager.datasource.serverName=$(LOCKSS_METADATA_DB_SERVER)
