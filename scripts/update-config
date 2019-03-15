@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,5 +28,29 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+####
+## Relative paths
+##
 
-docker kill $(docker ps -a -q --filter="name=lockss-")
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+##
+## Definitions
+##
+
+# Directories
+CONFIG_DIR="${_D0}/../config"
+
+CONFIG_FILE="${CONFIG_DIR}/config.dat"
+
+##
+## MAIN
+##
+
+# Source user-config
+
+set -a
+. ${CONFIG_FILE}
+set +a
+
+tiller -v --base-dir=${CONFIG_DIR} --environment docker

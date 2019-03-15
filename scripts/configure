@@ -30,111 +30,31 @@ then
         echo "${A} not executable"
     done
 fi
-SCRIPT=`mktemp /tmp/servicesconfig.XXXXX`
-cat >${SCRIPT} <<'Funky-EOF'
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+##
+## Definitions
+##
+
+# Directories
+CONFIG_DIR="${_D0}/../config"
 
 #
 # Query user and write local LOCKSS config values to /etc/lockss/config.dat
 # Must be run before LOCKSS daemon can be started
 #
-
-ask_for_input() {
-    echo -n "$1: [$2] "
-    read ANS
-    if [ "X${ANS}" = "X" ]
-    then
-        ANS=$2
-    fi
-}
-
-ask_for_input_shadow() {
-    echo -n "$1: [$2] "
-    local STTY_ORIG=`stty -g`
-    stty -echo
-    read ANS
-    stty "$STTY_ORIG"
-    echo
-    if [ "X${ANS}" = "X" ]
-    then
-        ANS=$2
-    fi
-}
-
-is_yes() {
-    local WORD="$1"
-    if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-parse_ip_address() {
-    local INP=$1
-    local OLD_IFS="${IFS}"
-    IFS="."
-    local COUNT=0
-    local GOODCOUNT=0
-    local IPADDR=0
-    for A in ${INP}; do
-      if  ( expr ${A} + 1 >/dev/null 2>&1 ); then
-          if [ ${A} -ge 0 -a ${A} -lt 256 ]; then
-              GOODCOUNT=`expr ${GOODCOUNT} + 1`
-              IPADDR=`expr ${IPADDR} \* 256 + ${A}`
-          fi
-      fi
-      COUNT=`expr ${COUNT} + 1`
-    done
-    IFS="${OLD_IFS}"
-    if [ ${COUNT} != 4 -o ${GOODCOUNT} != 4 ]; then
-        echo 0
-    else
-        echo ${IPADDR}
-    fi
-}
-
-valid_ip_address() {
-    local IPADDR=`parse_ip_address "$1"`
-    if [ ${IPADDR} -eq 0 ]; then
-        return 1
-    else
-        return 0
-    fi
-}
-
-valid_subnet() {
-    local INP=$1
-    if ! echo ${INP} | grep -s '/' >/dev/null; then
-        oct='[0-9]{1,3}'
-        if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
-            return 0
-        fi
-        return 1
-    fi
-    local NET=`echo ${INP} | sed 's/\/.*//'`
-    local MASK=`echo ${INP} | sed 's/.*\///'`
-    local NETADDR=`parse_ip_address "${NET}"`
-    if [ ${NETADDR} -eq 0 ]; then
-        return 1
-    fi
-    if echo ${MASK} | grep -s '\.' >/dev/null; then
-        local MASKADDR=`parse_ip_address "${MASK}"`
-        if [ ${MASKADDR} -eq 0 ]; then
-            return 1
-        fi
-        # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
-        return 0;
-    else
-        if ! expr ${MASK} + 1 >/dev/null 2>&1; then
-            return 1
-        fi
-        if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
-            return 1
-        fi
-        # should check legal cidr
-        return 0;
-    fi
-}
 
 read_config() {
     local FILE="$1"
@@ -180,6 +100,17 @@ check_writable() {
     local PROBE_FILE=${DIR}/probe_$!
     case `uname -s ` in
     Linux)
+        if [ "X${CONFIG_USER}" != "X${2}" ] ; then
+            SUDO="sudo -u ${2}"
+        else
+            SUDO=""
+        fi
+        if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
+            rm -f ${PROBE_FILE}
+            return 0
+        fi
+        ;;
+    Darwin)
         if [ "X${CONFIG_USER}" != "X${2}" ] ; then
             SUDO="sudo -u ${2}"
         else
@@ -321,6 +252,13 @@ build_config_file () {
         if [ "X${ANS}" != "X" ]; then
             LOCKSS_UI_PORT="${ANS}"
         fi
+        if [ "X${LOCKSS_JMS_PORT}" = X ]; then
+            LOCKSS_JMS_PORT=61616
+        fi
+        ask_for_input "LOCKSS JMS port" ${LOCKSS_JMS_PORT}
+        if [ "X${ANS}" != "X" ]; then
+            LOCKSS_JMS_PORT="${ANS}"
+        fi
         if [ "X${LOCKSS_MAILHUB}" = X ]; then
             LOCKSS_MAILHUB=localhost
         fi
@@ -353,31 +291,6 @@ build_config_file () {
                 EMAIL_OK=Y
             fi
         done
-        if [ "X${LOCKSS_JAVA_CMD}" = X ]; then
-            LOCKSS_JAVA_CMD=`which java 2>/dev/null`
-        fi
-        JAVA_OK=N
-        while [ "X${JAVA_OK}" != XY ]
-        do
-            ask_for_input "Path to java" ${LOCKSS_JAVA_CMD}
-            if [ -x ${ANS} ] ; then
-                JAVA_VERSION=`${ANS} -version 2>&1 | head -1 | sed -e 's/.* "\(.*\)"/\1/
-    '`
-                case "X${JAVA_VERSION}" in
-                X1.[6789]*)
-                    JAVA_OK=Y
-                    ;;
-                *)
-                    echo "Java version is ${JAVA_VERSION}: 1.6 or higher required"
-                    ;;
-                esac
-            else
-                echo "${ANS} not executable"
-            fi
-        done
-        LOCKSS_JAVA_CMD="${ANS}"
-        ask_for_input "Java switches" ${LOCKSS_JAVA_SWITCHES}
-        LOCKSS_JAVA_SWITCHES="${ANS}"
         if [ "X${LOCKSS_PROPS_URL}" = X ]; then
             LOCKSS_PROPS_URL="http://props.lockss.org:8001/daemon/lockss.xml"
         fi
@@ -386,8 +299,8 @@ build_config_file () {
 
         if echo ${LOCKSS_PROPS_URL} | egrep -is "^https:" >/dev/null; then
 	    if [ "X${LOCKSS_PROPS_AUTHENTICATE_SERVER}" = X ]; then
-		LOCKSS_PROPS_AUTHENTICATE_SERVER="Y"
-            fi
+		    LOCKSS_PROPS_AUTHENTICATE_SERVER="Y"
+        fi
             ask_for_input "Verify configuration server authenticity?" ${LOCKSS_PROPS_AUTHENTICATE_SERVER}
 	    if is_yes "${ANS}" ; then
 		if [ "X${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" = X ]; then
@@ -405,18 +318,6 @@ build_config_file () {
         fi
         ask_for_input "Configuration proxy (host:port)" ${LOCKSS_PROPS_PROXY}
         LOCKSS_PROPS_PROXY="${ANS}"
-
-        if [ "X${LOCKSS_CONFIG_FAILOVER_ENABLE}" = X ]; then
-          LOCKSS_CONFIG_FAILOVER_ENABLE=Y
-        fi
-        ask_for_input "Enable config failover" "${LOCKSS_CONFIG_FAILOVER_ENABLE}"
-        if is_yes "${ANS}" ; then
-            LOCKSS_CONFIG_FAILOVER_ENABLE="Y"
-            ask_for_input "Config failover max age" "${LOCKSS_CONFIG_FAILOVER_MAX_AGE}"
-            LOCKSS_CONFIG_FAILOVER_MAX_AGE="${ANS}"
-        else
-            LOCKSS_CONFIG_FAILOVER_ENABLE="N"
-        fi
 
         if [ "X${LOCKSS_TEST_GROUP}" = X ]; then
             LOCKSS_TEST_GROUP="prod"
@@ -455,17 +356,17 @@ build_config_file () {
             done
             ask_for_input_shadow "Password for web UI administration (again)" ""
             if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=`echo -n "${P1}" | ${SHA256SUM}`
+                SHA256=`echo "${P1}" | ${SHA256SUM}`
                 SHA256=`echo ${SHA256} | sed 's/ .*$//'`
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
             fi
         done
-        TMP_CONFIG=/tmp/lockss.dat$$
+        TMP_CONFIG=${CONFIG_DIR}/config.dat.tmp
         # LOCKSS_CONFIG_VERSION must be incremented when the set or usage
         # of variables stored in the config file changes in a way that
         # requires hostconfig to be rerun.  Not required if just adding a
         # new variable that defaults to empty
-        export LOCKSS_CONFIG_VERSION=1
+        export LOCKSS_CONFIG_VERSION=2
         cat >${TMP_CONFIG} <<EOF
 LOCKSS_CONFIG_VERSION=${LOCKSS_CONFIG_VERSION}
 LOCKSS_USER="${2}"
@@ -473,28 +374,22 @@ LOCKSS_HOSTNAME=${LOCKSS_HOSTNAME}
 LOCKSS_IPADDR=${LOCKSS_IPADDR}
 LOCKSS_EXTERNAL_IPADDR=${LOCKSS_EXTERNAL_IPADDR}
 LOCKSS_V3_PORT=${LOCKSS_V3_PORT}
+LOCKSS_JMS_PORT=${LOCKSS_JMS_PORT}
 LOCKSS_ACCESS_SUBNET="${LOCKSS_ACCESS_SUBNET}"
 LOCKSS_MAILHUB=${LOCKSS_MAILHUB}
 LOCKSS_MAILHUB_USER=${LOCKSS_MAILHUB_USER}
 LOCKSS_MAILHUB_PASSWORD=${LOCKSS_MAILHUB_PASSWORD}
 LOCKSS_EMAIL=${LOCKSS_EMAIL}
-LOCKSS_JAVA_CMD=${LOCKSS_JAVA_CMD}
-LOCKSS_JAVA_SWITCHES=${LOCKSS_JAVA_SWITCHES}
-LOCKSS_JAVA_HEAP=${LOCKSS_JAVA_HEAP}
 LOCKSS_PROPS_URL="${LOCKSS_PROPS_URL}"
 LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
-LOCKSS_CONFIG_FAILOVER_ENABLE="${LOCKSS_CONFIG_FAILOVER_ENABLE}"
-LOCKSS_CONFIG_FAILOVER_MAX_AGE="${LOCKSS_CONFIG_FAILOVER_MAX_AGE}"
 LOCKSS_TEST_GROUP="${LOCKSS_TEST_GROUP}"
 LOCKSS_DISK_PATHS="${LOCKSS_DISK_PATHS}"
 LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}
 LOCKSS_ADMIN_PASSWD=${LOCKSS_ADMIN_PASSWD}
 LOCKSS_PROXY_PORT=${LOCKSS_PROXY_PORT}
-LOCKSS_UI_PORT=${LOCKSS_UI_PORT}
 LOCKSS_TMPDIR=${LOCKSS_TMPDIR}
 LOCKSS_CLEAR_TMPDIR=${LOCKSS_CLEAR_TMPDIR:-yes}
-LOCKSS_RELEASE=@RELEASENAME@-@RPMRELEASE@
 EOF
         echo
         echo "Configuration:"
@@ -516,48 +411,8 @@ EOF
             if ! init_cache_dirs ${LOCKSS_DISK_PATHS} $2 ; then
                 exit 1
             fi
-            if [ ! -d ${LOCKSS_HOME}/var/run ] ; then
-                init_one_dir ${LOCKSS_HOME}/var/run $2
-            fi
-            if [ "X${CONFIG_USER}" = Xroot -a ! -f ${LOCKSS_HOME}/var/run/lockss.pid ]; then
-                touch ${LOCKSS_HOME}/var/run/lockss.pid
-                chown ${2} ${LOCKSS_HOME}/var/run/lockss.pid
-            fi
-            if [ ! -d ${LOCKSS_HOME}/var/log/lockss ] ; then
-                init_one_dir ${LOCKSS_HOME}/var/log/lockss $2
-            fi
-            if [ ! -d ${LOCKSS_TMPDIR} ] ; then
-                init_one_dir ${LOCKSS_TMPDIR} $2
-            fi
+            rm -f ${TMP_CONFIG}
             echo Done
-            case ${OS_TYPE} in
-            SunOS)
-		if [ -x /etc/init.d/lockss ] ; then
-                    if [ ! -x /etc/rc3.d/S99lockss ] ; then
-                        ln /etc/init.d/lockss /etc/rc3.d/S99lockss
-                        for A in 0 1 2 S ; do
-                            ln /etc/init.d/lockss /etc/rc${A}.d/K99lockss
-                        done
-                    fi
-                    echo "LOCKSS will start automatically at next reboot, or you may"
-                    echo " start it now by running   /etc/init.d/lockss start"
-
-                fi
-                ;;
-            Linux)
-                if [ -x /etc/init.d/lockss ]
-                then
-                    if [ ! -L /etc/rc3.d/S99lockss ]
-                    then
-                        chkconfig --add lockss
-                    fi
-                    echo "LOCKSS will start automatically at next reboot, or you may"
-                    echo " start it now by running   /etc/init.d/lockss start"
-                else
-                    echo "Start LOCKSS by ${LOCKSS_HOME}/etc/init.d/lockss"
-                fi
-                ;;
-            esac
             CONFIG_OK=Y
 	    FILT_CONFIG=`mktemp /tmp/filtconfig.XXXXX`
 	    egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
@@ -607,6 +462,11 @@ Linux)
     SHA256SUM=sha256sum
     LOCAL_IPADDR=`ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/'`
     ;;
+Darwin)
+    LOCKSS_HOME=
+    SHA256SUM=sha256sum
+    LOCAL_IPADDR=`ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/'`
+    ;;
 *)
     echo "${OS_TYPE} not supported"
     exit 1
@@ -614,9 +474,9 @@ Linux)
 esac
 LOCKSS_USER=lockss
 LOCAL_HOSTNAME=`uname -n`
-CONFIG_FILE=${LOCKSS_HOME}/etc/lockss/config.dat
+CONFIG_FILE=${CONFIG_DIR}/config.dat
 echo "LOCKSS host configuration for ${OS_TYPE}."
-echo "For more information see /etc/lockss/README"
+echo "For more information see README"
 USER_COUNT=1
 if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
@@ -627,18 +487,7 @@ if [ -r "${CONFIG_FILE}" ]; then
 fi
 if [ ${USER_COUNT} -eq 1 ] ; then
     build_config_file ${CONFIG_FILE} ${LOCKSS_USER}
-else
-    for USER in ${LOCKSS_USER} ; do
-        if [ -s ${LOCKSS_HOME}/etc/lockss/config.${USER}.dat ] ; then
-            echo "Re-setting defaults from existing config for ${USER}"
-            read_config ${LOCKSS_HOME}/etc/lockss/config.${USER}.dat
-        fi
-        build_config_file ${LOCKSS_HOME}/etc/lockss/config.${USER}.dat ${USER}
-    done
 fi
-Funky-EOF
-CONFIG_USER=`ls -l ${SCRIPT} | while read BITS N U FOO; do echo $U; done`
+
+CONFIG_USER=$(whoami)
 echo ${CONFIG_USER} is configuring
-export CONFIG_USER
-${BASH} ${SCRIPT}
-rm ${SCRIPT}

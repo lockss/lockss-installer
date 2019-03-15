@@ -1,0 +1,50 @@
+data_sources: [ "defaults" , "file", "environment" ]
+template_sources: [ "file" ]
+
+defaults:
+  global:
+    lockss_repo_port: 24610
+    postgres_user: LOCKSS
+    postgres_password: goodPassword
+
+  bootstrap.erb:
+    target: ../config/cluster/bootstrap.txt
+    
+  cluster.erb:
+    target: ../config/cluster/cluster.txt
+    
+  conf.erb:
+    target: ../config/conf/conf.sh
+      
+environments:
+  jars:
+    conf.erb:
+      config:
+        lockss_cfg_host: localhost
+        lockss_mdq_host: localhost
+        lockss_pgsql_host: localhost
+        lockss_hdfs_host: localhost
+        lockss_solr_host: localhost
+        lockss_repo_host: localhost  
+        lockss_config_host: localhost
+        lockss_db_server: localhost
+        lockss_jms_host: localhost
+    cluster.erb:
+      config:
+        lockss_repo_host: localhost
+        lockss_jms_host: localhost 
+  docker:
+    conf.erb:
+      config:
+        lockss_cfg_host: lockss-configuration-service
+        lockss_mdq_host: lockss-metadata-service
+        lockss_pgsql_host: lockss-metadata-pgsql
+        lockss_hdfs_host: lockss-hdfs
+        lockss_solr_host: lockss-solr
+        lockss_repo_host: lockss-repo
+        lockss_db_server: lockss-metadata-pgsql
+        lockss_jms_host: lockss-configuration-service
+    cluster.erb:
+      config:
+        lockss_repo_host: lockss-repo
+        lockss_jms_host: lockss-configuration-service
