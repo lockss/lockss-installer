@@ -1,5 +1,42 @@
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 version: '3'
+
+#
+# SERVICES
+#
 services:
+
+  #
+  # SERVICE lockss-configuration-service
+  #
   lockss-configuration-service:
     image: 'lockss/lockss-configuration-service:${CFG_VERSION}'
     deploy:
@@ -26,6 +63,9 @@ services:
       - ./storage/lockss-configuration-service:/opt/lockss/storage
       - ./logs/lockss-configuration-service:/opt/lockss/logs
 
+  #
+  # SERVICE lockss-metadata-service
+  #
   lockss-metadata-service:
     image: lockss/lockss-metadata-service:${MDQ_VERSION}
     deploy:
@@ -51,6 +91,9 @@ services:
       - ./storage/lockss-metadata-service:/opt/lockss/storage
       - ./logs/lockss-metadata-service:/opt/lockss/logs
 
+  #
+  # SERVICE lockss-metadata-extraction-service
+  #
   lockss-metadata-extraction-service:
     image: lockss/lockss-metadata-extraction-service:${MDX_VERSION}
     deploy:
@@ -76,6 +119,9 @@ services:
       - ./storage/lockss-metadata-extraction-service:/opt/lockss/storage
       - ./logs/lockss-metadata-extraction-service:/opt/lockss/logs
 
+  #
+  # SERVICE lockss-metadata-pgsql
+  #
   lockss-metadata-pgsql:
     image: postgres:9.6
     deploy:
@@ -93,6 +139,9 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_DB
 
+  #
+  # SERVICE lockss-poller
+  #
   lockss-poller:
     image: lockss/lockss-poller:${POL_VERSION}
     deploy:
@@ -117,6 +166,9 @@ services:
       - ./storage/lockss-poller:/opt/lockss/storage
       - ./logs/lockss-poller:/opt/lockss/logs
 
+  #
+  # SERVICE lockss-repository-service
+  #
   lockss-repository-service:
     image: lockss/lockss-repository-service:${REPO_VERSION}
     deploy:
@@ -143,6 +195,9 @@ services:
     volumes:
       - ./config/lockss-repository-service:/opt/lockss/config/lockss-repository-service
 
+  #
+  # SERVICE lockss-solr
+  #
   lockss-solr:
     image: lockss/lockss-solr
     deploy:
@@ -157,6 +212,9 @@ services:
       - "${SOLR_PORT}:${SOLR_PORT}"
     command: "${SOLR_CMD}"
 
+  #
+  # SERVICE lockss-hdfs
+  #
   lockss-hdfs:
     image: lockss/lockss-dev-hdfs
     ports:
@@ -175,6 +233,9 @@ services:
     volumes:
       - ./config/lockss-hdfs/etc/hadoop:/hadoop/etc/hadoop.custom
 
+  #
+  # SERVICE lockss-pywb
+  #
   lockss-pywb:
     image: lockss/lockss-pywb
     deploy:
@@ -206,32 +267,8 @@ services:
     volumes:
     - lockssvol:/config/lockss-pywb/config.yaml:/webarchive/config.yaml
 
-  lockss-edina-indexer:
-    image: lockss/lockss-edina-indexer
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
-    links:
-      - lockss-solr
-      - lockss-hdfs
-    environment:
-      - HDFS_HOST
-      - HDFS_FSMD
-      - REPO_BASEDIR
-      - LOCKSS_SOLR_HDFSMNT
-      - LOCKSS_SOLR_WATCHDIR
-      - LOCKSS_SOLR_WATCHDIR_INTERVAL
-      - LOCKSS_SOLR_URL
-    devices:
-      - /dev/fuse
-    cap_add:
-      - SYS_ADMIN
   volumes:
     lockssvol:
       external: true
       name: "${LOCKSS_VOLUME}"
+
