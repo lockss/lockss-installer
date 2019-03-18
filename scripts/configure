@@ -1,7 +1,6 @@
 #!/bin/sh
 # do not edit the line above, or edit the parts of this file outside
 # Funky-EOF without making sure that it works with /bin/sh on Solaris.
-# After any change to this file it must be tested on Linux and Solaris.
 PATH=/sbin:/usr/sbin:$PATH
 BASH_NAME=bash
 BASH=`which ${BASH_NAME} 2>/dev/null`
@@ -430,33 +429,11 @@ EOF
 ###
 # Start
 ###
+CONFIG_USER=$(whoami)
+echo ${CONFIG_USER} is configuring
 export LOCKSS_TEAM=lockssdiag@lockss.org
 OS_TYPE=`uname -s`
 case ${OS_TYPE} in
-SunOS)
-    LOCKSS_HOME=/opt/lockss
-    PATH=/usr/ucb:/sbin:$PATH
-    LOCAL_IPADDR=`ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/'`
-    export SHA256SUM
-    for A in sha256sum digest
-    do
-        WHICH=`which $A | sed "s/.*\///"`
-        if [ "X${A}" = "X${WHICH}" ]
-        then
-            SHA256SUM=$A
-            break
-        fi
-    done
-    case "X${SHA256SUM}" in
-    Xdigest)
-        SHA256SUM="digest -a sha256"
-        ;;
-    X)
-        echo "Can't find a SHA25656 command"
-        exit
-        ;;
-    esac
-    ;;
 Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
@@ -489,5 +466,3 @@ if [ ${USER_COUNT} -eq 1 ] ; then
     build_config_file ${CONFIG_FILE} ${LOCKSS_USER}
 fi
 
-CONFIG_USER=$(whoami)
-echo ${CONFIG_USER} is configuring
