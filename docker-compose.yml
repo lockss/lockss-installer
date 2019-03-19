@@ -39,6 +39,10 @@ services:
   #
   lockss-configuration-service:
     image: 'lockss/lockss-configuration-service:${CFG_VERSION}'
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     configs:
       - source: bootstrap
         target: /run/configs/lockss_bootstrap
@@ -47,10 +51,9 @@ services:
       - source: cfg_service_opt
         target: /run/configs/lockss_service_opt
     # add cluster to this when ready.
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    environment:
+      - LOCKSS_IS_CONFIG=true
+      - LOCKSS_PROPS_URL: ${LOCKSS_PROPS_URL}
     ports:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
@@ -66,6 +69,10 @@ services:
   #
   lockss-metadata-service:
     image: lockss/lockss-metadata-service:${MDQ_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     configs:
       - source: bootstrap
         target: /run/configs/lockss_bootstrap
@@ -73,10 +80,6 @@ services:
         target: /run/configs/lockss_service
       - source: mdq_service_opt
         target: /run/configs/lockss_service_opt
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - "${MDQ_REST_PORT}:${MDQ_REST_PORT}"
       - "${MDQ_UI_PORT}:${MDQ_UI_PORT}"
@@ -99,6 +102,10 @@ services:
   #
   lockss-metadata-extraction-service:
     image: lockss/lockss-metadata-extraction-service:${MDX_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     configs:
       - source: bootstrap
         target: /run/configs/lockss_bootstrap
@@ -106,24 +113,20 @@ services:
         target: /run/configs/lockss_service
       - source: mdx_service_opt
         target: /run/configs/lockss_service_opt
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
-      - ${MDX_REST_PORT}:${MDX_REST_PORT}
-      - ${MDX_UI_PORT}:${MDX_UI_PORT}
+      - "${MDX_REST_PORT}:${MDX_REST_PORT}"
+      - "${MDX_UI_PORT}:${MDX_UI_PORT}"
     links:
       - lockss-configuration-service
-      - lockss-metadata-pgsql
+      - lockss-postgres
     volumes:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
     environment:
-      - POSTGRES_HOST: ${POSTGRES_HOST}
-      - POSTGRES_PORT: ${POSTGRES_DEFAULT_PORT}
-      - POSTGRES_USER: ${POSTGRES_USER}
-      - LOCKSS_CONFIG_URL: ${LOCKSS_CONFIG_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_DEFAULT_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - LOCKSS_CONFIG_URL=${LOCKSS_CONFIG_URL}
     secrets:
       - postgres_pass
 
@@ -132,6 +135,10 @@ services:
   #
   lockss-poller:
     image: lockss/lockss-poller:${POL_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     configs:
       - source: bootstrap
         target: /run/configs/lockss_bootstrap
@@ -139,10 +146,6 @@ services:
         target: /run/configs/lockss_service
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - ${POL_REST_PORT}:${POL_REST_PORT}
       - ${POL_UI_PORT}:${POL_UI_PORT}
@@ -152,7 +155,7 @@ services:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
     environment:
-      - LOCKSS_CONFIG_URL: ${LOCKSS_CONFIG_URL}
+      - LOCKSS_CONFIG_URL=${LOCKSS_CONFIG_URL}
 
   #
   # SERVICE lockss-repository-service
@@ -163,9 +166,11 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+    configs:
+      - source: repo_service
+        target: /run/configs/lockss_service
     ports:
       - ${REPO_REST_PORT}:${REPO_REST_PORT}
-    command: "${REPO_CMD}"
     environment:
       - "JVM_ARGS=${REPO_JARGS}"
       - REPO_MAX_WARC_SIZE
@@ -177,7 +182,9 @@ services:
       - lockss-solr
       - lockss-hdfs
     volumes:
-      - ./config/lockss-repository-service:/opt/lockss/config/lockss-repository-service
+      - lockss-repo-data: /data
+      - lockss-repo-logs: /var/log/lockss
+
   #
   # SERVICE lockss-postgres
   #
@@ -193,22 +200,20 @@ services:
       lockss-postgres-data: /data
       lockss-postgres-logs: /var/logs/postgres
     environment:
-      - POSTGRES_USER: ${POSTGRES_USER}
-      - POSTGRES_PASSWORD_FILE: '/run/secrets/postgres_passwd'
-      - POSTGRES_DB: ${POSTGRES_DB}
-      - PGDATA: /data
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_passwd
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/data
         #for version 9
-      - POSTGRES_INITDB_XLOGDIR: /var/log/postgres
+      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
         # for version 10+
-      - POSTGRES_INITDB_WALDIR: /var/log/postgres
-    config:
-      - source: config/services/
+      - POSTGRES_INITDB_WALDIR=/var/log/postgres
 
   #
   # SERVICE lockss-solr
   #
   lockss-solr:
-    image: lockss/solr
+    image: lockss/solr:${LOCKSS_SOLR_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -232,9 +237,8 @@ services:
     ports:
       - "${HDFS_FS}:${HDFS_DEFAULT_PORT}"
     volumes:
-      lockss-hdfs-data: /hadoop
-      lockss-hdfs-logs: /var/log/hadoop
-      lockss-hdfs-conf: /usr/local/etc/hadoop
+      - lockss-hdfs-data=/hadoop
+      - lockss-hdfs-logs=/var/log/hadoop
   #
   # SERVICE lockss-pywb
   #
@@ -245,7 +249,7 @@ services:
       restart_policy:
         condition: on-failure
     ports:
-      - "${PYWB_URL_PORT}:${PYWB_URL_PORT}"
+      - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
     links:
       - lockss-hdfs
     environment:
@@ -288,6 +292,8 @@ services:
       external: true
     pol_service_opt:
       external: true
+    repo_service:
+      external: true
 
   volumes:
     lockss-cfg-data:
@@ -306,6 +312,10 @@ services:
       external: true
     lockss-pol-logs:
       external: true
+    lockss-repo-data:
+      external: true
+    lockss-repo-logs:
+      external: true
     lockss-postgres-data:
       external: true
     lockss-postgres-logs:
@@ -318,5 +328,3 @@ services:
       external: true
     lockss-hdfs-logs:
       external: true
-    lockss-hdfs-conf:
-      extenral: true
