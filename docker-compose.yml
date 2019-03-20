@@ -38,7 +38,7 @@ services:
   # SERVICE lockss-configuration-service
   #
   lockss-configuration-service:
-    image: 'lockss/lockss-configuration-service:${CFG_VERSION}'
+    image: ${CFG_IMAGE}:${CFG_VERSION}'
     deploy:
       replicas: 1
       restart_policy:
@@ -68,7 +68,7 @@ services:
   # SERVICE lockss-metadata-service
   #
   lockss-metadata-service:
-    image: lockss/lockss-metadata-service:${MDQ_VERSION}
+    image: ${MDQ_IMAGE}:${MDQ_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -85,15 +85,15 @@ services:
       - "${MDQ_UI_PORT}:${MDQ_UI_PORT}"
     links:
       - lockss-configuration-service
-      - lockss-metadata-pgsql
+      - lockss-postgres
     volumes:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
     environment:
-      - POSTGRES_HOST: ${POSTGRES_HOST}
-      - POSTGRES_PORT: ${POSTGRES_PORT}
-      - POSTGRES_USER: ${POSTGRES_USER}
-      - LOCKSS_CONFIG_URL: ${LOCKSS_CONFIG_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_DEFAULT_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - LOCKSS_CONFIG_URL=${CFG_URL}
     secrets:
       - postgres_passwd
 
@@ -101,7 +101,7 @@ services:
   # SERVICE lockss-metadata-extraction-service
   #
   lockss-metadata-extraction-service:
-    image: lockss/lockss-metadata-extraction-service:${MDX_VERSION}
+    image: ${MDX_IMAGE}:${MDX_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -126,7 +126,7 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=${POSTGRES_DEFAULT_PORT}
       - POSTGRES_USER=${POSTGRES_USER}
-      - LOCKSS_CONFIG_URL=${LOCKSS_CONFIG_URL}
+      - LOCKSS_CONFIG_URL=${CFG_URL}
     secrets:
       - postgres_pass
 
@@ -134,7 +134,7 @@ services:
   # SERVICE lockss-poller
   #
   lockss-poller:
-    image: lockss/lockss-poller:${POL_VERSION}
+    image: ${POL_IMAGE}:${POL_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -155,13 +155,13 @@ services:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
     environment:
-      - LOCKSS_CONFIG_URL=${LOCKSS_CONFIG_URL}
+      - LOCKSS_CONFIG_URL=${CFG_URL}
 
   #
   # SERVICE lockss-repository-service
   #
   lockss-repository-service:
-    image: lockss/lockss-repository-service:${REPO_VERSION}
+    image: ${REPO_IMG}:${REPO_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -189,7 +189,7 @@ services:
   # SERVICE lockss-postgres
   #
   lockss-postgres:
-    image: postgres:${POSTGRES_VERSION}
+    image: ${POSTGRES_IMG}:${POSTGRES_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -213,14 +213,14 @@ services:
   # SERVICE lockss-solr
   #
   lockss-solr:
-    image: lockss/solr:${LOCKSS_SOLR_VERSION}
+    image: ${LOCKSS_SOLR_IMG}:${LOCKSS_SOLR_VERSION}
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     ports:
       - "${SOLR_PORT}:${SOLR_DEFAULT_PORT}"
-    command: solr-precreate lockss
+    command: solr-precreate lockss-repo
     volumes:
       lockss-solr-data: /opt/solr/server/solr/mycores
       lockss-solr-logs: /opt/solr/server/logs
@@ -229,7 +229,7 @@ services:
   # SERVICE lockss-hdfs
   #
   lockss-hdfs:
-    image: lockss/lockss-hdfs
+    image: ${HDFS_IMG}:${HDFS_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -243,7 +243,7 @@ services:
   # SERVICE lockss-pywb
   #
   lockss-pywb:
-    image: lockss/lockss-pywb
+    image: ${PYWB_IMG}:${PYWB_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -251,23 +251,18 @@ services:
     ports:
       - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
     links:
-      - lockss-hdfs
+      - lockss-repository-service
+      - lockss-configuration-service
     environment:
-      - HDFS_HOST
-      - HDFS_FSMD
-      - REPO_BASEDIR
-      - PYWB_URL_PORT
-      - PYWB_URL_HOST
-      - PYWB_COLLECTION
-      - PYWB_BASEDIR
-      - PYWB_HDFSMNT
-      - PYWB_WATCHDIR
+      - LOCKSS_HDFS_HOST
+      - LOCKSS_HDFS_FS_PORT
+      - LOCKSS_REPO_BASEDIR
+    volumes:
+      - lockss-pywb-data=/webarchive
     devices:
       - /dev/fuse
     cap_add:
       - SYS_ADMIN
-    volumes:
-      - lockssvol:/config/lockss-pywb/config.yaml:/webarchive/config.yaml
 
   configs:
     cluster:
@@ -327,4 +322,6 @@ services:
     lockss-hdfs-data:
       external: true
     lockss-hdfs-logs:
+      external: true
+    lockss-pywb-data:
       external: true
