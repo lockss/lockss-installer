@@ -24,21 +24,8 @@
 
 # Don't make local changes in this file; put local settings in lockss.opt
 
-org.lockss.ui.port=24641
+org.lockss.ui.port=24651
 
-
-# The database manager used to store the Archival Unit metadata.
-# Using PostgreSQL.
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.metadataDbManager.datasource.password=goodPassword
-org.lockss.metadataDbManager.datasource.serverName=$(LOCKSS_DB_SERVER)
-
-# The database manager used to store the job queue.
-# Using PostgreSQL.
-org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.jobDbManager.datasource.password=goodPassword
-org.lockss.jobDbManager.datasource.serverName=$(LOCKSS_DB_SERVER)
-
-org.lockss.jobManager.enabled=true
-org.lockss.metadataManager.mandatoryFields=publisher;provider
-org.lockss.metadataManager.onDemandMetadataExtractionOnly=true
+org.lockss.metadataDbManager.datasource.password={{ secret "postgres_pass" }}
+org.lockss.metadataDbManager.datasource.serverName={{ env "POSTGRES_HOST" }}

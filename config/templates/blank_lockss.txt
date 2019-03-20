@@ -1,4 +1,5 @@
-# Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
+
+# Copyright (c) 2017 Board of Trustees of Leland Stanford Jr. University,
 # all rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,14 +22,7 @@
 # Except as contained in this notice, the name of Stanford University shall not
 # be used in advertising or otherwise to promote the sale, use or other dealings
 # in this Software without prior written authorization from Stanford University.
+#
+# Don't make local changes in this file; put local settings in lockss.opt
 
-org.lockss.platform.localIPAddress={{env "lockss_ipaddr"}}
-org.lockss.platform.v3.identity=TCP:{{env "lockss_ipaddr"}}:{{env "lockss_v3_port"}}
-org.lockss.platform.diskSpacePaths={{env "lockss_disk_paths"}}
-org.lockss.platform.accesssubnet={{env "lockss_access_subnet"}}
-org.lockss.platform.tmpDir={{env "lockss_tmpdir"}}
-org.lockss.platform.logdirectory={{env "lockss_logdir"}}
-org.lockss.platform.fqdn={{env "lockss_hostname"}}
-org.lockss.platform.ui.username={{env "lockss_admin_user"}}
-org.lockss.platform.ui.password={{env "lockss_admin_passwd"}}
-org.lockss.ui.access.ip.include={{env "lockss_ipaddr"}}/16
+# Intentionally left blank
