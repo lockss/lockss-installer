@@ -19,5 +19,5 @@ environments:
   docker:
     cluster.erb:
       config:
-        lockss_repo_host: lockss-repo
+        lockss_repo_host: lockss-repository-service
         lockss_jms_host: lockss-configuration-service

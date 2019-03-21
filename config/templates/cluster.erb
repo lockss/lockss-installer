@@ -3,10 +3,10 @@
 #
 
 # Use a REST repository
-org.lockss.repository.v2Repository=rest:lockss:http://{{env "REPO_HOST"}}:{{env "REPO_PORT"}}
+org.lockss.repository.v2Repository=rest:lockss:http://<%= lockss_repo_host %>:<%= lockss_repo_port %>
 
 # The lockss jms broker port61
-org.lockss.jms.broker.uri={{ env "JMS_URI" }}
+org.lockss.jms.broker.uri=tcp://<%= lockss_jms_host %>:<%= env_lockss_jms_port %>
 
 # Start the UI
 org.lockss.ui.start=yes
