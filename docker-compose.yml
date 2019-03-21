@@ -53,7 +53,7 @@ services:
     # add cluster to this when ready.
     environment:
       - LOCKSS_IS_CONFIG=true
-      - LOCKSS_PROPS_URL: ${LOCKSS_PROPS_URL}
+      - LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}
     ports:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
@@ -90,12 +90,9 @@ services:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_DEFAULT_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
       - LOCKSS_CONFIG_URL=${CFG_URL}
     secrets:
-      - postgres_passwd
+      - postgres_pass
 
   #
   # SERVICE lockss-metadata-extraction-service
@@ -123,9 +120,6 @@ services:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_DEFAULT_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
       - LOCKSS_CONFIG_URL=${CFG_URL}
     secrets:
       - postgres_pass
@@ -201,7 +195,7 @@ services:
       lockss-postgres-logs: /var/logs/postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_passwd
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_pass
       - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=/data
         #for version 9
