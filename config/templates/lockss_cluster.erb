@@ -36,7 +36,7 @@ org.lockss.jms.broker.uri=tcp://<%= env_jms_host %>:<%= env_jms_port %>
 # Start the UI
 org.lockss.ui.start=yes
 
-# Disable crawler, poller, voter, proxy, ICP, SOAP Web Services
+# Disable crawler, poller, voter, proxy, ICP, SOAP Web Services, SComm
 org.lockss.crawler.enabled=false
 org.lockss.poll.v3.enableV3Poller=false
 org.lockss.poll.v3.enableV3Voter=false
@@ -44,4 +44,6 @@ org.lockss.proxy.start=false
 org.lockss.proxy.icp.enabled=false
 org.lockss.ws.enabled=false
 org.lockss.scomm.enabled=false
+
+# Enable JMS
 org.lockss.plugin.jms.enable=true
