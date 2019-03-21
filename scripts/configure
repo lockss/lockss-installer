@@ -1,10 +1,8 @@
 #!/bin/sh
-# do not edit the line above, or edit the parts of this file outside
-# Funky-EOF without making sure that it works with /bin/sh on Solaris.
 PATH=/sbin:/usr/sbin:$PATH
 BASH_NAME=bash
 BASH=`which ${BASH_NAME} 2>/dev/null`
-if [ "X${BASH}" = "X" ]
+if [[ "X${BASH}" = "X" ]]
 then
     for A in /bin /usr/bin /usr/gnu/bin /usr/local/bin
     do
@@ -254,7 +252,7 @@ build_config_file () {
         if [ "X${LOCKSS_JMS_PORT}" = X ]; then
             LOCKSS_JMS_PORT=61616
         fi
-        ask_for_input "LOCKSS JMS port" ${LOCKSS_JMS_PORT}
+        ask_for_input "JMS port" ${LOCKSS_JMS_PORT}
         if [ "X${ANS}" != "X" ]; then
             LOCKSS_JMS_PORT="${ANS}"
         fi
@@ -358,6 +356,20 @@ build_config_file () {
                 SHA256=`echo "${P1}" | ${SHA256SUM}`
                 SHA256=`echo ${SHA256} | sed 's/ .*$//'`
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
+            fi
+        done
+        LOCKSS_DB_PASSWD=""
+        while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
+            P1=
+            while [ "X${P1}" = X ]; do
+                ask_for_input_shadow "Password for database" ""
+                P1="${ANS}"
+            done
+            ask_for_input_shadow "Password for database (again)" ""
+            if [ "X${ANS}" = "X${P1}" ]; then
+                SHA256=`echo "${P1}" | ${SHA256SUM}`
+                SHA256=`echo ${SHA256} | sed 's/ .*$//'`
+                LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.dat.tmp

@@ -53,3 +53,4 @@ set -a
 . ${CONFIG_FILE}
 set +a
 
+tiller -v --base-dir=${CONFIG_DIR} --environment docker
