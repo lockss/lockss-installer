@@ -122,4 +122,4 @@ do
   docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${vol}-logs --name=lockss-${vol}-logs
 done
 
-docker stack deploy --comopose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+docker stack deploy --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
