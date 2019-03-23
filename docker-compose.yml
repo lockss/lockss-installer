@@ -319,3 +319,6 @@ services:
     lockss-pywb-data:
       external: true
 
+  secrets:
+    postgres_pass:
+      external: true

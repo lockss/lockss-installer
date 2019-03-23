@@ -21,7 +21,7 @@ _D0=$(dirname "${0}")
 CONFIG_DIR="${_D0}/../config"
 
 #
-# Query user and write local LOCKSS config values to /etc/lockss/config.dat
+# Query user and write local LOCKSS config values to /etc/lockss/config.info
 # Must be run before LOCKSS daemon can be started
 #
 
@@ -30,8 +30,8 @@ read_config() {
     local OLD_IFS="${IFS}"
     IFS='
 '
-    for A in `sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1` ; do
+    for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+\1=\2/' $1); do
         eval "$A"
     done
     IFS="${OLD_IFS}"
@@ -40,11 +40,11 @@ read_config() {
 # check_writable dir user
 check_writable() {
     local DIR="$1"
-    true&
+    true &
     local PROBE_FILE=${DIR}/probe_$!
-    case `uname -s ` in
+    case $(uname -s) in
     Linux)
-        if [ "X${CONFIG_USER}" != "X${2}" ] ; then
+        if [ "X${CONFIG_USER}" != "X${2}" ]; then
             SUDO="sudo -u ${2}"
         else
             SUDO=""
@@ -55,7 +55,7 @@ check_writable() {
         fi
         ;;
     Darwin)
-        if [ "X${CONFIG_USER}" != "X${2}" ] ; then
+        if [ "X${CONFIG_USER}" != "X${2}" ]; then
             SUDO="sudo -u ${2}"
         else
             SUDO=""
@@ -69,18 +69,18 @@ check_writable() {
     return 1
 }
 
-# init_one_dir dir user
+# init_one_dir(dir, user)
 init_one_dir() {
     local DIR="$1"
     if [ ! -d "${DIR}" ]; then
         ask_for_input "${DIR} does not exist; shall I create it" Y
         if is_yes "${ANS}"; then
             mkdir -p "${DIR}"
-            if [ "X${CONFIG_USER}" != "X${2}" ] ; then
+            if [ "X${CONFIG_USER}" != "X${2}" ]; then
                 chown ${2} "${DIR}"
             fi
             chmod 750 "${DIR}"
-            if check_writable "${DIR}" ${2} ; then
+            if check_writable "${DIR}" ${2}; then
                 return 0
             else
                 echo "${DIR} not writable by user ${2}"
@@ -93,13 +93,13 @@ init_one_dir() {
         fi
         return 0
     fi
-    if check_writable "${DIR}" $2 ; then
+    if check_writable "${DIR}" $2; then
         echo "${DIR} exists and is writable by ${2}"
     else
         ask_for_input "${DIR} is not writable; shall I chown it" Y
         if is_yes "${ANS}"; then
             chown ${2} "${DIR}"
-            if check_writable "${DIR}" $2 ; then
+            if check_writable "${DIR}" $2; then
                 return 0
             else
                 echo "${DIR} still not writable by user ${2}"
@@ -113,9 +113,9 @@ init_one_dir() {
     fi
 }
 
-# build_config_file file user
-build_config_file () {
-    echo "Configuring for user ${2}"
+# build_config_file(file, user)
+build_config_file() {
+    echo "Writing config file ${1} for user ${2}"
     CONFIG_OK=N
     until is_yes ${CONFIG_OK}; do
         if [ "X${LOCKSS_HOSTNAME}" = X ]; then
@@ -135,7 +135,7 @@ build_config_file () {
             fi
         done
         if [ "X${LOCKSS_ACCESS_SUBNET}" = X ]; then
-            LOCKSS_ACCESS_SUBNET=`echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/'`
+            LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
         fi
         NAT=N
         if [ "${LOCKSS_EXTERNAL_IPADDR}X" != X ]; then
@@ -185,19 +185,19 @@ build_config_file () {
         ask_for_input "Mail relay for this machine" ${LOCKSS_MAILHUB}
         LOCKSS_MAILHUB="${ANS}"
         NEED_USER=N
-        if [ "X${LOCKSS_MAILHUB_USER}" != X ] ; then
+        if [ "X${LOCKSS_MAILHUB_USER}" != X ]; then
             NEED_USER=Y
         fi
         ask_for_input "Does mail relay ${LOCKSS_MAILHUB} need user & password" ${NEED_USER}
-        if is_yes "${ANS}" ; then
+        if is_yes "${ANS}"; then
             ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
             LOCKSS_MAILHUB_USER="${ANS}"
             MAILHUB_PASSWORD=
-            while [ "X${MAILHUB_PASSWORD}" = X ] ; do
+            while [ "X${MAILHUB_PASSWORD}" = X ]; do
                 ask_for_input_shadow "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" ""
                 P1=${ANS}
                 ask_for_input_shadow "Again" ""
-                if [ "X${ANS}" = "X${P1}" ] ; then
+                if [ "X${ANS}" = "X${P1}" ]; then
                     MAILHUB_PASSWORD="${ANS}"
                 fi
             done
@@ -218,20 +218,20 @@ build_config_file () {
         LOCKSS_PROPS_URL="${ANS}"
 
         if echo ${LOCKSS_PROPS_URL} | egrep -is "^https:" >/dev/null; then
-	    if [ "X${LOCKSS_PROPS_AUTHENTICATE_SERVER}" = X ]; then
-		    LOCKSS_PROPS_AUTHENTICATE_SERVER="Y"
-        fi
+            if [ "X${LOCKSS_PROPS_AUTHENTICATE_SERVER}" = X ]; then
+                LOCKSS_PROPS_AUTHENTICATE_SERVER="Y"
+            fi
             ask_for_input "Verify configuration server authenticity?" ${LOCKSS_PROPS_AUTHENTICATE_SERVER}
-	    if is_yes "${ANS}" ; then
-		if [ "X${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" = X ]; then
-		    LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="lockss-ca"
-		fi
-		ask_for_input "Server certificate keystore" ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}
-		LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
-	    else
-		unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
-	    fi
-	fi
+            if is_yes "${ANS}"; then
+                if [ "X${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" = X ]; then
+                    LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="lockss-ca"
+                fi
+                ask_for_input "Server certificate keystore" ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}
+                LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
+            else
+                unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
+            fi
+        fi
 
         if [ "X${LOCKSS_PROPS_PROXY}" = X ]; then
             LOCKSS_PROPS_PROXY="NONE"
@@ -263,7 +263,7 @@ build_config_file () {
         if [ "X${LOCKSS_TMPDIR}" = X ]; then
             LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}/tmp
         fi
-       ask_for_input "Temporary storage directory" ${LOCKSS_TMPDIR}
+        ask_for_input "Temporary storage directory" ${LOCKSS_TMPDIR}
         LOCKSS_TMPDIR="${ANS}"
         USER_OK=N
         until is_yes ${USER_OK}; do
@@ -282,12 +282,13 @@ build_config_file () {
             done
             ask_for_input_shadow "Password for web UI administration (again)" ""
             if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=`echo "${P1}" | ${SHA256SUM}`
-                SHA256=`echo ${SHA256} | sed 's/ .*$//'`
+                SHA256=$(echo "${P1}" | ${SHA256SUM})
+                SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
             fi
         done
         LOCKSS_DB_PASSWD=""
+        POSTGRES_PASSWD=""
         while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
             P1=
             while [ "X${P1}" = X ]; do
@@ -296,12 +297,14 @@ build_config_file () {
             done
             ask_for_input_shadow "Password for database (again)" ""
             if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=`echo "${P1}" | ${SHA256SUM}`
-                SHA256=`echo ${SHA256} | sed 's/ .*$//'`
+                SHA256=$(echo "${P1}" | ${SHA256SUM})
+                SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
+                POSTGRES_PASSWD=${P1}
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
+        SECRET_FILE=${CONFIG_DIR}/postgres.sec
         export LOCKSS_CONFIG_VERSION=2
         cat >${TMP_CONFIG} <<EOF
 LOCKSS_CONFIG_VERSION=${LOCKSS_CONFIG_VERSION}
@@ -345,25 +348,26 @@ EOF
                 exit 1
             fi
             echo "Checking content storage directory"
-            if ! init_one_dir ${LOCKSS_DATA_DIR} $2 ; then
+            if ! init_one_dir ${LOCKSS_DATA_DIR} $2; then
                 exit 1
             fi
-            if ! init_one_dir ${LOCKSS_LOGS_DIR} $2 ; then
+            if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
                 exit 1
             fi
             rm -f ${TMP_CONFIG}
             echo Done
             CONFIG_OK=Y
-	          FILT_CONFIG=`mktemp /tmp/filtconfig.XXXXX`
-	          egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-            if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG} ; then
+            FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
+            egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+            if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
                 echo "Sending mail failed. Please check mail configuration."
-		        UNSENT_FILE=/tmp/unsent-lockss-config
-		        cp ${FILT_CONFIG} ${UNSENT_FILE}
-              echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+                UNSENT_FILE=/tmp/unsent-lockss-config
+                cp ${FILT_CONFIG} ${UNSENT_FILE}
+                echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
             fi
-	          rm -f ${FILT_CONFIG}
-        fi
+            rm -f ${FILT_CONFIG}
+
+       fi
     done
 }
 
@@ -373,17 +377,17 @@ EOF
 CONFIG_USER=$(whoami)
 echo ${CONFIG_USER} is configuring
 export LOCKSS_TEAM=lockssdiag@lockss.org
-OS_TYPE=`uname -s`
+OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
 Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
-    LOCAL_IPADDR=`ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/'`
+    LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
     ;;
 Darwin)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
-    LOCAL_IPADDR=`ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/'`
+    LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
     ;;
 *)
     echo "${OS_TYPE} not supported"
@@ -391,7 +395,7 @@ Darwin)
     ;;
 esac
 LOCKSS_USER=lockss
-LOCAL_HOSTNAME=`uname -n`
+LOCAL_HOSTNAME=$(uname -n)
 CONFIG_FILE=${CONFIG_DIR}/config.info
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
@@ -399,11 +403,11 @@ USER_COUNT=1
 if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
     read_config ${CONFIG_FILE}
-    if [ "${LOCKSS_USER}X" != X ] ; then
-        USER_COUNT=`echo ${LOCKSS_USER} | wc -w`
-    fi
 fi
-if [ ${USER_COUNT} -eq 1 ] ; then
-    build_config_file ${CONFIG_FILE} ${LOCKSS_USER}
-fi
+#build config file
+build_config_file ${CONFIG_FILE} ${CONFIG_USER}
 
+#call update-config
+. "${_D0}/update-config"
+
+export ${POSTGRES_PASS}

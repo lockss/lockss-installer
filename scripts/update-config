@@ -28,21 +28,27 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-####
+
+##
 ## Relative paths
 ##
-
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+
 ##
 ## Definitions
 ##
 
 # Directories
+# Directories
+COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
-CONFIG_FILE="${CONFIG_DIR}/config.dat"
-
+# Files
+ENV_FILE="${CONFIG_DIR}/env.sh"
+USER_CONF_FILE="${CONFIG_DIR}/config.info"
 ##
 ## MAIN
 ##
@@ -50,7 +56,9 @@ CONFIG_FILE="${CONFIG_DIR}/config.dat"
 # Source user-config
 
 set -a
-. ${CONFIG_FILE}
+. ${USER_CONF_FILE}
+. ${ENV_FILE}
 set +a
 
 tiller -v --base-dir=${CONFIG_DIR} --environment docker
+cp ${ENV_FILE} "${COMPOSE_DIR}/.env"

@@ -4,19 +4,22 @@ template_sources: [ "file" ]
 defaults:
 
   lockss_bootstrap.erb:
-    target: ../configs/lockss_bootstrap
+    target: ../config/configs/lockss_bootstrap
 
   lockss_cluster.erb:
-    target: ../configs/lockss_cluster
+    target: ../config/configs/lockss_cluster
 
   cfg_service.erb:
-    target: ../configs/cfg_service
+    target: ../config/configs/cfg_service
 
   mdq_service.erb:
-    target: ../configs/mdq_service
+    target: ../config/configs/mdq_service
 
   mdx_service.erb:
-    target: ../configs/mdx_service
+    target: ../config/configs/mdx_service
 
-  env.erb:
-    target: ../../.env
+  repo_properties.erb:
+    target: ../config/configs/repo_properties
+
+environments:
+  docker:

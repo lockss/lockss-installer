@@ -30,8 +30,8 @@
 repo.spec=custom
 
 repo.index.spec=solr
-repo.index.solr.solrUrl=http://<%= env_solr_host =>:<%= env_solr_port =>/solr/<%= env_solr_core_repo %>
+repo.index.solr.solrUrl=http://<%= env_solr_host%>:<%= env_solr_port %>/solr/<%= env_solr_core_repo %>
 
 repo.datastore.spec=hdfs
-repo.datastore.hdfs.server=hdfs://<%= env_hdfs_host =>:<%= env_hdfs_fs_port =>/
-repo.datastore.hdfs.basedir=<%= env_repo_basedir =>
+repo.datastore.hdfs.server=hdfs://<%= env_hdfs_host %>:<%= env_hdfs_fs_port %>/
+repo.datastore.hdfs.basedir=<%= env_repo_basedir %>
