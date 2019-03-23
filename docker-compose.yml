@@ -177,8 +177,8 @@ services:
       - lockss-solr
       - lockss-hdfs
     volumes:
-      - lockss-repo-data: /data
-      - lockss-repo-logs: /var/log/lockss
+      - lockss-repo-data:/data
+      - lockss-repo-logs:/var/log/lockss
 
   #
   # SERVICE lockss-postgres
@@ -192,8 +192,8 @@ services:
     ports:
       - '${POSTGRES_PORT}:${POSTGRES_DEFAULT_PORT}'
     volumes:
-      lockss-postgres-data: /data
-      lockss-postgres-logs: /var/logs/postgres
+      lockss-postgres-data:/data
+      lockss-postgres-logs:/var/logs/postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_pass
@@ -217,8 +217,8 @@ services:
       - "${SOLR_PORT}:${SOLR_DEFAULT_PORT}"
     command: solr-precreate lockss-repo
     volumes:
-      lockss-solr-data: /opt/solr/server/solr/mycores
-      lockss-solr-logs: /opt/solr/server/logs
+      lockss-solr-data:/opt/solr/server/solr/mycores
+      lockss-solr-logs:/opt/solr/server/logs
 
   #
   # SERVICE lockss-hdfs
