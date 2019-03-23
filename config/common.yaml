@@ -2,22 +2,21 @@ data_sources: [ "defaults" , "file", "environment" ]
 template_sources: [ "file" ]
 
 defaults:
-  global:
-    postgres_user: LOCKSS
-    repo_port: 24610
 
   lockss_bootstrap.erb:
-    target: ../configs/lockss_bootstrap.cfg
+    target: ../configs/lockss_bootstrap
 
   lockss_cluster.erb:
-    target: ../configs/lockss_cluster.cfg
+    target: ../configs/lockss_cluster
+
+  cfg_service.erb:
+    target: ../configs/cfg_service
+
+  mdq_service.erb:
+    target: ../configs/mdq_service
+
+  mdx_service.erb:
+    target: ../configs/mdx_service
 
   env.erb:
     target: ../../.env
-
-environments:
-  docker:
-    cluster.erb:
-      config:
-        repo_host: lockss-repository-service
-        jms_host: lockss-configuration-service

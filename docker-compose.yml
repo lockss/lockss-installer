@@ -44,13 +44,14 @@ services:
       restart_policy:
         condition: on-failure
     configs:
-      - source: bootstrap
+      - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
       - source: cfg_service
         target: /run/configs/lockss_service
       - source: cfg_service_opt
         target: /run/configs/lockss_service_opt
-    # add cluster to this when ready.
+      - source: lockss-cluster
+        target: /run/configs/lockss_cluster
     environment:
       - LOCKSS_IS_CONFIG=true
       - LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}
@@ -259,11 +260,9 @@ services:
       - SYS_ADMIN
 
   configs:
-    cluster:
+    lockss_cluster:
       external: true
-    conf:
-      external: true
-    bootstrap:
+    lockss_bootstrap:
       external: true
     cfg_service:
       external: true
