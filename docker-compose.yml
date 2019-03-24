@@ -1,237 +1,324 @@
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 version: '3'
+
+#
+# SERVICES
+#
 services:
+
+  #
+  # SERVICE lockss-configuration-service
+  #
   lockss-configuration-service:
-    image: 'lockss/lockss-configuration-service:${CFG_VERSION}'
+    image: ${CFG_IMAGE}:${CFG_VERSION}'
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: lockss_bootstrap
+        target: /run/configs/lockss_bootstrap
+      - source: cfg_service
+        target: /run/configs/lockss_service
+      - source: cfg_service_opt
+        target: /run/configs/lockss_service_opt
+      - source: lockss-cluster
+        target: /run/configs/lockss_cluster
+    environment:
+      - LOCKSS_IS_CONFIG=true
+      - LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}
     ports:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
-      - "${JMS_PORT}:${JMS_PORT}"
-    command: "${CFG_CMD}"
+      - "${JMS_PORT}:${JMS_DEFAULT_PORT}"
     links:
       - lockss-repository-service
     volumes:
-      - ./config/plugins:/opt/lockss/BOOT-INF/lib
-      - ./config/tdbxml:/opt/lockss/config/tdbxml
-      - ./config/cluster:/opt/lockss/config/cluster
-      - ./config/host:/opt/lockss/config/host
-      - ./config/lockss-configuration-service:/opt/lockss/config/lockss-configuration-service
-      - ./storage/lockss-configuration-service:/opt/lockss/storage
-      - ./logs/lockss-configuration-service:/opt/lockss/logs
+      - lockss-cfg-data:/data
+      - lockss-cfg-logs:/var/log/lockss
 
+  #
+  # SERVICE lockss-metadata-service
+  #
   lockss-metadata-service:
-    image: lockss/lockss-metadata-service:${MDQ_VERSION}
+    image: ${MDQ_IMAGE}:${MDQ_VERSION}
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: bootstrap
+        target: /run/configs/lockss_bootstrap
+      - source: mdq_service
+        target: /run/configs/lockss_service
+      - source: mdq_service_opt
+        target: /run/configs/lockss_service_opt
     ports:
       - "${MDQ_REST_PORT}:${MDQ_REST_PORT}"
       - "${MDQ_UI_PORT}:${MDQ_UI_PORT}"
-    command: "${MDQ_CMD}"
     links:
       - lockss-configuration-service
-      - lockss-metadata-pgsql
+      - lockss-postgres
     volumes:
-      - ./config/plugins:/opt/lockss/BOOT-INF/lib
-      - ./config/cluster:/opt/lockss/config/cluster
-      - ./config/host:/opt/lockss/config/host
-      - ./config/lockss-metadata-service:/opt/lockss/config/lockss-metadata-service
-      - ./storage/lockss-metadata-service:/opt/lockss/storage
-      - ./logs/lockss-metadata-service:/opt/lockss/logs
-
-  lockss-metadata-extraction-service:
-    image: lockss/lockss-metadata-extraction-service:${MDX_VERSION}
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
-    ports:
-      - ${MDX_REST_PORT}:${MDX_REST_PORT}
-      - ${MDX_UI_PORT}:${MDX_UI_PORT}
-    command: "${MDX_CMD}"
-    links:
-      - lockss-configuration-service
-      - lockss-metadata-pgsql
-    volumes:
-      - ./config/plugins:/opt/lockss/BOOT-INF/lib
-      - ./config/cluster:/opt/lockss/config/cluster
-      - ./config/host:/opt/lockss/config/host
-      - ./config/lockss-metadata-extraction-service:/opt/lockss/config/lockss-metadata-extraction-service
-      - ./storage/lockss-metadata-extraction-service:/opt/lockss/storage
-      - ./logs/lockss-metadata-extraction-service:/opt/lockss/logs
-
-  lockss-metadata-pgsql:
-    image: postgres:9.6
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 50M
-        restart_policy:
-          condition: on-failure
-    ports:
-      - '${PGSQL_PORT}:${PGSQL_PORT}'
+      - lockss-mdq-data:/data
+      - lockss-mdq-logs:/var/log/lockss
     environment:
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD
-      - POSTGRES_DB
+      - LOCKSS_CONFIG_URL=${CFG_URL}
+    secrets:
+      - postgres_pass
 
-  lockss-poller:
-    image: lockss/lockss-poller:${POL_VERSION}
+  #
+  # SERVICE lockss-metadata-extraction-service
+  #
+  lockss-metadata-extraction-service:
+    image: ${MDX_IMAGE}:${MDX_VERSION}
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: bootstrap
+        target: /run/configs/lockss_bootstrap
+      - source: mdx_service
+        target: /run/configs/lockss_service
+      - source: mdx_service_opt
+        target: /run/configs/lockss_service_opt
+    ports:
+      - "${MDX_REST_PORT}:${MDX_REST_PORT}"
+      - "${MDX_UI_PORT}:${MDX_UI_PORT}"
+    links:
+      - lockss-configuration-service
+      - lockss-postgres
+    volumes:
+      - lockss-mdx-data:/data
+      - lockss-mdx-logs:/var/log/lockss
+    environment:
+      - LOCKSS_CONFIG_URL=${CFG_URL}
+    secrets:
+      - postgres_pass
+
+  #
+  # SERVICE lockss-poller
+  #
+  lockss-poller:
+    image: ${POL_IMAGE}:${POL_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: bootstrap
+        target: /run/configs/lockss_bootstrap
+      - source: pol_service
+        target: /run/configs/lockss_service
+      - source: pol_service_opt
+        target: /run/configs/lockss_service_opt
     ports:
       - ${POL_REST_PORT}:${POL_REST_PORT}
       - ${POL_UI_PORT}:${POL_UI_PORT}
-    command: "${POL_CMD}"
     links:
       - lockss-configuration-service
     volumes:
-      - ./config/plugins:/opt/lockss/BOOT-INF/lib
-      - ./config/cluster:/opt/lockss/config/cluster
-      - ./config/host:/opt/lockss/config/host
-      - ./config/lockss-poller:/opt/lockss/config/lockss-poller
-      - ./storage/lockss-poller:/opt/lockss/storage
-      - ./logs/lockss-poller:/opt/lockss/logs
+      - lockss-pol-data:/data
+      - lockss-pol-logs:/var/log/lockss
+    environment:
+      - LOCKSS_CONFIG_URL=${CFG_URL}
 
+  #
+  # SERVICE lockss-repository-service
+  #
   lockss-repository-service:
-    image: lockss/lockss-repository-service:${REPO_VERSION}
+    image: ${REPO_IMG}:${REPO_VERSION}
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: repo_properties
+        target: /run/configs/lockss.properties
     ports:
-      - ${REPO_REST_PORT}:${REPO_REST_PORT}
-    command: "${REPO_CMD}"
+      - ${REPO_REST_PORT}:${LOCKSS_REST_PORT}
     environment:
-      - "JVM_ARGS=${REPO_JARGS}"
-      - REPO_MAX_WARC_SIZE
-      - SOLR_HOST
-      - SOLR_PORT
-      - HDFS_HOST
-      - HDFS_FSMD
+      - LOCKSS_HDFS_HOST=${HDFS_HOST}
+      - LOCKSS_HDFS_PORT=${HDFS_FSMD}
+      - LOCKSS_SOLR_HOST=${SOLR_HOST}
+      - LOCKSS_SOLR_PORT=${SOLR_PORT}
+      - LOCKSS_JMS_HOST=${JMS_HOST}
+      - LOCKSS_JMS_PORT=${JMS_PORT}
     links:
       - lockss-solr
       - lockss-hdfs
     volumes:
-      - ./config/lockss-repository-service:/opt/lockss/config/lockss-repository-service
+      - lockss-repo-data:/data
+      - lockss-repo-logs:/var/log/lockss
 
+  #
+  # SERVICE lockss-postgres
+  #
+  lockss-postgres:
+    image: ${POSTGRES_IMG}:${POSTGRES_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - '${POSTGRES_PORT}:${POSTGRES_DEFAULT_PORT}'
+    volumes:
+      - lockss-postgres-data:/data
+      - lockss-postgres-logs:/var/logs/postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_pass
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/data
+        #for version 9
+      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
+        # for version 10+
+      - POSTGRES_INITDB_WALDIR=/var/log/postgres
+
+  #
+  # SERVICE lockss-solr
+  #
   lockss-solr:
-    image: lockss/lockss-solr
+    image: ${LOCKSS_SOLR_IMG}:${LOCKSS_SOLR_VERSION}
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
     ports:
-      - "${SOLR_PORT}:${SOLR_PORT}"
-    command: "${SOLR_CMD}"
+      - "${SOLR_PORT}:${SOLR_DEFAULT_PORT}"
+    command: solr-precreate lockss-repo
+    volumes:
+      - lockss-solr-data:/opt/solr/server/solr/mycores
+      - lockss-solr-logs:/opt/solr/server/logs
 
+  #
+  # SERVICE lockss-hdfs
+  #
   lockss-hdfs:
-    image: lockss/lockss-dev-hdfs
+    image: ${HDFS_IMG}:${HDFS_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     ports:
-      - "${HDFS_FSMD}:${HDFS_FSMD}"
-      - "${HDFS_DATA}:${HDFS_DATA}"
-      - "${HDFS_MD}:${HDFS_MD}"
-      - "${HDFS_STATUI}:${HDFS_STATUI}"
-      - "${HDFS_DNUI}:${HDFS_DNUI}"
-    environment:
-      - HDFS_HOST
-      - HDFS_FSMD
-      - HDFS_DATA
-      - HDFS_MD
-      - HDFS_STATUI
-      - HDFS_DNUI
+      - "${HDFS_FS}:${HDFS_DEFAULT_PORT}"
     volumes:
-      - ./config/lockss-hdfs/etc/hadoop:/hadoop/etc/hadoop.custom
-
+      - lockss-hdfs-data=/hadoop
+      - lockss-hdfs-logs=/var/log/hadoop
+  #
+  # SERVICE lockss-pywb
+  #
   lockss-pywb:
-    image: lockss/lockss-pywb
+    image: ${PYWB_IMG}:${PYWB_VERSION}
     deploy:
       replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
+      restart_policy:
+        condition: on-failure
     ports:
-      - "${PYWB_URL_PORT}:${PYWB_URL_PORT}"
+      - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
     links:
-      - lockss-hdfs
+      - lockss-repository-service
+      - lockss-configuration-service
     environment:
-      - HDFS_HOST
-      - HDFS_FSMD
-      - REPO_BASEDIR
-      - PYWB_URL_PORT
-      - PYWB_URL_HOST
-      - PYWB_COLLECTION
-      - PYWB_BASEDIR
-      - PYWB_HDFSMNT
-      - PYWB_WATCHDIR
-    devices:
-      - /dev/fuse
-    cap_add:
-      - SYS_ADMIN
+      - LOCKSS_HDFS_HOST
+      - LOCKSS_HDFS_FS_PORT
+      - LOCKSS_REPO_BASEDIR
     volumes:
-    - lockssvol:/config/lockss-pywb/config.yaml:/webarchive/config.yaml
-
-  lockss-edina-indexer:
-    image: lockss/lockss-edina-indexer
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 50M
-        restart_policy:
-          condition: on-failure
-    links:
-      - lockss-solr
-      - lockss-hdfs
-    environment:
-      - HDFS_HOST
-      - HDFS_FSMD
-      - REPO_BASEDIR
-      - LOCKSS_SOLR_HDFSMNT
-      - LOCKSS_SOLR_WATCHDIR
-      - LOCKSS_SOLR_WATCHDIR_INTERVAL
-      - LOCKSS_SOLR_URL
+      - lockss-pywb-data=/webarchive
     devices:
       - /dev/fuse
     cap_add:
       - SYS_ADMIN
-  volumes:
-    lockssvol:
+
+  configs:
+    lockss_cluster:
       external: true
-      name: "${LOCKSS_VOLUME}"
+    lockss_bootstrap:
+      external: true
+    cfg_service:
+      external: true
+    cfg_service_opt:
+      external: true
+    mdq_service:
+      external: true
+    mdq_service_opt:
+      external: true
+    mdx_service:
+      external: true
+    mdx_service_opt:
+      external: true
+    pol_service:
+      external: true
+    pol_service_opt:
+      external: true
+    repo_properties:
+      external: true
+
+  volumes:
+    lockss-cfg-data:
+      external: true
+    lockss-cfg-logs:
+      external: true
+    lockss-mdq-data:
+      external: true
+    lockss-mdq-logs:
+      external: true
+    lockss-mdx-data:
+      external: true
+    lockss-mdx-logs:
+      external: true
+    lockss-pol-data:
+      external: true
+    lockss-pol-logs:
+      external: true
+    lockss-repo-data:
+      external: true
+    lockss-repo-logs:
+      external: true
+    lockss-postgres-data:
+      external: true
+    lockss-postgres-logs:
+      external: true
+    lockss-solr-data:
+      external: true
+    lockss-solr-logs:
+      external: true
+    lockss-hdfs-data:
+      external: true
+    lockss-hdfs-logs:
+      external: true
+    lockss-pywb-data:
+      external: true
+
+  secrets:
+    postgres_pass:
+      external: true

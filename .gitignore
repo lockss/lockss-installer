@@ -4,5 +4,6 @@
 .idea/
 *.iml
 /download/
-/config/config.dat
+/config/config.info
 /.env
+/config/configs/*

@@ -1,2 +1,0 @@
-deb http://archive.cloudera.com/cdh5/debian/jessie/amd64/cdh jessie-cdh5 contrib
-deb-src http://archive.cloudera.com/cdh5/debian/jessie/amd64/cdh jessie-cdh5 contrib

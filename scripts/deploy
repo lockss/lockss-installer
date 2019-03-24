@@ -46,18 +46,28 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
+COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
-DOCKER_COMPOSE_FILE="${_D0}/../docker-compose.yaml"
+DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yaml"
+ENV_FILE="${COMPOSE_DIR}/.env"
+EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
+EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
+#Data
+declare -a arr vols=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
+declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 ##
 ## MAIN
 ##
 
-# Source conf.docker.sh and conf.sh 
+# Source env
 set -a
-. "${CONFIG_DIR}/conf/conf.sh"
+. "${ENV_FILE}"
 set +a
 
 # Sanity checks
@@ -65,4 +75,51 @@ Check_Installed 'docker' 'docker-compose'
 Check_Docker
 Check_Stack
 
-docker stack deploy --comopose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+# Create our secret
+docker secret rm postgres_pass
+echo "creating docker secret for postgres password..."
+echo ${POSTGRES_PASS} | docker secret create postgres_pass -
+
+# Create the global configs
+for gconf in "${global_confs[@]}"
+do
+  docker config rm ${gconf}
+  echo "creating docker config for global conf ${gconf}..."
+  docker config create --template-driver golang ${gconf} ${DOCKER_CONFIGS_DIR}/${gconf}
+done
+
+# Create the secret for the
+# Create the configs for each lockss service
+for sconf in "${service_confs[@]}"
+do
+  echo "creating docker config for conf ${sconf}..."
+  sconf_file=${DOCKER_CONFIGS_DIR}/${sconf}_service
+  sconf_opt=${DOCKER_CONFIGS_DIR}/${sconf}_service_opt
+
+# create missing lockss.txt file
+  if [ ! -f ${sconf_file} ]
+  then
+    echo "using empty lockss.txt for ${sconf_file}"
+    cp ${EMPTY_LOCKSS_TXT} ${sconf_file}
+  fi
+# create missing lockss.opt file
+  if [ ! -f ${sconf_opt} ]
+  then
+    echo "using empty lockss.opt for ${sconf_opt}"
+    cp ${EMPTY_LOCKSS_OPT} ${sconf_opt}
+  fi
+# now docker create the configs
+  docker config rm ${sconf}_service ${sconf}_service_opt
+  docker config create --template-driver golang ${sconf}_service ${sconf_file}
+  docker config create --template-driver golang ${sconf}_service_opt ${sconf_opt}
+done
+
+# Create a mount points for each vols
+for vol in "${vols[@]}"
+do
+  echo "creating docker data and log volumes for ${vol}..."
+  docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${vol}-data --name=lockss-${vol}-data
+  docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${vol}-logs --name=lockss-${vol}-logs
+done
+
+docker stack deploy --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
