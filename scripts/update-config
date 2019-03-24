@@ -55,10 +55,8 @@ USER_CONF_FILE="${CONFIG_DIR}/config.info"
 
 # Source user-config
 
-set -a
-. ${USER_CONF_FILE}
-. ${ENV_FILE}
-set +a
+mkdir -p "${DOCKER_CONFIGS_DIR}"
 
-tiller -v --base-dir=${CONFIG_DIR} --environment docker
-cp ${ENV_FILE} "${COMPOSE_DIR}/.env"
+for f in ${CONFIG_DIR}/templates/*.mustache ; do
+  pystache "${f}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${ENV_FILE}")" > "${DOCKER_CONFIGS_DIR}/$(basename "${f}" .mustache)"
+done
