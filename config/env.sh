@@ -77,7 +77,7 @@ POSTGRES_USER=LOCKSS
 POSTGRES_DB=postgres
 
 # Solr container configuration
-LOCKSS_SOLR_IMG='solr'
+SOLR_IMG='solr'
 SOLR_VERSION='6.6.0-alpine'
 SOLR_HOST='lockss-solr'
 SOLR_DEFAULT_PORT='8983'
@@ -87,7 +87,7 @@ SOLR_CMD="solr-precreate ${SOLR_CORE_REPO}"
 
 # HDFS container configuration
 HDFS_IMG='lockss/lockss-hdfs'
-HDFS_VERSION='1:1'
+HDFS_VERSION='1.1'
 HDFS_HOST=lockss-hdfs
 HDFS_FS_PORT='24619'
 HDFS_DEFAULT_FS_PORT='9000'
