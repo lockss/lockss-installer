@@ -300,11 +300,12 @@ build_config_file() {
                 SHA256=$(echo "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-                POSTGRES_PASSWD=${P1}
+                SECRET_FILE=${CONFIG_DIR}/postgres.sec
+                POSTGRES_PASS=${P1}
+                echo -n "${POSTGRES_PASS}" > $SECRET_FILE # XXX
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
-        SECRET_FILE=${CONFIG_DIR}/postgres.sec
         export LOCKSS_CONFIG_VERSION=2
         cat >${TMP_CONFIG} <<EOF
 LOCKSS_CONFIG_VERSION=${LOCKSS_CONFIG_VERSION}

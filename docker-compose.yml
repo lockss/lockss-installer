@@ -27,7 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-version: '3'
+version: '3.7'
 
 #
 # SERVICES
@@ -38,7 +38,7 @@ services:
   # SERVICE lockss-configuration-service
   #
   lockss-configuration-service:
-    image: ${CFG_IMAGE}:${CFG_VERSION}'
+    image: ${CFG_IMG}:${CFG_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -50,7 +50,7 @@ services:
         target: /run/configs/lockss_service
       - source: cfg_service_opt
         target: /run/configs/lockss_service_opt
-      - source: lockss-cluster
+      - source: lockss_cluster
         target: /run/configs/lockss_cluster
     environment:
       - LOCKSS_IS_CONFIG=true
@@ -69,13 +69,13 @@ services:
   # SERVICE lockss-metadata-service
   #
   lockss-metadata-service:
-    image: ${MDQ_IMAGE}:${MDQ_VERSION}
+    image: ${MDQ_IMG}:${MDQ_VERSION}
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     configs:
-      - source: bootstrap
+      - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
       - source: mdq_service
         target: /run/configs/lockss_service
@@ -99,13 +99,13 @@ services:
   # SERVICE lockss-metadata-extraction-service
   #
   lockss-metadata-extraction-service:
-    image: ${MDX_IMAGE}:${MDX_VERSION}
+    image: ${MDX_IMG}:${MDX_VERSION}
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     configs:
-      - source: bootstrap
+      - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
       - source: mdx_service
         target: /run/configs/lockss_service
@@ -129,13 +129,13 @@ services:
   # SERVICE lockss-poller
   #
   lockss-poller:
-    image: ${POL_IMAGE}:${POL_VERSION}
+    image: ${POL_IMG}:${POL_VERSION}
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     configs:
-      - source: bootstrap
+      - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
       - source: pol_service
         target: /run/configs/lockss_service
@@ -165,7 +165,7 @@ services:
       - source: repo_properties
         target: /run/configs/lockss.properties
     ports:
-      - ${REPO_REST_PORT}:${LOCKSS_REST_PORT}
+      - ${REPO_REST_PORT}:${REPO_REST_PORT}
     environment:
       - LOCKSS_HDFS_HOST=${HDFS_HOST}
       - LOCKSS_HDFS_PORT=${HDFS_FSMD}
@@ -208,7 +208,7 @@ services:
   # SERVICE lockss-solr
   #
   lockss-solr:
-    image: ${LOCKSS_SOLR_IMG}:${LOCKSS_SOLR_VERSION}
+    image: ${SOLR_IMG}:${SOLR_VERSION}
     deploy:
       replicas: 1
       restart_policy:
@@ -230,7 +230,7 @@ services:
       restart_policy:
         condition: on-failure
     ports:
-      - "${HDFS_FS}:${HDFS_DEFAULT_PORT}"
+      - "${HDFS_FS_PORT}:${HDFS_DEFAULT_FS_PORT}"
     volumes:
       - lockss-hdfs-data=/hadoop
       - lockss-hdfs-logs=/var/log/hadoop
@@ -259,66 +259,67 @@ services:
     cap_add:
       - SYS_ADMIN
 
-  configs:
-    lockss_cluster:
-      external: true
-    lockss_bootstrap:
-      external: true
-    cfg_service:
-      external: true
-    cfg_service_opt:
-      external: true
-    mdq_service:
-      external: true
-    mdq_service_opt:
-      external: true
-    mdx_service:
-      external: true
-    mdx_service_opt:
-      external: true
-    pol_service:
-      external: true
-    pol_service_opt:
-      external: true
-    repo_properties:
-      external: true
+configs:
+  lockss_cluster:
+    external: true
+  lockss_bootstrap:
+    external: true
+  cfg_service:
+    external: true
+  cfg_service_opt:
+    external: true
+  mdq_service:
+    external: true
+  mdq_service_opt:
+    external: true
+  mdx_service:
+    external: true
+  mdx_service_opt:
+    external: true
+  pol_service:
+    external: true
+  pol_service_opt:
+    external: true
+  repo_properties:
+    external: true
 
-  volumes:
-    lockss-cfg-data:
-      external: true
-    lockss-cfg-logs:
-      external: true
-    lockss-mdq-data:
-      external: true
-    lockss-mdq-logs:
-      external: true
-    lockss-mdx-data:
-      external: true
-    lockss-mdx-logs:
-      external: true
-    lockss-pol-data:
-      external: true
-    lockss-pol-logs:
-      external: true
-    lockss-repo-data:
-      external: true
-    lockss-repo-logs:
-      external: true
-    lockss-postgres-data:
-      external: true
-    lockss-postgres-logs:
-      external: true
-    lockss-solr-data:
-      external: true
-    lockss-solr-logs:
-      external: true
-    lockss-hdfs-data:
-      external: true
-    lockss-hdfs-logs:
-      external: true
-    lockss-pywb-data:
-      external: true
+volumes:
+  lockss-cfg-data:
+    external: true
+  lockss-cfg-logs:
+    external: true
+  lockss-mdq-data:
+    external: true
+  lockss-mdq-logs:
+    external: true
+  lockss-mdx-data:
+    external: true
+  lockss-mdx-logs:
+    external: true
+  lockss-pol-data:
+    external: true
+  lockss-pol-logs:
+    external: true
+  lockss-repo-data:
+    external: true
+  lockss-repo-logs:
+    external: true
+  lockss-postgres-data:
+    external: true
+  lockss-postgres-logs:
+    external: true
+  lockss-solr-data:
+    external: true
+  lockss-solr-logs:
+    external: true
+  lockss-hdfs-data:
+    external: true
+  lockss-hdfs-logs:
+    external: true
+  lockss-pywb-data:
+    external: true
 
-  secrets:
-    postgres_pass:
-      external: true
+secrets:
+  postgres_pass:
+    external: true
+

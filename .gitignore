@@ -4,6 +4,8 @@
 .idea/
 *.iml
 /download/
-/config/config.info
 /.env
+/config/config.info
+/config/*.sec
 /config/configs/*
+

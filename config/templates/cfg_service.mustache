@@ -1,3 +1,4 @@
+{{={{{{ }}}}=}}
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -28,7 +29,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 org.lockss.configDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.configDbManager.datasource.serverName=<%= env_postgres_host %>
-org.lockss.configDbManager.datasource.portNumber=<%= env_postgres_port %>
+org.lockss.configDbManager.datasource.serverName={{{{{POSTGRES_HOST}}}}}
+org.lockss.configDbManager.datasource.portNumber={{{{{POSTGRES_PORT}}}}}
 org.lockss.configDbManager.datasource.user=LOCKSS
 org.lockss.configDbManager.datasource.password={{ secret "postgres_pass" }}

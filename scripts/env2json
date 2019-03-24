@@ -1,0 +1,19 @@
+#!/bin/sh
+
+_0=$(basename "${0}")
+
+for f in "$@" ; do
+  if [ ! -f "${f}" ]; then
+    echo "${_0}: file not found: ${f}"
+    exit 1
+  fi
+done
+
+echo '{'
+for f in "$@" ; do
+  env -i /bin/sh -c "set -a ; source \"$(realpath "${f}")\" ; set +a ; env | sort"
+done | while read line ; do
+  echo "  \"${line%%=*}\": \"${line#*=}\","
+done
+echo '  "_": null'
+echo '}'

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -52,40 +52,62 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
-DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yaml"
-ENV_FILE="${COMPOSE_DIR}/.env"
+DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+ENV_FILE="${CONFIG_DIR}/env.sh"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
 #Data
-declare -a arr vols=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
 declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
+
+Config_Or_Blank()
+{
+  if [ -f "${DOCKER_CONFIGS_DIR}/${1}" ]; then
+    echo "${DOCKER_CONFIGS_DIR}/${1}"
+  else
+    echo "${DOCKER_CONFIGS_DIR}/blank_lockss"
+  fi 
+}
+
 ##
 ## MAIN
 ##
 
-# Source env
+# Source config.info and env.sh
 set -a
+. "${CONFIG_DIR}/config.info"
 . "${ENV_FILE}"
 set +a
 
 # Sanity checks
-Check_Installed 'docker' 'docker-compose'
+Check_Installed 'docker'
 Check_Docker
 Check_Stack
+
+if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
+  echo "LOCKSS_DATADIR and LOCKSS_LOGS_DIR are not set; exiting"
+  exit 1
+fi 
 
 # Create our secret
 docker secret rm postgres_pass
 echo "creating docker secret for postgres password..."
-echo ${POSTGRES_PASS} | docker secret create postgres_pass -
+if ! docker secret create postgres_pass "${CONFIG_DIR}/postgres.sec" ; then
+  echo "${_0}: error creating secret postgres_pass"
+  exit 1
+fi
 
 # Create the global configs
 for gconf in "${global_confs[@]}"
 do
   docker config rm ${gconf}
   echo "creating docker config for global conf ${gconf}..."
-  docker config create --template-driver golang ${gconf} ${DOCKER_CONFIGS_DIR}/${gconf}
+  if ! docker config create --template-driver golang ${gconf} $(Config_Or_Blank ${gconf}) ; then
+    echo "${_0}: error creating config ${gconf}"
+    exit 1
+  fi
 done
 
 # Create the secret for the
@@ -93,33 +115,29 @@ done
 for sconf in "${service_confs[@]}"
 do
   echo "creating docker config for conf ${sconf}..."
-  sconf_file=${DOCKER_CONFIGS_DIR}/${sconf}_service
-  sconf_opt=${DOCKER_CONFIGS_DIR}/${sconf}_service_opt
-
-# create missing lockss.txt file
-  if [ ! -f ${sconf_file} ]
-  then
-    echo "using empty lockss.txt for ${sconf_file}"
-    cp ${EMPTY_LOCKSS_TXT} ${sconf_file}
-  fi
-# create missing lockss.opt file
-  if [ ! -f ${sconf_opt} ]
-  then
-    echo "using empty lockss.opt for ${sconf_opt}"
-    cp ${EMPTY_LOCKSS_OPT} ${sconf_opt}
-  fi
-# now docker create the configs
   docker config rm ${sconf}_service ${sconf}_service_opt
-  docker config create --template-driver golang ${sconf}_service ${sconf_file}
-  docker config create --template-driver golang ${sconf}_service_opt ${sconf_opt}
+  if ! docker config create --template-driver golang ${sconf}_service $(Config_Or_Blank ${sconf}_service) ; then
+    echo "${_0}: error creating config ${sconf}_service"
+    exit 1
+  fi
+  if ! docker config create --template-driver golang ${sconf}_service_opt $(Config_Or_Blank ${sconf}_service_opt) ; then
+    echo "${_0}: error creating config ${sconf}_service_opt"
+    exit 1
+  fi
 done
 
-# Create a mount points for each vols
-for vol in "${vols[@]}"
+# Create a mount points for each service
+for svc in "${svcs[@]}"
 do
-  echo "creating docker data and log volumes for ${vol}..."
-  docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${vol}-data --name=lockss-${vol}-data
-  docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${vol}-logs --name=lockss-${vol}-logs
+  echo "creating docker data and log volumes for ${svc}..."
+  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${svc}-data --name=lockss-${svc}-data ; then
+    echo "${_0}: error creating volume lockss-${svc}-data"
+    exit 1
+  fi
+  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${svc}-logs --name=lockss-${svc}-logs ; then
+    echo "${_0}: error creating volume lockss-${svc}-logs"
+    exit 1
+  fi
 done
 
 docker stack deploy --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack

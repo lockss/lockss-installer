@@ -1,3 +1,4 @@
+{{={{{{ }}}}=}}
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -27,8 +28,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.metadataDbManager.datasource.serverName=<%= env_postgres_host %>
-org.lockss.metadataDbManager.datasource.portNumber=<%= env_postgres_port %>
-org.lockss.metadataDbManager.datasource.user=LOCKSS
-org.lockss.metadataDbManager.datasource.password={{ secret "postgres_pass" }}
+repo.spec=custom
+
+repo.index.spec=solr
+repo.index.solr.solrUrl=http://{{{{{SOLRHOST}}}}}:{{{{{SOLR_PORT}}}}}/solr/{{{{{SOLR_CORE_REPO}}}}}
+
+repo.datastore.spec=hdfs
+repo.datastore.hdfs.server=hdfs://{{{{{HDFS_PORT}}}}}:{{{{{HDFSFS_PORT}}}}}
+repo.datastore.hdfs.basedir={{{{{REPO_BASEDIR}}}}}

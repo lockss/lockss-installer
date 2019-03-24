@@ -1,3 +1,4 @@
+{{={{{{ }}}}=}}
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -26,6 +27,9 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# Make local changes to service in this file
 
-# Intentionally left blank
+org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
+org.lockss.metadataDbManager.datasource.serverName={{{{{POSTGRES_HOST}}}}}
+org.lockss.metadataDbManager.datasource.portNumber={{{{{POSTGRES_PORT}}}}}
+org.lockss.metadataDbManager.datasource.user=LOCKSS
+org.lockss.metadataDbManager.datasource.password={{ secret "postgres_pass" }}

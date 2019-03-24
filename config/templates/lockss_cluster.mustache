@@ -1,3 +1,4 @@
+{{={{{{ }}}}=}}
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -27,14 +28,23 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.metadataDbManager.datasource.serverName=<%= env_postgres_host %>
-org.lockss.metadataDbManager.datasource.portNumber=<%= env_postgres_port %>
-org.lockss.metadataDbManager.datasource.user=LOCKSS
-org.lockss.metadataDbManager.datasource.password={{ secret "postgres_pass" }}
+# Use a REST repository
+org.lockss.repository.v2Repository=rest:lockss:http://{{{{{REPO_HOST}}}}}:{{{{{REPO_PORT}}}}}
 
-org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.jobDbManager.datasource.serverName=<%= env_postgres_host %>
-org.lockss.jobDbManager.datasource.portNumber=<%= env_postgres_port %>
-org.lockss.jobDbManager.datasource.user=LOCKSS
-org.lockss.jobDbManager.datasource.password={{ secret "postgres_pass" }}
+# The lockss jms broker
+org.lockss.jms.broker.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_PORT}}}}}
+
+# Start the UI
+org.lockss.ui.start=yes
+
+# Disable crawler, poller, voter, proxy, ICP, SOAP Web Services, SComm
+org.lockss.crawler.enabled=false
+org.lockss.poll.v3.enableV3Poller=false
+org.lockss.poll.v3.enableV3Voter=false
+org.lockss.proxy.start=false
+org.lockss.proxy.icp.enabled=false
+org.lockss.ws.enabled=false
+org.lockss.scomm.enabled=false
+
+# Enable JMS
+org.lockss.plugin.jms.enable=true
