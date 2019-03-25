@@ -245,6 +245,7 @@ services:
     volumes:
       - lockss-hdfs-data=/hadoop
       - lockss-hdfs-logs=/var/log/hadoop
+
   #
   # SERVICE lockss-pywb
   #
