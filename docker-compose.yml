@@ -176,7 +176,7 @@ services:
       - "${REPO_REST_PORT}:${REPO_REST_PORT}"
     environment:
       - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
-      - "LOCKSS_HDFS_PORT=${HDFS_FSMD}"
+      - "LOCKSS_HDFS_PORT=${HDFS_FS_PORT}"
       - "LOCKSS_SOLR_HOST=${SOLR_HOST}"
       - "LOCKSS_SOLR_PORT=${SOLR_PORT}"
       - "LOCKSS_JMS_HOST=${JMS_HOST}"
@@ -212,6 +212,8 @@ services:
       - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
         # for version 10+
       - POSTGRES_INITDB_WALDIR=/var/log/postgres
+    secrets:
+      - postgres_pass
 
   #
   # SERVICE lockss-solr
