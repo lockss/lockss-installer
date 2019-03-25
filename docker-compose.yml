@@ -55,8 +55,8 @@ services:
     environment:
       - LOCKSS_IS_CONFIG=true
       - "LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${REPO_HOST}:${REPO_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${REPO_HOST}:${REPO_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
     ports:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
@@ -94,8 +94,8 @@ services:
       - lockss-mdq-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
 
@@ -126,8 +126,8 @@ services:
       - lockss-mdx-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
 
@@ -157,8 +157,8 @@ services:
       - lockss-pol-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
-      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_PORT} ${CFG_HOST}:${CFG_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_PORT} ${CFG_HOST}:${CFG_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
 
   #
   # SERVICE lockss-repository-service

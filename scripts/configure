@@ -282,9 +282,14 @@ build_config_file() {
             done
             ask_for_input_shadow "Password for web UI administration (again)" ""
             if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=$(echo "${P1}" | ${SHA256SUM})
+                SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
+                UI_SECRET_FILE=${CONFIG_DIR}/ui.sec
+                touch $UI_SECRET_FILE
+                chmod 600 $UI_SECRET_FILE
+                UI_PASS=${P1}
+                echo -n "${UI_PASS}" > $UI_SECRET_FILE # XXX
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -297,12 +302,14 @@ build_config_file() {
             done
             ask_for_input_shadow "Password for database (again)" ""
             if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=$(echo "${P1}" | ${SHA256SUM})
+                SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-                SECRET_FILE=${CONFIG_DIR}/postgres.sec
+                DB_SECRET_FILE=${CONFIG_DIR}/postgres.sec
+                touch $DB_SECRET_FILE
+                chmod 600 $DB_SECRET_FILE
                 POSTGRES_PASS=${P1}
-                echo -n "${POSTGRES_PASS}" > $SECRET_FILE # XXX
+                echo -n "${POSTGRES_PASS}" > $DB_SECRET_FILE # XXX
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp

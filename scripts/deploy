@@ -80,6 +80,7 @@ Config_Or_Blank()
 set -a
 . "${CONFIG_DIR}/config.info"
 . "${ENV_FILE}"
+CFG_URL="http://${LOCKSS_ADMIN_USER}:$(cat "${CONFIG_DIR}/ui.sec")@${CFG_HOST}:${CFG_REST_PORT}"
 set +a
 
 # Sanity checks
