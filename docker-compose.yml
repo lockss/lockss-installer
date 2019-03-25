@@ -54,7 +54,9 @@ services:
         target: /run/configs/lockss_cluster
     environment:
       - LOCKSS_IS_CONFIG=true
-      - LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}
+      - "LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${REPO_HOST}:${REPO_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
     ports:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
@@ -91,7 +93,9 @@ services:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
     environment:
-      - LOCKSS_CONFIG_URL=${CFG_URL}
+      - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
 
@@ -121,7 +125,9 @@ services:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
     environment:
-      - LOCKSS_CONFIG_URL=${CFG_URL}
+      - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
 
@@ -142,15 +148,17 @@ services:
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - ${POL_REST_PORT}:${POL_REST_PORT}
-      - ${POL_UI_PORT}:${POL_UI_PORT}
+      - "${POL_REST_PORT}:${POL_REST_PORT}"
+      - "${POL_UI_PORT}:${POL_UI_PORT}"
     links:
       - lockss-configuration-service
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
     environment:
-      - LOCKSS_CONFIG_URL=${CFG_URL}
+      - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
 
   #
   # SERVICE lockss-repository-service
@@ -165,17 +173,18 @@ services:
       - source: repo_properties
         target: /run/configs/lockss.properties
     ports:
-      - ${REPO_REST_PORT}:${REPO_REST_PORT}
+      - "${REPO_REST_PORT}:${REPO_REST_PORT}"
     environment:
-      - LOCKSS_HDFS_HOST=${HDFS_HOST}
-      - LOCKSS_HDFS_PORT=${HDFS_FSMD}
-      - LOCKSS_SOLR_HOST=${SOLR_HOST}
-      - LOCKSS_SOLR_PORT=${SOLR_PORT}
-      - LOCKSS_JMS_HOST=${JMS_HOST}
-      - LOCKSS_JMS_PORT=${JMS_PORT}
+      - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
+      - "LOCKSS_HDFS_PORT=${HDFS_FS_PORT}"
+      - "LOCKSS_SOLR_HOST=${SOLR_HOST}"
+      - "LOCKSS_SOLR_PORT=${SOLR_PORT}"
+      - "LOCKSS_JMS_HOST=${JMS_HOST}"
+      - "LOCKSS_JMS_PORT=${JMS_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${HDFS_HOST}:${HDFS_FS_PORT} ${SOLR_HOST}:${SOLR_PORT}"
     links:
-      - lockss-solr
       - lockss-hdfs
+      - lockss-solr
     volumes:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
@@ -203,6 +212,8 @@ services:
       - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
         # for version 10+
       - POSTGRES_INITDB_WALDIR=/var/log/postgres
+    secrets:
+      - postgres_pass
 
   #
   # SERVICE lockss-solr
@@ -232,8 +243,9 @@ services:
     ports:
       - "${HDFS_FS_PORT}:${HDFS_DEFAULT_FS_PORT}"
     volumes:
-      - lockss-hdfs-data=/hadoop
-      - lockss-hdfs-logs=/var/log/hadoop
+      - lockss-hdfs-data:/hadoop
+      - lockss-hdfs-logs:/var/log/hadoop
+
   #
   # SERVICE lockss-pywb
   #
@@ -253,7 +265,7 @@ services:
       - LOCKSS_HDFS_FS_PORT
       - LOCKSS_REPO_BASEDIR
     volumes:
-      - lockss-pywb-data=/webarchive
+      - lockss-pywb-data:/webarchive
     devices:
       - /dev/fuse
     cap_add:
