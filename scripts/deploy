@@ -62,12 +62,13 @@ declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "p
 declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
+# $1=file $2=blankfile
 Config_Or_Blank()
 {
   if [ -f "${DOCKER_CONFIGS_DIR}/${1}" ]; then
     echo "${DOCKER_CONFIGS_DIR}/${1}"
   else
-    echo "${DOCKER_CONFIGS_DIR}/blank_lockss"
+    echo "${DOCKER_CONFIGS_DIR}/${2}"
   fi 
 }
 
@@ -104,7 +105,7 @@ for gconf in "${global_confs[@]}"
 do
   docker config rm ${gconf}
   echo "creating docker config for global conf ${gconf}..."
-  if ! docker config create --template-driver golang ${gconf} $(Config_Or_Blank ${gconf}) ; then
+  if ! docker config create --template-driver golang ${gconf} $(Config_Or_Blank ${gconf} "blank_lockss") ; then
     echo "${_0}: error creating config ${gconf}"
     exit 1
   fi
@@ -116,11 +117,11 @@ for sconf in "${service_confs[@]}"
 do
   echo "creating docker config for conf ${sconf}..."
   docker config rm ${sconf}_service ${sconf}_service_opt
-  if ! docker config create --template-driver golang ${sconf}_service $(Config_Or_Blank ${sconf}_service) ; then
+  if ! docker config create --template-driver golang ${sconf}_service $(Config_Or_Blank ${sconf}_service "blank_lockss") ; then
     echo "${_0}: error creating config ${sconf}_service"
     exit 1
   fi
-  if ! docker config create --template-driver golang ${sconf}_service_opt $(Config_Or_Blank ${sconf}_service_opt) ; then
+  if ! docker config create --template-driver golang ${sconf}_service_opt $(Config_Or_Blank ${sconf}_service_opt "blank_lockss_opt") ; then
     echo "${_0}: error creating config ${sconf}_service_opt"
     exit 1
   fi
