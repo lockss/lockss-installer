@@ -265,7 +265,7 @@ services:
       - LOCKSS_HDFS_FS_PORT
       - LOCKSS_REPO_BASEDIR
     volumes:
-      - lockss-pywb-data=/webarchive
+      - lockss-pywb-data:/webarchive
     devices:
       - /dev/fuse
     cap_add:
