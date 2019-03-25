@@ -243,8 +243,8 @@ services:
     ports:
       - "${HDFS_FS_PORT}:${HDFS_DEFAULT_FS_PORT}"
     volumes:
-      - lockss-hdfs-data=/hadoop
-      - lockss-hdfs-logs=/var/log/hadoop
+      - lockss-hdfs-data:/hadoop
+      - lockss-hdfs-logs:/var/log/hadoop
 
   #
   # SERVICE lockss-pywb
