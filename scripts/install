@@ -143,4 +143,10 @@ do
     exit 1
   fi
 done
-echo "Successfully installed Docker secrets, configs and volumes."
+
+# Create a lockss network
+echo "Creating lockss network"
+docker network remove lockss-network
+docker network create -d overlay --opt encrypted --attachable lockss-network
+
+echo "Successfully installed Docker secrets, configs and volumes and network."

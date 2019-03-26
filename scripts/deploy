@@ -105,4 +105,4 @@ do
   Check_Volume lockss-${svc}-logs
 done
 
-docker stack deploy --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
