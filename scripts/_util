@@ -56,6 +56,34 @@ Check_Docker()
   fi
 }
 
+Check_Secret()
+{
+  if ! docker secret inspect ${1} &> /dev/null ; then
+    echo "${1}: Docker Secret has not been installed."
+    echo "Run configure and install scripts."
+    exit 1
+  fi
+
+}
+
+Check_Volume()
+{
+    if ! docker volume inspect ${1} &> /dev/null ; then
+      echo "${1}: Docker Volume has not been installed."
+      echo "Run configure and install scripts."
+      exit 1
+    fi
+}
+
+Check_Config()
+{
+    if ! docker config inspect ${1} &> /dev/null ; then
+      echo "${1}: Config file is missing. Run configure and install scripts.."
+      echo "Run configure and install scripts."
+      exit 1
+    fi
+}
+
 ##
 ## function Check_Installed
 ##

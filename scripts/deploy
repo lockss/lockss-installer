@@ -62,16 +62,6 @@ declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "p
 declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
-# $1=file $2=blankfile
-Config_Or_Blank()
-{
-  if [ -f "${DOCKER_CONFIGS_DIR}/${1}" ]; then
-    echo "${DOCKER_CONFIGS_DIR}/${1}"
-  else
-    echo "${DOCKER_CONFIGS_DIR}/${2}"
-  fi 
-}
-
 ##
 ## MAIN
 ##
@@ -88,58 +78,31 @@ Check_Installed 'docker'
 Check_Docker
 Check_Stack
 
-if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
-  echo "LOCKSS_DATADIR and LOCKSS_LOGS_DIR are not set; exiting"
-  exit 1
-fi 
+# Check our secret
+echo "checking installed secret..."
+Check_Secret 'postgres_pass'
 
-# Create our secret
-docker secret rm postgres_pass
-echo "creating docker secret for postgres password..."
-if ! docker secret create postgres_pass "${CONFIG_DIR}/postgres.sec" ; then
-  echo "${_0}: error creating secret postgres_pass"
-  exit 1
-fi
-
-# Create the global configs
+# Check the global configs
 for gconf in "${global_confs[@]}"
 do
-  docker config rm ${gconf}
-  echo "creating docker config for global conf ${gconf}..."
-  if ! docker config create --template-driver golang ${gconf} $(Config_Or_Blank ${gconf} "blank_lockss") ; then
-    echo "${_0}: error creating config ${gconf}"
-    exit 1
-  fi
+ echo "checking installed configs for ${gconf}..."
+ Check_Config ${gconf}
 done
 
-# Create the secret for the
-# Create the configs for each lockss service
+# Check the configs for each lockss service
 for sconf in "${service_confs[@]}"
 do
-  echo "creating docker config for conf ${sconf}..."
-  docker config rm ${sconf}_service ${sconf}_service_opt
-  if ! docker config create --template-driver golang ${sconf}_service $(Config_Or_Blank ${sconf}_service "blank_lockss") ; then
-    echo "${_0}: error creating config ${sconf}_service"
-    exit 1
-  fi
-  if ! docker config create --template-driver golang ${sconf}_service_opt $(Config_Or_Blank ${sconf}_service_opt "blank_lockss_opt") ; then
-    echo "${_0}: error creating config ${sconf}_service_opt"
-    exit 1
-  fi
+  echo "checking installed configs for ${sconf}..."
+  Check_Config ${sconf}_service
+  Check_Config ${sconf}_service_opt
 done
 
-# Create a mount points for each service
+# Check the mountpoints
 for svc in "${svcs[@]}"
 do
-  echo "creating docker data and log volumes for ${svc}..."
-  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${svc}-data --name=lockss-${svc}-data ; then
-    echo "${_0}: error creating volume lockss-${svc}-data"
-    exit 1
-  fi
-  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${svc}-logs --name=lockss-${svc}-logs ; then
-    echo "${_0}: error creating volume lockss-${svc}-logs"
-    exit 1
-  fi
+  echo "checking docker mountpoints for ${svc}..."
+  Check_Volume lockss-${svc}-data
+  Check_Volume lockss-${svc}-logs
 done
 
 docker stack deploy --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack

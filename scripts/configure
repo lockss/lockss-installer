@@ -417,5 +417,3 @@ build_config_file ${CONFIG_FILE} ${CONFIG_USER}
 
 #call update-config
 . "${_D0}/update-config"
-
-export ${POSTGRES_PASS}
