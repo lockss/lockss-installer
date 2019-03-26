@@ -70,6 +70,8 @@ services:
     volumes:
       - lockss-cfg-data:/data
       - lockss-cfg-logs:/var/log/lockss
+    secrets:
+      - postgres_pass
 
   #
   # SERVICE lockss-metadata-service
