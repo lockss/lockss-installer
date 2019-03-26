@@ -29,6 +29,13 @@
 
 version: '3.7'
 
+x-lockss-service-common: &lockss-service-common
+  deploy:
+    replicas: 1
+    restart_policy:
+      condition: on-failure
+  stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
+
 #
 # SERVICES
 #
@@ -38,11 +45,8 @@ services:
   # SERVICE lockss-configuration-service
   #
   lockss-configuration-service:
+    <<: *lockss-service-common
     image: ${CFG_IMG}:${CFG_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     configs:
       - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
@@ -71,11 +75,8 @@ services:
   # SERVICE lockss-metadata-service
   #
   lockss-metadata-service:
+    <<: *lockss-service-common
     image: ${MDQ_IMG}:${MDQ_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     configs:
       - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
@@ -103,11 +104,8 @@ services:
   # SERVICE lockss-metadata-extraction-service
   #
   lockss-metadata-extraction-service:
+    <<: *lockss-service-common
     image: ${MDX_IMG}:${MDX_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     configs:
       - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
@@ -135,11 +133,8 @@ services:
   # SERVICE lockss-poller
   #
   lockss-poller:
+    <<: *lockss-service-common
     image: ${POL_IMG}:${POL_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     configs:
       - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
@@ -164,11 +159,8 @@ services:
   # SERVICE lockss-repository-service
   #
   lockss-repository-service:
+    <<: *lockss-service-common
     image: ${REPO_IMG}:${REPO_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     configs:
       - source: repo_properties
         target: /run/configs/lockss.properties
@@ -193,11 +185,8 @@ services:
   # SERVICE lockss-postgres
   #
   lockss-postgres:
+    <<: *lockss-service-common
     image: ${POSTGRES_IMG}:${POSTGRES_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - '${POSTGRES_PORT}:${POSTGRES_DEFAULT_PORT}'
     volumes:
@@ -208,10 +197,10 @@ services:
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_pass
       - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=/data
-        #for version 9
-      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
-        # for version 10+
-      - POSTGRES_INITDB_WALDIR=/var/log/postgres
+#        #for version 9
+#      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
+#        # for version 10+
+#      - POSTGRES_INITDB_WALDIR=/var/log/postgres
     secrets:
       - postgres_pass
 
@@ -219,11 +208,8 @@ services:
   # SERVICE lockss-solr
   #
   lockss-solr:
+    <<: *lockss-service-common
     image: ${SOLR_IMG}:${SOLR_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - "${SOLR_PORT}:${SOLR_DEFAULT_PORT}"
     command: solr-precreate lockss-repo
@@ -235,11 +221,8 @@ services:
   # SERVICE lockss-hdfs
   #
   lockss-hdfs:
+    <<: *lockss-service-common
     image: ${HDFS_IMG}:${HDFS_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - "${HDFS_FS_PORT}:${HDFS_DEFAULT_FS_PORT}"
     volumes:
@@ -250,20 +233,17 @@ services:
   # SERVICE lockss-pywb
   #
   lockss-pywb:
+    <<: *lockss-service-common
     image: ${PYWB_IMG}:${PYWB_VERSION}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
     ports:
       - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
     links:
       - lockss-repository-service
       - lockss-configuration-service
     environment:
-      - LOCKSS_HDFS_HOST
-      - LOCKSS_HDFS_FS_PORT
-      - LOCKSS_REPO_BASEDIR
+      - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
+      - "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}"
+      - "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}"
     volumes:
       - lockss-pywb-data:/webarchive
     devices:
