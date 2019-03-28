@@ -66,9 +66,24 @@ Check_Secret()
 
 }
 
+Add_Secret()
+{
+  local NAME="${1}"
+  local VALUE="${2}"
+
+  docker secret rm ${NAME}
+  echo "creating docker secret ${NAME}..."
+  if [! printf ${VALUE} | docker secret create ${NAME} ] ; then
+    echo "Docker secret creation failed for ${NAME}"
+    return 1
+  else
+    return 0
+  fi
+}
+
 Check_Volume()
 {
-    if ! docker volume inspect ${1} &> /dev/null ; then
+    if [! docker volume inspect ${1} &> /dev/null ] ; then
       echo "${1}: Docker Volume has not been installed."
       echo "Run configure and install scripts."
       exit 1

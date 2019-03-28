@@ -78,9 +78,11 @@ Check_Installed 'docker'
 Check_Docker
 Check_Stack
 
-# Check our secret
+# Check our secrets
 echo "checking installed secret..."
+
 Check_Secret 'postgres_pass'
+Check_Secret 'uipass'
 
 # Check the global configs
 for gconf in "${global_confs[@]}"

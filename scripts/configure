@@ -285,11 +285,12 @@ build_config_file() {
                 SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
-                UI_SECRET_FILE=${CONFIG_DIR}/ui.sec
-                touch $UI_SECRET_FILE
-                chmod 600 $UI_SECRET_FILE
-                UI_PASS=${P1}
-                echo -n "${UI_PASS}" > $UI_SECRET_FILE # XXX
+                 UI_PASS=${P1}
+                Add_Secret "uipass" UI_PASS
+#                UI_SECRET_FILE=${CONFIG_DIR}/ui.sec
+#                touch $UI_SECRET_FILE
+#                chmod 600 $UI_SECRET_FILE
+#                echo -n "${UI_PASS}" > $UI_SECRET_FILE # XXX
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -305,11 +306,13 @@ build_config_file() {
                 SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-                DB_SECRET_FILE=${CONFIG_DIR}/postgres.sec
-                touch $DB_SECRET_FILE
-                chmod 600 $DB_SECRET_FILE
                 POSTGRES_PASS=${P1}
-                echo -n "${POSTGRES_PASS}" > $DB_SECRET_FILE # XXX
+                Add_Secret "postgres_pass" "${POSTGRES_PASS}"
+#                DB_SECRET_FILE=${CONFIG_DIR}/postgres.sec
+#               touch $DB_SECRET_FILE
+#                chmod 600 $DB_SECRET_FILE
+#
+#                echo -n "${POSTGRES_PASS}" > $DB_SECRET_FILE # XXX
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
@@ -384,6 +387,10 @@ EOF
 ###
 CONFIG_USER=$(whoami)
 echo ${CONFIG_USER} is configuring
+Check_Installed 'docker'
+Check_Docker
+Check_Stack
+
 export LOCKSS_TEAM=lockssdiag@lockss.org
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
