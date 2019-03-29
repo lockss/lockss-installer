@@ -34,7 +34,12 @@ x-lockss-service-common: &lockss-service-common
     replicas: 1
     restart_policy:
       condition: on-failure
-      delay: 5s
+      delay: 10s
+      max_attempts: 5
+      window: 120s
+    update_config:
+      parallelism: 2
+      delay: 10s
   stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
   networks:
     - lockss-network
@@ -75,6 +80,7 @@ services:
       - lockss-cfg-logs:/var/log/lockss
     secrets:
       - postgres_pass
+      - ui_pass
 
   #
   # SERVICE lockss-metadata-service
@@ -104,6 +110,7 @@ services:
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
+      - ui_pass
 
   #
   # SERVICE lockss-metadata-extraction-service
@@ -133,6 +140,7 @@ services:
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - postgres_pass
+      - ui_pass
 
   #
   # SERVICE lockss-poller
@@ -159,7 +167,8 @@ services:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
-
+    secrets:
+      - ui_pass
   #
   # SERVICE lockss-repository-service
   #
@@ -319,6 +328,8 @@ volumes:
 
 secrets:
   postgres_pass:
+    external: true
+  ui_pass:
     external: true
 
 networks:

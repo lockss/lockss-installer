@@ -1,0 +1,23 @@
+#
+# SERVICE lockss-pywb
+#
+lockss-pywb:
+  image: ${PYWB_IMG}:${PYWB_VERSION}
+  ports:
+    - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
+  links:
+    - lockss-repository-service
+    - lockss-configuration-service
+  environment:
+    - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
+    - "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}"
+    - "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}"
+  volumes:
+    - lockss-pywb-data:/webarchive
+  devices:
+    - /dev/fuse
+  cap_add:
+    - SYS_ADMIN
+  stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
+  networks:
+    - lockss-network
