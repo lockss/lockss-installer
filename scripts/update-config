@@ -55,8 +55,15 @@ USER_CONF_FILE="${CONFIG_DIR}/config.info"
 
 # Source user-config
 
+echo "$(date) Updating configs..."
+
 mkdir -p "${DOCKER_CONFIGS_DIR}"
 
 for f in ${CONFIG_DIR}/templates/*.mustache ; do
-  pystache "${f}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${ENV_FILE}")" > "${DOCKER_CONFIGS_DIR}/$(basename "${f}" .mustache)"
+  src="${f}"
+  dst="${DOCKER_CONFIGS_DIR}/$(basename "${f}" .mustache)"
+  echo "$(date) Rendering ${src} to ${dst}..."
+  pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${ENV_FILE}")" > "${dst}"
 done
+
+echo "$(date) Done updating configs."
