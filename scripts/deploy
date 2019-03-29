@@ -70,7 +70,9 @@ declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 set -a
 . "${CONFIG_DIR}/config.info"
 . "${ENV_FILE}"
-CFG_URL="http://${LOCKSS_ADMIN_USER}:$(cat "${CONFIG_DIR}/ui.sec")@${CFG_HOST}:${CFG_REST_PORT}"
+UI_PASS="\$(cat \"/run/secrets/ui_pass\")"
+CFG_URL="http://${LOCKSS_ADMIN_USER}:${UI_PASS}@${CFG_HOST}:${CFG_REST_PORT}"
+echo ${CFG_URL}
 set +a
 
 # Sanity checks
@@ -82,7 +84,7 @@ Check_Stack
 echo "checking installed secret..."
 
 Check_Secret 'postgres_pass'
-Check_Secret 'uipass'
+Check_Secret 'ui_pass'
 
 # Check the global configs
 for gconf in "${global_confs[@]}"
@@ -107,4 +109,5 @@ do
   Check_Volume lockss-${svc}-logs
 done
 
-docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+docker stack deploy --prune --resolve-image changed --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+docker container deploy

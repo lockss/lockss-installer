@@ -29,4 +29,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+#Data
+declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+
 docker stack rm lockss-stack
+
+for i in $(docker ps -a | grep "lockss" | cut -f1 -d" "); do docker service rm $i; done
+
+# Check the mountpoints
+for svc in "${svcs[@]}"
+do
+  echo "removing docker mountpoints for ${svc}..."
+  docker volume rm lockss-${svc}-data
+  docker volume rm lockss-${svc}-logs
+done

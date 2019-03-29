@@ -286,11 +286,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
                  UI_PASS=${P1}
-                Add_Secret "uipass" UI_PASS
-#                UI_SECRET_FILE=${CONFIG_DIR}/ui.sec
-#                touch $UI_SECRET_FILE
-#                chmod 600 $UI_SECRET_FILE
-#                echo -n "${UI_PASS}" > $UI_SECRET_FILE # XXX
+                Add_Secret "ui_pass" UI_PASS
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -308,11 +304,6 @@ build_config_file() {
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
                 POSTGRES_PASS=${P1}
                 Add_Secret "postgres_pass" "${POSTGRES_PASS}"
-#                DB_SECRET_FILE=${CONFIG_DIR}/postgres.sec
-#               touch $DB_SECRET_FILE
-#                chmod 600 $DB_SECRET_FILE
-#
-#                echo -n "${POSTGRES_PASS}" > $DB_SECRET_FILE # XXX
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
