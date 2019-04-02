@@ -66,7 +66,7 @@ Check_Stack
 
 docker run --name "lockss-pywb" \
 -p "${PYWB_PORT}:${PYWB_DEFAULT_PORT}" \
---env "LOCKSS_HDFS_HOST=${HDFS_HOST}" \
+--env "LOCKSS_HDFS_HOST=host.docker.internal" \
 --env "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}" \
 --env "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}" \
 --privileged \
