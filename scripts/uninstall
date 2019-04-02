@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+#!/bin/bash
+
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -15,7 +17,7 @@
 #
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
-# specific prior written permission. 
+# specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,6 +30,10 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+##
+## Relative paths
+##
+
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
@@ -43,29 +49,58 @@ _D0=$(dirname "${0}")
 
 # Directories
 COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${_D0}/../config"
 
 # Files
 DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 PYWB_COMPOSE_FILE="${COMPOSE_DIR}/pywb-docker-compose.yml"
-ENV_FILE="${CONFIG_DIR}/env.sh"
 
 
-LOCKSS_STACK_FILTER="docker container ps -a -q -f name=lockss"
+LOCKSS_STACK_FILTER="docker container ls -a --filter \"label=lockss-stack\""
 
 #Data
-
 declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
+declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
-set -a
-. "${CONFIG_DIR}/config.info"
-. "${ENV_FILE}"
-set +a
+##
+## MAIN
+##
 
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
+
+# Make sure we stop any running service by calling remove stack
 docker stack rm lockss-stack
 docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
 docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
+
+# Remove the global configs
+for gconf in "${global_confs[@]}"
+do
+   echo "Removing docker config for global conf ${gconf}..."
+   docker config rm ${gconf} 2> /dev/null
+done
+
+# Remove the configs for each lockss service
+for sconf in "${service_confs[@]}"
+do
+  echo "Removing docker config for conf ${sconf}..."
+  docker config rm ${sconf}_service ${sconf}_service_opt 2> /dev/null
+done
+
+# Remove mount points for each service
+for svc in "${svcs[@]}"
+do
+  echo "Removing docker data and log volumes for ${svc}..."
+  docker volume remove lockss-${svc}-data 2> /dev/null
+  docker volume remove lockss-${svc}-logs 2> /dev/null
+done
+
+# Create a lockss network
+echo "Removing lockss network"
+docker network remove lockss-network 2> /dev/null
+
+
+echo "Successfully removed LOCKSS docker install."

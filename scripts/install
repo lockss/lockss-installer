@@ -125,7 +125,7 @@ done
 for svc in "${svcs[@]}"
 do
   echo "creating docker data and log volumes for ${svc}..."
-  docker volume remove lockss-${svc}-data lockss-${svc}-logs
+#  docker volume remove lockss-${svc}-data lockss-${svc}-logs
   if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${svc}-data --name=lockss-${svc}-data ; then
     echo "${_0}: error creating volume lockss-${svc}-data"
     exit 1
@@ -139,7 +139,7 @@ done
 # Create a lockss network
 echo "Creating lockss network"
 docker network remove lockss-network
-if ! docker network create -d overlay --opt encrypted lockss-network; then
+if ! docker network create -d overlay --opt encrypted --attachable lockss-network; then
   echo "lockss-network: error creating network."
   exit 1
 fi

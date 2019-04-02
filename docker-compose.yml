@@ -41,8 +41,6 @@ x-lockss-service-common: &lockss-service-common
       parallelism: 2
       delay: 10s
   stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
-  networks:
-    - lockss-network
 
 #
 # SERVICES
@@ -81,6 +79,8 @@ services:
     secrets:
       - postgres_pass
       - ui_pass
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-metadata-service
@@ -111,6 +111,8 @@ services:
     secrets:
       - postgres_pass
       - ui_pass
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-metadata-extraction-service
@@ -141,6 +143,8 @@ services:
     secrets:
       - postgres_pass
       - ui_pass
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-poller
@@ -169,6 +173,8 @@ services:
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - ui_pass
+    networks:
+      - lockss-network
   #
   # SERVICE lockss-repository-service
   #
@@ -195,6 +201,8 @@ services:
     volumes:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-postgres
@@ -218,6 +226,8 @@ services:
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
     secrets:
       - postgres_pass
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-solr
@@ -231,6 +241,8 @@ services:
     volumes:
       - lockss-solr-data:/opt/solr/server/solr/mycores
       - lockss-solr-logs:/opt/solr/server/logs
+    networks:
+      - lockss-network
 
   #
   # SERVICE lockss-hdfs
@@ -243,29 +255,10 @@ services:
     volumes:
       - lockss-hdfs-data:/hadoop
       - lockss-hdfs-logs:/var/log/hadoop
-
-  #
-  # SERVICE lockss-pywb
-  #
-  lockss-pywb:
-    <<: *lockss-service-common
-    image: ${PYWB_IMG}:${PYWB_VERSION}
-    ports:
-      - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
-    links:
-      - lockss-repository-service
-      - lockss-configuration-service
-    environment:
-      - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
-      - "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}"
-      - "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}"
-    volumes:
-      - lockss-pywb-data:/webarchive
-    devices:
-      - /dev/fuse
-    cap_add:
-      - SYS_ADMIN
-
+    networks:
+      lockss-network:
+        aliases:
+          - lockss-hdfs
 configs:
   lockss_cluster:
     external: true
@@ -322,8 +315,6 @@ volumes:
   lockss-hdfs-data:
     external: true
   lockss-hdfs-logs:
-    external: true
-  lockss-pywb-data:
     external: true
 
 secrets:

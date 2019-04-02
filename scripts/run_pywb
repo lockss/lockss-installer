@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,10 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+##
+## Relative paths
+##
+
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
@@ -41,24 +45,16 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Directories
-COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
-
-# Files
-DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
-PYWB_COMPOSE_FILE="${COMPOSE_DIR}/pywb-docker-compose.yml"
 ENV_FILE="${CONFIG_DIR}/env.sh"
+CONIG_INFO="${CONFIG_DIR}/config.info"
+##
+## MAIN
+##
 
-
-LOCKSS_STACK_FILTER="docker container ps -a -q -f name=lockss"
-
-#Data
-
-declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
-
+# Source config.info and env.sh
 set -a
-. "${CONFIG_DIR}/config.info"
+. "${CONIG_INFO}"
 . "${ENV_FILE}"
 set +a
 
@@ -66,6 +62,16 @@ set +a
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
-docker stack rm lockss-stack
-docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
-docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
+
+
+docker run --name "lockss-pywb" \
+-p "${PYWB_PORT}:${PYWB_DEFAULT_PORT}" \
+--env "LOCKSS_HDFS_HOST=${HDFS_HOST}" \
+--env "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}" \
+--env "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}" \
+--privileged \
+--device="/dev/fuse" \
+--volume=lockss-pywb-data:/webarchive \
+--network=lockss-network \
+--restart=on-failure:5 \
+${PYWB_IMG}:${PYWB_VERSION}

@@ -53,6 +53,7 @@ TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
 DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+PYWB_COMPOSE_FILE="${COMPOSE_DIR}/pywb-docker-compose.yml"
 ENV_FILE="${CONFIG_DIR}/env.sh"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
@@ -109,5 +110,5 @@ do
   Check_Volume lockss-${svc}-logs
 done
 
-docker stack deploy --prune --resolve-image changed --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
-docker container deploy
+docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
+. run_pywb
