@@ -35,21 +35,10 @@
 org.lockss.repository.v2Repository=rest:lockss:http://{{{{{REPO_HOST}}}}}:{{{{{REPO_REST_PORT}}}}}
 
 # JMS connection
+org.lockss.plugin.jms.enable=true
 #org.lockss.jms.connect.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_DEFAULT_PORT}}}}}
 org.lockss.jms.broker.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_DEFAULT_PORT}}}}}
 
 # UI and service bindings
 org.lockss.ui.start=yes
 org.lockss.app.serviceBindings=cfg={{{{{LOCKSS_IPADDR}}}}}:24621;poller={{{{{LOCKSS_IPADDR}}}}}:24631;crawler={{{{{LOCKSS_IPADDR}}}}}:24631;mdx={{{{{LOCKSS_IPADDR}}}}}:24641;mdq={{{{{LOCKSS_IPADDR}}}}}:24651
-
-# Disable crawler, poller, voter, proxy, ICP, SOAP Web Services, SComm
-org.lockss.crawler.enabled=false
-org.lockss.poll.v3.enableV3Poller=false
-org.lockss.poll.v3.enableV3Voter=false
-org.lockss.proxy.start=false
-org.lockss.proxy.icp.enabled=false
-org.lockss.ws.enabled=false
-org.lockss.scomm.enabled=false
-
-# Enable JMS
-org.lockss.plugin.jms.enable=true
