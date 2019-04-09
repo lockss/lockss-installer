@@ -77,8 +77,8 @@ services:
       - lockss-cfg-data:/data
       - lockss-cfg-logs:/var/log/lockss
     secrets:
-      - postgres_pass
-      - ui_pass
+      - lockss_postgres_pass
+      - lockss_ui_pass
     networks:
       - lockss-network
 
@@ -109,8 +109,8 @@ services:
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - postgres_pass
-      - ui_pass
+      - lockss_postgres_pass
+      - lockss_ui_pass
     networks:
       - lockss-network
 
@@ -141,8 +141,8 @@ services:
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - postgres_pass
-      - ui_pass
+      - lockss_postgres_pass
+      - lockss_ui_pass
     networks:
       - lockss-network
 
@@ -162,6 +162,7 @@ services:
     ports:
       - "${POL_REST_PORT}:${POL_REST_PORT}"
       - "${POL_UI_PORT}:${POL_UI_PORT}"
+      - "${LOCKSS_V3_PORT}:${POL_LCAP_PORT}"
     links:
       - lockss-configuration-service
     volumes:
@@ -172,7 +173,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - ui_pass
+      - lockss_ui_pass
     networks:
       - lockss-network
   #
@@ -217,7 +218,7 @@ services:
       - lockss-postgres-logs:/var/logs/postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_pass
+      - POSTGRES_PASSWORD_FILE=/run/secrets/lockss_postgres_pass
       - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=/data
 #        #for version 9
@@ -225,7 +226,7 @@ services:
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
     secrets:
-      - postgres_pass
+      - lockss_postgres_pass
     networks:
       - lockss-network
 
@@ -318,9 +319,9 @@ volumes:
     external: true
 
 secrets:
-  postgres_pass:
+  lockss_postgres_pass:
     external: true
-  ui_pass:
+  lockss_ui_pass:
     external: true
 
 networks:

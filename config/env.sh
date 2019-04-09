@@ -55,6 +55,7 @@ POL_IMG='lockss/laaws-poller'
 POL_VERSION='1.0.0-SNAPSHOT'
 POL_REST_PORT='24630'
 POL_UI_PORT='24631'
+POL_LCAP_PORT='9729'
 
 # LAAWS repository service configuration
 REPO_IMG='lockss/laaws-repository-service'

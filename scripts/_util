@@ -32,7 +32,7 @@ _0=$(basename "${0}")
 
 
 ##
-## function Check_Docker
+## function Check_SWarm
 ##
 
 Check_Stack()
@@ -55,6 +55,22 @@ Check_Docker()
     exit 1
   fi
 }
+
+##
+## function Check_Docker
+##
+
+Check_LocalPersistPlugin()
+{
+  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
+    echo "${_0}: The local-persist volume plugin is not available. See readme for instructions."
+    exit 1
+  fi
+}
+
+##
+## Check For installed secret
+## 
 
 Check_Secret()
 {
@@ -89,6 +105,7 @@ Check_Volume()
       exit 1
     fi
 }
+
 
 Check_Config()
 {

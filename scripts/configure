@@ -212,7 +212,7 @@ build_config_file() {
             fi
         done
         if [ "X${LOCKSS_PROPS_URL}" = X ]; then
-            LOCKSS_PROPS_URL="http://props.lockss.org:8001/daemon/lockss.xml"
+            LOCKSS_PROPS_URL="http://props.lockss.org:8001/demo/lockss.xml"
         fi
         ask_for_input "Configuration URL" ${LOCKSS_PROPS_URL}
         LOCKSS_PROPS_URL="${ANS}"
@@ -240,7 +240,7 @@ build_config_file() {
         LOCKSS_PROPS_PROXY="${ANS}"
 
         if [ "X${LOCKSS_TEST_GROUP}" = X ]; then
-            LOCKSS_TEST_GROUP="prod"
+            LOCKSS_TEST_GROUP="demo"
         fi
         ask_for_input "Preservation group(s)" "${LOCKSS_TEST_GROUP}"
         LOCKSS_TEST_GROUP="${ANS}"
@@ -286,7 +286,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
                  UI_PASS=${P1}
-                Add_Secret "ui_pass" UI_PASS
+                Add_Secret "lockss_ui_pass" UI_PASS
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -303,7 +303,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
                 POSTGRES_PASS=${P1}
-                Add_Secret "postgres_pass" "${POSTGRES_PASS}"
+                Add_Secret "lockss_postgres_pass" "${POSTGRES_PASS}"
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp

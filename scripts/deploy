@@ -47,7 +47,7 @@ _D0=$(dirname "${0}")
 
 # Directories
 COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${_D0}/../config"
+CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
@@ -80,6 +80,7 @@ set +a
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
+Check_LocalPersistPlugin
 
 # Check our secrets
 echo "checking installed secret..."
@@ -111,4 +112,4 @@ do
 done
 
 docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
-. run_pywb
+. "${_D0}/run_pywb"
