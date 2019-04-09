@@ -83,7 +83,7 @@ Check_LocalPersistPlugin
 echo "checking installed secret..."
 
 Check_Secret 'postgres_pass'
-Check_Secret 'ui_pass'
+Check_Secret 'lockss_ui_pass'
 
 # Check the global configs
 for gconf in "${global_confs[@]}"
