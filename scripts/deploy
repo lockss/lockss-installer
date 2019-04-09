@@ -71,9 +71,6 @@ declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 set -a
 . "${CONFIG_DIR}/config.info"
 . "${ENV_FILE}"
-UI_PASS="\$(cat \"/run/secrets/ui_pass\")"
-CFG_URL="http://${LOCKSS_ADMIN_USER}:${UI_PASS}@${CFG_HOST}:${CFG_REST_PORT}"
-echo ${CFG_URL}
 set +a
 
 # Sanity checks

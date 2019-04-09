@@ -29,6 +29,9 @@
 
 version: '3.7'
 
+#
+# MERGE lockss-service-common
+#
 x-lockss-service-common: &lockss-service-common
   deploy:
     replicas: 1
@@ -106,6 +109,7 @@ services:
       - lockss-mdq-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
@@ -138,6 +142,7 @@ services:
       - lockss-mdx-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
@@ -170,12 +175,14 @@ services:
       - lockss-pol-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
       - lockss_ui_pass
     networks:
       - lockss-network
+
   #
   # SERVICE lockss-repository-service
   #
@@ -260,6 +267,10 @@ services:
       lockss-network:
         aliases:
           - lockss-hdfs
+
+#
+# CONFIGS
+#
 configs:
   lockss_cluster:
     external: true
@@ -284,6 +295,18 @@ configs:
   repo_properties:
     external: true
 
+#
+# SECRETS
+#
+secrets:
+  lockss_postgres_pass:
+    external: true
+  lockss_ui_pass:
+    external: true
+
+#
+# VOLUMES
+#
 volumes:
   lockss-cfg-data:
     external: true
@@ -318,13 +341,9 @@ volumes:
   lockss-hdfs-logs:
     external: true
 
-secrets:
-  lockss_postgres_pass:
-    external: true
-  lockss_ui_pass:
-    external: true
-
+#
+# NETWORKS
+#
 networks:
   lockss-network:
     external: true
-
