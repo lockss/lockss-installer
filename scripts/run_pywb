@@ -63,10 +63,10 @@ Check_Installed 'docker'
 Check_Docker
 Check_Stack
 
-
+DOCKERHOST=$(docker network inspect --format='{{range .IPAM.Config}}{{.Gateway}}{{end}}' lockss-network | awk -F "/" 'NR==1{print $1}')  
 docker run --name "lockss-pywb" \
 -p "${PYWB_PORT}:${PYWB_DEFAULT_PORT}" \
---env "LOCKSS_HDFS_HOST=host.docker.internal" \
+--env "LOCKSS_HDFS_HOST=${DOCKERHOST}" \
 --env "LOCKSS_HDFS_FS_PORT=${HDFS_FS_PORT}" \
 --env "LOCKSS_REPO_BASEDIR=${REPO_BASEDIR}" \
 --privileged \
