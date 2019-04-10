@@ -109,4 +109,3 @@ do
 done
 
 docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} lockss-stack
-. "${_D0}/run_pywb"

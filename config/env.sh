@@ -94,7 +94,7 @@ HDFS_DNUI_PORT='50075'
 
 # PyWb container settings
 PYWB_IMG='lockss/lockss-pywb'
-PYWB_VERSION='2.2.20190311-1'
-PYWB_HOST='lockss-repository-service'
+PYWB_VERSION='2.2.20190311-2'
+PYWB_HOST='lockss-pywb'
 PYWB_PORT='24681'
 PYWB_DEFAULT_PORT='8080'
