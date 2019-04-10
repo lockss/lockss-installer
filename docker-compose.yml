@@ -268,6 +268,24 @@ services:
         aliases:
           - lockss-hdfs
 
+  #
+  # SERVICE lockss-pywb
+  #
+  lockss-pywb:
+    <<: *lockss-service-common
+    image: ${PYWB_IMG}:${PYWB_VERSION}
+    ports:
+      - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
+    volumes:
+      - lockss-pywb-data:/data
+    environment:
+      - "REPO_HOST=${REPO_HOST}"
+      - "REPO_REST_PORT=${REPO_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
+    networks:
+      - lockss-network
+
 #
 # CONFIGS
 #
@@ -339,6 +357,10 @@ volumes:
   lockss-hdfs-data:
     external: true
   lockss-hdfs-logs:
+    external: true
+  lockss-pywb-data:
+    external: true
+  lockss-pywb-logs:
     external: true
 
 #

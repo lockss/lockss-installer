@@ -76,7 +76,7 @@ POSTGRES_DB=postgres
 
 # Solr container configuration
 SOLR_IMG='solr'
-SOLR_VERSION='6.6.0-alpine'
+SOLR_VERSION='6.6.5-alpine'
 SOLR_HOST='lockss-solr'
 SOLR_DEFAULT_PORT='8983'
 SOLR_PORT='24603'
@@ -92,9 +92,9 @@ HDFS_DEFAULT_FS_PORT='9000'
 HDFS_STATUI_PORT='50070'
 HDFS_DNUI_PORT='50075'
 
-# PyWb container settings
+# Pywb container settings
 PYWB_IMG='lockss/lockss-pywb'
-PYWB_VERSION='2.2.20190311-1'
-PYWB_HOST='lockss-repository-service'
+PYWB_VERSION='2.2.20190410-1'
+PYWB_HOST='lockss-pywb'
 PYWB_PORT='24681'
 PYWB_DEFAULT_PORT='8080'
