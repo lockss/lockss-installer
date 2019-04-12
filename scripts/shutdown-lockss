@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
 #
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
-# specific prior written permission. 
+# specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,42 +28,44 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
-##
-## Relative paths
-##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
 
 ##
 ## Definitions
 ##
 
 # Directories
-# Directories
 COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
-DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
-TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
+DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+PYWB_COMPOSE_FILE="${COMPOSE_DIR}/pywb-docker-compose.yml"
 ENV_FILE="${CONFIG_DIR}/env.sh"
-USER_CONF_FILE="${CONFIG_DIR}/config.info"
-##
-## MAIN
-##
 
-# Source user-config
 
-echo "$(date) Updating configs..."
+LOCKSS_STACK_FILTER="docker container ps -a -q -f name=lockss"
 
-mkdir -p "${DOCKER_CONFIGS_DIR}"
+#Data
 
-for f in ${CONFIG_DIR}/templates/*.mustache ; do
-  src="${f}"
-  dst="${DOCKER_CONFIGS_DIR}/$(basename "${f}" .mustache)"
-  echo "$(date) Rendering ${src} to ${dst}..."
-  pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${ENV_FILE}")" > "${dst}"
-done
+declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
 
-echo "$(date) Done updating configs."
+set -a
+. "${CONFIG_DIR}/config.info"
+. "${ENV_FILE}"
+set +a
+
+# Sanity checks
+Check_Installed 'docker'
+Check_Docker
+Check_Stack
+docker stack rm lockss-stack
+docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
+docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
