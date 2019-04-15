@@ -138,7 +138,7 @@ done
 # Create a lockss network
 echo "Creating lockss network"
 docker network remove lockss-network
-if ! docker network create -d overlay --opt encrypted --attachable lockss-network; then
+if ! docker network create -d overlay --opt encrypted lockss-network; then
   echo "lockss-network: error creating network."
   exit 1
 fi

@@ -414,4 +414,5 @@ fi
 build_config_file ${CONFIG_FILE} ${CONFIG_USER}
 
 #call update-config
-. "${_D0}/update-config"
+
+. "${_D0}/generate-lockss"

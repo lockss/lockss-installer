@@ -66,6 +66,6 @@ set +a
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
-docker stack rm lockss-stack
+docker stack rm lockss-stack*
 docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
 docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
