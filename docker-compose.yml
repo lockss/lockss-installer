@@ -74,16 +74,14 @@ services:
       - "${CFG_REST_PORT}:${CFG_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_UI_PORT}"
       - "${JMS_PORT}:${JMS_DEFAULT_PORT}"
-    links:
-      - lockss-repository-service
     volumes:
-      - lockss-cfg-data:/data
-      - lockss-cfg-logs:/var/log/lockss
+      - ${STACK}-cfg-data:/data
+      - ${STACK}-cfg-logs:/var/log/lockss
     secrets:
-      - lockss_postgres_pass
-      - lockss_ui_pass
+      - lockss-postgres-pass
+      - lockss-ui-pass
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-metadata-service
@@ -101,22 +99,19 @@ services:
     ports:
       - "${MDQ_REST_PORT}:${MDQ_REST_PORT}"
       - "${MDQ_UI_PORT}:${MDQ_UI_PORT}"
-    links:
-      - lockss-configuration-service
-      - lockss-postgres
     volumes:
-      - lockss-mdq-data:/data
-      - lockss-mdq-logs:/var/log/lockss
+      - ${STACK}-mdq-data:/data
+      - ${STACK}-mdq-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - lockss_postgres_pass
-      - lockss_ui_pass
+      - lockss-postgres-pass
+      - lockss-ui-pass
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-metadata-extraction-service
@@ -134,22 +129,19 @@ services:
     ports:
       - "${MDX_REST_PORT}:${MDX_REST_PORT}"
       - "${MDX_UI_PORT}:${MDX_UI_PORT}"
-    links:
-      - lockss-configuration-service
-      - lockss-postgres
     volumes:
-      - lockss-mdx-data:/data
-      - lockss-mdx-logs:/var/log/lockss
+      - ${STACK}-mdx-data:/data
+      - ${STACK}-mdx-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - lockss_postgres_pass
-      - lockss_ui_pass
+      - lockss-postgres-pass
+      - lockss-ui-pass
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-poller
@@ -168,20 +160,18 @@ services:
       - "${POL_REST_PORT}:${POL_REST_PORT}"
       - "${POL_UI_PORT}:${POL_UI_PORT}"
       - "${LOCKSS_V3_PORT}:${POL_LCAP_PORT}"
-    links:
-      - lockss-configuration-service
     volumes:
-      - lockss-pol-data:/data
-      - lockss-pol-logs:/var/log/lockss
+      - ${STACK}-pol-data:/data
+      - ${STACK}-pol-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
       - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
     secrets:
-      - lockss_ui_pass
+      - lockss-ui-pass
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-repository-service
@@ -203,14 +193,11 @@ services:
       - "LOCKSS_JMS_HOST=${JMS_HOST}"
       - "LOCKSS_JMS_PORT=${JMS_DEFAULT_PORT}"
       - "LOCKSS_WAIT_FOR_PORT=${HDFS_HOST}:${HDFS_DEFAULT_FS_PORT} ${SOLR_HOST}:${SOLR_DEFAULT_PORT}"
-    links:
-      - lockss-hdfs
-      - lockss-solr
     volumes:
-      - lockss-repo-data:/data
-      - lockss-repo-logs:/var/log/lockss
+      - ${STACK}-repo-data:/data
+      - ${STACK}-repo-logs:/var/log/lockss
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-postgres
@@ -221,11 +208,11 @@ services:
     ports:
       - '${POSTGRES_PORT}:${POSTGRES_DEFAULT_PORT}'
     volumes:
-      - lockss-postgres-data:/data
-      - lockss-postgres-logs:/var/logs/postgres
+      - ${STACK}-postgres-data:/data
+      - ${STACK}-postgres-logs:/var/logs/postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD_FILE=/run/secrets/lockss_postgres_pass
+      - POSTGRES_PASSWORD_FILE=/run/secrets/lockss-postgres-pass
       - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=/data
 #        #for version 9
@@ -233,9 +220,9 @@ services:
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
     secrets:
-      - lockss_postgres_pass
+      - lockss-postgres-pass
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-solr
@@ -247,10 +234,10 @@ services:
       - "${SOLR_PORT}:${SOLR_DEFAULT_PORT}"
     command: solr-precreate lockss-repo
     volumes:
-      - lockss-solr-data:/opt/solr/server/solr/mycores
-      - lockss-solr-logs:/opt/solr/server/logs
+      - ${STACK}-solr-data:/opt/solr/server/solr/mycores
+      - ${STACK}-solr-logs:/opt/solr/server/logs
     networks:
-      - lockss-network
+      - ${STACK}-network
 
   #
   # SERVICE lockss-hdfs
@@ -261,10 +248,10 @@ services:
     ports:
       - "${HDFS_FS_PORT}:${HDFS_DEFAULT_FS_PORT}"
     volumes:
-      - lockss-hdfs-data:/hadoop
-      - lockss-hdfs-logs:/var/log/hadoop
+      - ${STACK}-hdfs-data:/hadoop
+      - ${STACK}-hdfs-logs:/var/log/hadoop
     networks:
-      lockss-network:
+      ${STACK}-network:
         aliases:
           - lockss-hdfs
 
@@ -277,14 +264,14 @@ services:
     ports:
       - "${PYWB_PORT}:${PYWB_DEFAULT_PORT}"
     volumes:
-      - lockss-pywb-data:/data
+      - ${STACK}-pywb-data:/data
     environment:
       - "REPO_HOST=${REPO_HOST}"
       - "REPO_REST_PORT=${REPO_REST_PORT}"
       - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT}"
       - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
     networks:
-      - lockss-network
+      - ${STACK}-network
 
 #
 # CONFIGS
@@ -317,55 +304,55 @@ configs:
 # SECRETS
 #
 secrets:
-  lockss_postgres_pass:
+  lockss-postgres-pass:
     external: true
-  lockss_ui_pass:
+  lockss-ui-pass:
     external: true
 
 #
 # VOLUMES
 #
 volumes:
-  lockss-cfg-data:
+  ${STACK}-cfg-data:
     external: true
-  lockss-cfg-logs:
+  ${STACK}-cfg-logs:
     external: true
-  lockss-mdq-data:
+  ${STACK}-mdq-data:
     external: true
-  lockss-mdq-logs:
+  ${STACK}-mdq-logs:
     external: true
-  lockss-mdx-data:
+  ${STACK}-mdx-data:
     external: true
-  lockss-mdx-logs:
+  ${STACK}-mdx-logs:
     external: true
-  lockss-pol-data:
+  ${STACK}-pol-data:
     external: true
-  lockss-pol-logs:
+  ${STACK}-pol-logs:
     external: true
-  lockss-repo-data:
+  ${STACK}-repo-data:
     external: true
-  lockss-repo-logs:
+  ${STACK}-repo-logs:
     external: true
-  lockss-postgres-data:
+  ${STACK}-postgres-data:
     external: true
-  lockss-postgres-logs:
+  ${STACK}-postgres-logs:
     external: true
-  lockss-solr-data:
+  ${STACK}-solr-data:
     external: true
-  lockss-solr-logs:
+  ${STACK}-solr-logs:
     external: true
-  lockss-hdfs-data:
+  ${STACK}-hdfs-data:
     external: true
-  lockss-hdfs-logs:
+  ${STACK}-hdfs-logs:
     external: true
-  lockss-pywb-data:
+  ${STACK}-pywb-data:
     external: true
-  lockss-pywb-logs:
+  ${STACK}-pywb-logs:
     external: true
 
 #
 # NETWORKS
 #
 networks:
-  lockss-network:
+  ${STACK}-network:
     external: true

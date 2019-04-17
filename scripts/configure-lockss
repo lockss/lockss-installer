@@ -286,7 +286,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
                  UI_PASS=${P1}
-                Add_Secret "lockss_ui_pass" UI_PASS
+                Add_Secret "lockss-ui-pass" UI_PASS
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -303,7 +303,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
                 POSTGRES_PASS=${P1}
-                Add_Secret "lockss_postgres_pass" "${POSTGRES_PASS}"
+                Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
             fi
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
@@ -377,12 +377,9 @@ EOF
 # Start
 ###
 CONFIG_USER=$(whoami)
-echo ${CONFIG_USER} is configuring
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
-
-export LOCKSS_TEAM=lockssdiag@lockss.org
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
 Linux)
@@ -400,19 +397,31 @@ Darwin)
     exit 1
     ;;
 esac
+LOCKSS_TEAM=lockssdiag@lockss.org
 LOCKSS_USER=lockss
 LOCAL_HOSTNAME=$(uname -n)
 CONFIG_FILE=${CONFIG_DIR}/config.info
+declare -i CONFIG_COUNT
+
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
-USER_COUNT=1
 if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
-    read_config ${CONFIG_FILE}
+    read_config ${CONFIG_FILE
 fi
+#get the number of stacks
+ask_for_input "Number of stacks to configure?" ${CONFIG_COUNT}
+while ! is_pos "${ANS}"; do
+    ask_for_input "The number must be positive integer. Number of stacks?" ${CONFIG_COUNT}
+done
+CONFIG_COUNT=${ANS}
+
 #build config file
-build_config_file ${CONFIG_FILE} ${CONFIG_USER}
+echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
+build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
-#call update-config
-
-. "${_D0}/generate-lockss"
+#call generate-lockss
+ask_for_input "Generate files from this configuration?" Y
+if is_yes "${ANS}"; then
+    . "${_D0}/generate-lockss" ${CONFIG_COUNT}
+fi

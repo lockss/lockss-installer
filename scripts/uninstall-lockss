@@ -45,20 +45,30 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Directories
-COMPOSE_DIR="${_D0}/.."
 
-# Files
-DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
-PYWB_COMPOSE_FILE="${COMPOSE_DIR}/pywb-docker-compose.yml"
+# Remove all stacks and stack info for stacks which match the prefix
+remove_matching_stacks()
+{
+  local prefix=$1
 
+  # Make sure we stop any running service by calling remove all stacks
+  echo "Remvoing all lockss stacks..."
+  docker stack ls | grep '$prefix' | awk '{print $1}' | xargs docker stack rm lockss-stack
 
-LOCKSS_STACK_FILTER="docker container ls -a --filter \"label=lockss-stack\""
+  echo "Stopping and remvoing all lockss containers..."
+  docker ps -a | grep '$prefix' | awk '{print $1}' | xargs docker container stop
+  docker ps -a | grep '$prefix' | awk '{print $1}' | xargs docker container rm &> /dev/null
 
-#Data
-declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
-declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
-declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
+  echo "Remvoing all installed lockss config..."
+  docker config ls | grep '$prefix' | awk '{print $1}' | xargs docker config rm &> /dev/null
+  echo "Remvoing all docker mount points for lockss volumes..."
+  docker volume ls | grep '$prefix' | awk '{print $2}' | xargs docker volume remove &> /dev/null
+  echo "Remvoing all docker networks for lockss stacks..."
+  docker network ls | grep '$prefix' | awk '{print $1}' | xargs docker network remove &> /dev/null
+  echo ""
+  echo "Successfully undeployed all stacks and removed all installed stack info."
+  echo "You will need to install and deploy to run again."
+}
 
 ##
 ## MAIN
@@ -69,36 +79,9 @@ Check_Installed 'docker'
 Check_Docker
 Check_Stack
 
-# Make sure we stop any running service by calling remove stack
-docker stack rm lockss-stack
-docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
-docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
-
-# Remove the global configs
-for gconf in "${global_confs[@]}"
-do
-   echo "Removing docker config for global conf ${gconf}..."
-   docker config rm ${gconf} 2> /dev/null
-done
-
-# Remove the configs for each lockss service
-for sconf in "${service_confs[@]}"
-do
-  echo "Removing docker config for conf ${sconf}..."
-  docker config rm ${sconf}_service ${sconf}_service_opt 2> /dev/null
-done
-
-# Remove mount points for each service
-for svc in "${svcs[@]}"
-do
-  echo "Removing docker data and log volumes for ${svc}..."
-  docker volume remove lockss-${svc}-data 2> /dev/null
-  docker volume remove lockss-${svc}-logs 2> /dev/null
-done
-
-# Create a lockss network
-echo "Removing lockss network"
-docker network remove lockss-network 2> /dev/null
-
-
-echo "Successfully removed LOCKSS docker install."
+if [[ $# -eq 0 ]]; then
+  echo "Removing all LOCKSS STACKS..."
+  remove_matching_stacks "lockss"
+else
+  remove_matching_stacks "lockss-stack$1"
+fi

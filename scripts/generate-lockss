@@ -40,30 +40,56 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-# Directories
 COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
+PORT_BASE=245
 
 # Files
-ENV_FILE="${CONFIG_DIR}/env.sh"
+ENV_FILE="${CONFIG_DIR}/env.mustache"
 USER_CONF_FILE="${CONFIG_DIR}/config.info"
+
+# Variables
+declare -i STACK_COUNT
+STACK_PREFIX="lockss-stack"
+
 ##
 ## MAIN
 ##
 
 # Source user-config
+set -a
+. "${CONFIG_DIR}/config.info"
+set +a
 
-echo "$(date) Updating configs..."
+if [ "$#" -ne 1 ]; then
+  echo "Stack count is being set to default of 1."
+  STACK_COUNT=1
+else
+  STACK_COUNT="${1}"
+fi
+echo "$(date) Removing old config files..."
+rm -rf "${DOCKER_CONFIGS_DIR}"
+echo "$(date) Generating config files for $STACK_COUNT stacks..."
+for (( num=1 ; num<=$STACK_COUNT ; num++)); do
+  stack_port_base=$((${PORT_BASE} + $num))
+  stack_name="${STACK_PREFIX}$num"
+  stack_config_dir="${DOCKER_CONFIGS_DIR}/${stack_name}"
+  stack_env_file="${stack_config_dir}/env.sh"
+  stack_lcap_port=$((${LOCKSS_V3_PORT} + $num -1))
 
-mkdir -p "${DOCKER_CONFIGS_DIR}"
+  echo "Stack ${num} named ${stack_name} is using port base of ${stack_port_base}."
+  mkdir -p ${stack_config_dir}
 
-for f in ${CONFIG_DIR}/templates/*.mustache ; do
-  src="${f}"
-  dst="${DOCKER_CONFIGS_DIR}/$(basename "${f}" .mustache)"
-  echo "$(date) Rendering ${src} to ${dst}..."
-  pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${ENV_FILE}")" > "${dst}"
+  pystache "${ENV_FILE}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
+
+  for f in ${CONFIG_DIR}/templates/*.mustache ; do
+    src="${f}"
+    dst="${stack_config_dir}/$(basename "${f}" .mustache)"
+    echo "$(date) Rendering ${src} to ${dst}..."
+    pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}"
+  done
 done
 
 echo "$(date) Done updating configs."

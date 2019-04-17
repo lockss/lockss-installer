@@ -59,17 +59,97 @@ EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
 #Data
 declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
-declare -a arr global_confs=("lockss_cluster" "lockss_bootstrap" "repo_properties")
+declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
+
+STACK_PREFIX="lockss-stack"
 
 # $1=file $2=blankfile
 Config_Or_Blank()
 {
-  if [ -f "${DOCKER_CONFIGS_DIR}/${1}" ]; then
-    echo "${DOCKER_CONFIGS_DIR}/${1}"
+  if [ -f "${1}/${2}" ]; then
+    echo "${1}/${2}"
   else
-    echo "${DOCKER_CONFIGS_DIR}/${2}"
+    echo "${1}/${3}"
   fi
+}
+
+Check_Physical_Volumes() {
+  if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
+    echo "LOCKSS_DATA_DIR and LOCKSS_LOGS_DIR are not set; exiting"
+    exit 1
+  fi
+}
+
+# Create configs for each stack
+add_stack_configs()
+{
+  local stack=$1
+  local stack_path="${DOCKER_CONFIGS_DIR}/$stack"
+
+  # Create the global configs
+  for gconf in "${global_confs[@]}"
+  do
+    docker config rm "$stack-${gconf}" &> /dev/null
+    echo "adding docker config $stack-${gconf}..."
+    if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "$stack-${gconf}" "blank_lockss") ; then
+      echo "${_0}: error creating config $stack-${gconf}"
+      exit 1
+    fi
+  done
+  # Create the configs for each lockss service
+  for sconf in "${service_confs[@]}"
+  do
+    echo "adding docker config ${sconf}..."
+    docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
+    if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path $stack-${sconf}-service "blank_lockss") ; then
+      echo "${_0}: error creating config $stack-${sconf}-service"
+      exit 1
+    fi
+    if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path $stack-${sconf}-service_opt "blank_lockss_opt") ; then
+      echo "${_0}: error creating config $stack-${sconf}-service_opt"
+      exit 1
+    fi
+  done
+}
+
+# Create a mount points for each stack
+add_stack_volumes()
+{
+  local stack=$1
+  for svc in "${svcs[@]}"
+  do
+    echo "creating docker data and log volumes for $stack-${svc}..."
+    docker volume remove $stack-${svc}-data $stack-${svc}-logs &> /dev/null
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data ; then
+      echo "${_0}: error creating volume $stack-${svc}-data"
+      exit 1
+    fi
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs ; then
+      echo "${_0}: error creating volume $stack-${svc}-logs"
+      exit 1
+    fi
+  done
+}
+
+# Create stack network
+add_stack_network() {
+  local stack=$1
+  # Create a lockss network
+  echo "Creating lockss network"
+  docker network remove $stack-network
+  if ! docker network create -d overlay --opt encrypted $stack-network; then
+    echo "$stack-network: error creating network."
+    exit 1
+  fi
+}
+
+assemble_stack() {
+  local stack=${STACK_PREFIX}$1
+  echo "Processing stack $stack"
+  add_stack_configs $stack
+  add_stack_network $stack
+  add_stack_volumes $stack
 }
 
 ##
@@ -87,59 +167,22 @@ Check_Installed 'docker'
 Check_Docker
 Check_Stack
 Check_LocalPersistPlugin
+Check_Physical_Volumes
 
-if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
-  echo "LOCKSS_DATADIR and LOCKSS_LOGS_DIR are not set; exiting"
+STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+NUM_STACKS=${#STACK_DIRS[@]}
+
+if [[ NUM_STACKS -eq 0 ]]; then
+  echo "No configuration files have been generated, run configure and generate first."
   exit 1
-fi
-
-
-# Create the global configs
-for gconf in "${global_confs[@]}"
-do
-  docker config rm ${gconf} &> /dev/null
-  echo "creating docker config for global conf ${gconf}..."
-  if ! docker config create --template-driver golang ${gconf} $(Config_Or_Blank ${gconf} "blank_lockss") ; then
-    echo "${_0}: error creating config ${gconf}"
-    exit 1
-  fi
-done
-
-# Create the configs for each lockss service
-for sconf in "${service_confs[@]}"
-do
-  echo "creating docker config for conf ${sconf}..."
-  docker config rm ${sconf}_service ${sconf}_service_opt &> /dev/null
-  if ! docker config create --template-driver golang ${sconf}_service $(Config_Or_Blank ${sconf}_service "blank_lockss") ; then
-    echo "${_0}: error creating config ${sconf}_service"
-    exit 1
-  fi
-  if ! docker config create --template-driver golang ${sconf}_service_opt $(Config_Or_Blank ${sconf}_service_opt "blank_lockss_opt") ; then
-    echo "${_0}: error creating config ${sconf}_service_opt"
-    exit 1
-  fi
-done
-
-# Create a mount points for each service
-for svc in "${svcs[@]}"
-do
-  echo "creating docker data and log volumes for ${svc}..."
-  docker volume remove lockss-${svc}-data lockss-${svc}-logs &> /dev/null
-  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/lockss-${svc}-data --name=lockss-${svc}-data ; then
-    echo "${_0}: error creating volume lockss-${svc}-data"
-    exit 1
-  fi
-  if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/lockss-${svc}-logs --name=lockss-${svc}-logs ; then
-    echo "${_0}: error creating volume lockss-${svc}-logs"
-    exit 1
-  fi
-done
-
-# Create a lockss network
-echo "Creating lockss network"
-docker network remove lockss-network
-if ! docker network create -d overlay --opt encrypted lockss-network; then
-  echo "lockss-network: error creating network."
+elif [[ $# -eq 0 ]]; then
+  for ((num=1 ; num <= $NUM_STACKS ; num++)); do
+    assemble_stack $num
+  done
+elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}$1" ]]; then
+  assemble_stack $1
+else
+  echo "Unable to find generated stack $1"
   exit 1
 fi
 

@@ -101,7 +101,7 @@ Check_Volume()
 {
     if ! docker volume inspect ${1} &> /dev/null  ; then
       echo "${1}: Docker Volume has not been installed."
-      echo "Run configure and install scripts."
+      echo "Run generate and install scripts."
       exit 1
     fi
 }
@@ -111,7 +111,16 @@ Check_Config()
 {
     if ! docker config inspect ${1} &> /dev/null ; then
       echo "${1}: Config file is missing. Run configure and install scripts.."
-      echo "Run configure and install scripts."
+      echo "Run generate and install scripts."
+      exit 1
+    fi
+}
+
+Check_Network()
+{
+    if ! docker network inspect ${1} &> /dev/null  ; then
+      echo "${1}: Docker network has not been installed."
+      echo "Run generate and install scripts."
       exit 1
     fi
 }
@@ -207,6 +216,12 @@ is_yes() {
     else
         return 1
     fi
+}
+
+is_pos() {
+  pattern='^[0-9]+$'
+  [[ $1 =~ $pattern ]]
+  return $?
 }
 
 parse_ip_address() {

@@ -42,4 +42,4 @@ org.lockss.jms.broker.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_DEFAULT_PORT}}}}}
 # UI and service bindings
 org.lockss.ui.start=yes
 org.lockss.ui.authType=Form
-org.lockss.app.serviceBindings=cfg={{{{{LOCKSS_IPADDR}}}}}:24621;poller={{{{{LOCKSS_IPADDR}}}}}:24631;crawler={{{{{LOCKSS_IPADDR}}}}}:24631;mdx={{{{{LOCKSS_IPADDR}}}}}:24641;mdq={{{{{LOCKSS_IPADDR}}}}}:24651
+org.lockss.app.serviceBindings=cfg={{{{{LOCKSS_IPADDR}}}}}:{{{{{CFG_UI_PORT}}}}};poller={{{{{LOCKSS_IPADDR}}}}}:{{{{{POL_UI_PORT}}}}};crawler={{{{{LOCKSS_IPADDR}}}}}:{{{{{POL_UI_PORT}}}}};mdx={{{{{LOCKSS_IPADDR}}}}}:{{{{{MDX_UI_PORT}}}}};mdq={{{{{LOCKSS_IPADDR}}}}}:{{{{{MDQ_UI_PORT}}}}}
