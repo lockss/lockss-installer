@@ -53,7 +53,7 @@ remove_matching_stacks()
 
   # Make sure we stop any running service by calling remove all stacks
   echo "Remvoing all lockss stacks..."
-  docker stack ls | grep '$prefix' | awk '{print $1}' | xargs docker stack rm lockss-stack
+  docker stack ls | grep '$prefix' | awk '{print $1}' | xargs docker stack remove
 
   echo "Stopping and remvoing all lockss containers..."
   docker ps -a | grep '$prefix' | awk '{print $1}' | xargs docker container stop
