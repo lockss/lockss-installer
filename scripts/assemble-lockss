@@ -163,7 +163,6 @@ assemble_stack() {
 # Source config.info and env.sh
 set -a
 . "${CONFIG_DIR}/config.info"
-. "${ENV_FILE}"
 set +a
 
 # Sanity checks
@@ -177,7 +176,7 @@ STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
 
 if [[ NUM_STACKS -eq 0 ]]; then
-  echo "No configuration files have been generated, run configure and generate first."
+  echo "No configuration files have been generated, run generate-lockss first."
   exit 1
 elif [[ $# -eq 0 ]]; then
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
@@ -189,5 +188,6 @@ else
   echo "Unable to find generated stack $1"
   exit 1
 fi
-
-echo "Successfully installed LOCKSS Configs and Volumes and Networks."
+echo ""
+echo "Successfully installed into docker all configs and volumes and networks."
+echo "Run deploy-lockss to deploy the assembled stack(s)."

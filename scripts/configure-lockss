@@ -411,18 +411,11 @@ if [ -r "${CONFIG_FILE}" ]; then
 fi
 #get the number of stacks
 CONFIG_COUNT=1
-ask_for_input "Number of stacks to configure?" ${CONFIG_COUNT}
-while ! is_pos "${ANS}"; do
-    ask_for_input "The number must be positive integer. Number of stacks?" ${CONFIG_COUNT}
-done
-CONFIG_COUNT=${ANS}
-
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 #call generate-lockss
-ask_for_input "Generate files from this configuration?" Y
-if is_yes "${ANS}"; then
-    . "${_D0}/generate-lockss" ${CONFIG_COUNT}
-fi
+. "${_D0}/generate-lockss"
+echo ""
+echo "Call configure-lockss and assemble-lockss to prepare for deploy-lockss"

@@ -44,32 +44,6 @@ _D0=$(dirname "${0}")
 ##
 ## Definitions
 ##
-
-
-# Remove all stacks and stack info for stacks which match the prefix
-remove_matching_stacks()
-{
-  local prefix=$1
-
-  # Make sure we stop any running service by calling remove all stacks
-  echo "Remvoing all lockss stacks..."
-  docker stack ls | grep '$prefix' | awk '{print $1}' | xargs docker stack rm
-
-  echo "Stopping and remvoing all lockss containers..."
-  docker ps -a | grep '$prefix' | awk '{print $1}' | xargs docker container stop
-  docker ps -a | grep '$prefix' | awk '{print $1}' | xargs docker container rm &> /dev/null
-
-  echo "Remvoing all installed lockss config..."
-  docker config ls | grep '$prefix' | awk '{print $1}' | xargs docker config rm &> /dev/null
-  echo "Remvoing all docker mount points for lockss volumes..."
-  docker volume ls | grep '$prefix' | awk '{print $2}' | xargs docker volume rm &> /dev/null
-  echo "Remvoing all docker networks for lockss stacks..."
-  docker network ls | grep '$prefix' | awk '{print $1}' | xargs docker network rm &> /dev/null
-  echo ""
-  echo "Successfully undeployed all stacks and removed all installed stack info."
-  echo "You will need to rerun install-lockss and deploy-lockss to run again."
-}
-
 ##
 ## MAIN
 ##
@@ -80,8 +54,21 @@ Check_Docker
 Check_Stack
 
 if [[ $# -eq 0 ]]; then
-  echo "Removing all LOCKSS STACKS..."
-  remove_matching_stacks "lockss"
-else
-  remove_matching_stacks "lockss-stack$1"
+  # Make sure we stop any running service by calling remove all stacks
+  echo "Remvoing all lockss stacks..."
+  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
+
+  echo "Stopping and remvoing all lockss containers..."
+  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop
+  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
+
+  echo "Remvoing all installed lockss config..."
+  docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
+  echo "Remvoing all docker mount points for lockss volumes..."
+  docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
+  echo "Remvoing all docker networks for lockss stacks..."
+  docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
+  echo ""
+  echo "Successfully undeployed all stacks and removed all installed stack info."
+  echo "You will need to rerun assemble-lockss and deploy-lockss to run again."
 fi

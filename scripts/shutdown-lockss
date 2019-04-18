@@ -55,9 +55,11 @@ if [[ $# -eq 0 ]]; then
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
   docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
   docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
+  echo "Stopped all containers and removed containers and stacks. Run deploy-lockss to run again."
 else
   echo "Shutting down lockss-stack$1"
   docker stack ls | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker stack rm
   docker ps -a | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker container stop
   docker ps -a | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker container rm
+  echo "Stopped all containers and removed containers for lockss-stack$1. Run deploy-lockss $1 to run again."
 fi
