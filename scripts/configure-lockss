@@ -410,7 +410,11 @@ if [ -r "${CONFIG_FILE}" ]; then
     read_config ${CONFIG_FILE}
 fi
 #get the number of stacks
-CONFIG_COUNT=1
+case "${1}" in
+  '') CONFIG_COUNT=1 ; break ;;
+  [1-9]) CONFIG_COUNT="${1}" ; break ;;
+  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
+esac
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
@@ -418,4 +422,4 @@ build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 #call generate-lockss
 . "${_D0}/generate-lockss"
 echo ""
-echo "Call configure-lockss and assemble-lockss to prepare for deploy-lockss"
+echo "Call assemble-lockss to prepare for deploy-lockss"
