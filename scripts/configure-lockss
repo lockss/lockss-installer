@@ -407,7 +407,7 @@ echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
 if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
-    read_config ${CONFIG_FILE
+    read_config ${CONFIG_FILE}
 fi
 #get the number of stacks
 ask_for_input "Number of stacks to configure?" ${CONFIG_COUNT}
