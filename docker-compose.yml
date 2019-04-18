@@ -251,9 +251,7 @@ services:
       - ${STACK}-hdfs-data:/hadoop
       - ${STACK}-hdfs-logs:/var/log/hadoop
     networks:
-      ${STACK}-network:
-        aliases:
-          - lockss-hdfs
+      - ${STACK}-network
 
   #
   # SERVICE lockss-pywb
