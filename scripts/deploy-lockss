@@ -66,7 +66,7 @@ check_installed_secrets
 {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
-  Check_Secret 'lockss-ui-pass'
+  Check_Secret 'lockss_ui_pass'
 }
 
 # Check the global configs
@@ -126,7 +126,6 @@ deploy_stack()
   set -a
     . "${CONFIG_DIR}/config.info"
     . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-    STACK="${stack}"
   set +a
 
   docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack

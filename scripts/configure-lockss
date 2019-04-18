@@ -286,7 +286,7 @@ build_config_file() {
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
                  UI_PASS=${P1}
-                Add_Secret "lockss-ui-pass" UI_PASS
+                Add_Secret "lockss_ui_pass" UI_PASS
             fi
         done
         LOCKSS_DB_PASSWD=""
@@ -376,10 +376,10 @@ EOF
 ###
 # Start
 ###
-CONFIG_USER=$(whoami)
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
+CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
 Linux)
@@ -410,6 +410,7 @@ if [ -r "${CONFIG_FILE}" ]; then
     read_config ${CONFIG_FILE}
 fi
 #get the number of stacks
+CONFIG_COUNT=1
 ask_for_input "Number of stacks to configure?" ${CONFIG_COUNT}
 while ! is_pos "${ANS}"; do
     ask_for_input "The number must be positive integer. Number of stacks?" ${CONFIG_COUNT}

@@ -41,22 +41,9 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-stop_matching_stacks()
-{
-    local prefix=$1
-    docker stack ls | grep '$prefix' | awk '{print $1}' | xargs docker stack remove
-    docker ps -a | grep lockss | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep lockss | awk '{print $1}' | xargs docker container rm
-}
-
 ##
 ## MAIN
 ##
-
-set -a
-. "${CONFIG_DIR}/config.info"
-. "${ENV_FILE}"
-set +a
 
 # Sanity checks
 Check_Installed 'docker'
@@ -65,8 +52,12 @@ Check_Stack
 
 if [[ $# -eq 0 ]]; then
   echo "Shutting down all LOCKSS stacks..."
-  stop_matching_stacks "lockss"
+  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
+  docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
+  docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
 else
   echo "Shutting down lockss-stack$1"
-  stop_matching_stacks "lockss-stack$1"
+  docker stack ls | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker stack rm
+  docker ps -a | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker container stop
+  docker ps -a | grep 'lockss-stack$1' | awk '{print $1}' | xargs docker container rm
 fi

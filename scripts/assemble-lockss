@@ -53,7 +53,6 @@ TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
 DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
-ENV_FILE="${CONFIG_DIR}/env.sh"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
@@ -92,7 +91,7 @@ add_stack_configs()
   do
     docker config rm "$stack-${gconf}" &> /dev/null
     echo "adding docker config $stack-${gconf}..."
-    if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "$stack-${gconf}" "blank_lockss") ; then
+    if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") ; then
       echo "${_0}: error creating config $stack-${gconf}"
       exit 1
     fi
@@ -102,11 +101,11 @@ add_stack_configs()
   do
     echo "adding docker config ${sconf}..."
     docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
-    if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path $stack-${sconf}-service "blank_lockss") ; then
+    if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path "${sconf}-service" "blank_lockss") ; then
       echo "${_0}: error creating config $stack-${sconf}-service"
       exit 1
     fi
-    if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path $stack-${sconf}-service_opt "blank_lockss_opt") ; then
+    if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path "${sconf}-service_opt" "blank_lockss_opt") ; then
       echo "${_0}: error creating config $stack-${sconf}-service_opt"
       exit 1
     fi
@@ -147,6 +146,11 @@ add_stack_network() {
 assemble_stack() {
   local stack=${STACK_PREFIX}$1
   echo "Processing stack $stack"
+  # Source config.info and env.sh for this stack
+  set -a
+    . "${CONFIG_DIR}/config.info"
+    . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
   add_stack_configs $stack
   add_stack_network $stack
   add_stack_volumes $stack
