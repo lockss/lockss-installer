@@ -159,7 +159,7 @@ services:
     ports:
       - "${POL_REST_PORT}:${POL_REST_PORT}"
       - "${POL_UI_PORT}:${POL_UI_PORT}"
-      - "${LOCKSS_V3_PORT}:${POL_LCAP_PORT}"
+      - "${LOCKSS_LCAP_PORT}:${POL_LCAP_PORT}"
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
