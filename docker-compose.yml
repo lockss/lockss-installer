@@ -68,11 +68,11 @@ services:
     environment:
       - LOCKSS_IS_CONFIG=true
       - "LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${REPO_HOST}:${REPO_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
     ports:
-      - "${CFG_REST_PORT}:${CFG_REST_PORT}"
-      - "${CFG_UI_PORT}:${CFG_UI_PORT}"
+      - "${CFG_REST_PORT}:${CFG_DEFAULT_REST_PORT}"
+      - "${CFG_UI_PORT}:${CFG_DEFAULT_UI_PORT}"
       - "${JMS_PORT}:${JMS_DEFAULT_PORT}"
     volumes:
       - lockss-cfg-data:/data
@@ -97,16 +97,16 @@ services:
       - source: mdq_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "${MDQ_REST_PORT}:${MDQ_REST_PORT}"
-      - "${MDQ_UI_PORT}:${MDQ_UI_PORT}"
+      - "${MDQ_REST_PORT}:${MDQ_DEFAULT_REST_PORT}"
+      - "${MDQ_UI_PORT}:${MDQ_DEFAULT_UI_PORT}"
     volumes:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
@@ -127,16 +127,16 @@ services:
       - source: mdx_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "${MDX_REST_PORT}:${MDX_REST_PORT}"
-      - "${MDX_UI_PORT}:${MDX_UI_PORT}"
+      - "${MDX_REST_PORT}:${MDX_DEFAULT_REST_PORT}"
+      - "${MDX_UI_PORT}:${MDX_DEFAULT_UI_PORT}"
     volumes:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
-      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
@@ -157,17 +157,17 @@ services:
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "${POL_REST_PORT}:${POL_REST_PORT}"
-      - "${POL_UI_PORT}:${POL_UI_PORT}"
-      - "${LOCKSS_LCAP_PORT}:${POL_LCAP_PORT}"
+      - "${POL_REST_PORT}:${POL_DEFAULT_REST_PORT}"
+      - "${POL_UI_PORT}:${POL_DEFAULT_UI_PORT}"
+      - "${LOCKSS_LCAP_PORT}:${POL_DEFAULT_LCAP_PORT}"
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
     environment:
       - "LOCKSS_CONFIG_URL=${CFG_URL}"
       - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
-      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT} ${CFG_HOST}:${CFG_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_DEFAULT_REST_PORT} ${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_DEFAULT_REST_PORT} ${CFG_HOST}:${CFG_DEFAULT_REST_PORT}"
     secrets:
       - lockss_ui_pass
     networks:
@@ -183,7 +183,7 @@ services:
       - source: repo_properties
         target: /run/configs/lockss.properties
     ports:
-      - "${REPO_REST_PORT}:${REPO_REST_PORT}"
+      - "${REPO_REST_PORT}:${REPO_DEFAULT_REST_PORT}"
     environment:
       - LOCKSS_IS_REPO=true
       - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
@@ -265,9 +265,9 @@ services:
       - lockss-pywb-data:/data
     environment:
       - "REPO_HOST=${REPO_HOST}"
-      - "REPO_REST_PORT=${REPO_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_REST_PORT}"
+      - "REPO_REST_PORT=${REPO_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_PORT=${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
+      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
     networks:
       - lockss-network
 
