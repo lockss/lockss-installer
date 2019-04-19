@@ -65,6 +65,8 @@ services:
         target: /run/configs/lockss_service_opt
       - source: lockss_cluster
         target: /run/configs/lockss_cluster
+      - source: lockss_cluster_opt
+        target: /run/configs/lockss_cluster_opt
     environment:
       - LOCKSS_IS_CONFIG=true
       - "LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}"
@@ -275,12 +277,15 @@ services:
 # CONFIGS
 #
 configs:
-  lockss_cluster:
-    external: true
-    name: ${STACK}-lockss-cluster
   lockss_bootstrap:
     external: true
     name: ${STACK}-lockss-bootstrap
+  lockss_cluster:
+    external: true
+    name: ${STACK}-lockss-cluster
+  lockss_cluster_opt:
+    external: true
+    name: ${STACK}-lockss-cluster_opt
   cfg_service:
     external: true
     name: ${STACK}-cfg-service
