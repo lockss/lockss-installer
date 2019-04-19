@@ -78,6 +78,7 @@ check_installed_configs()
   do
   echo "checking installed configs for $stack-${gconf}..."
   Check_Config "$stack-${gconf}"
+  Check_Config "$stack-${gconf}_opt"
   done
 
   # Check the configs for each lockss service
