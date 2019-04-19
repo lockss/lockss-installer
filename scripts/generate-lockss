@@ -44,6 +44,7 @@ COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${_D0}/../config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
 PORT_BASE=245
 
 # Files
@@ -81,14 +82,32 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
 
   echo "Stack ${num} named ${stack_name} is using port base of ${stack_port_base}."
   mkdir -p ${stack_config_dir}
-
+  #generate the env files.
   pystache "${ENV_FILE}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
-
+  #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do
     src="${f}"
     dst="${stack_config_dir}/$(basename "${f}" .mustache)"
     echo "$(date) Rendering ${src} to ${dst}..."
     pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}"
+  done
+  #add the user config file templates
+  for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
+    if [[ -f "${f}" ]]; then
+      src="${f}"
+      dst="${stack_config_dir}/$(basename "${f}" .mustache)"
+      echo "$(date) Rendering ${src} to ${dst}..."
+      pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}" 
+    fi
+  done
+  #add any remaining user opt files
+  for f in ${USEROPTS_DIR}/*_opt ; do
+    if [[ -f "${f}" ]]; then
+      src="${f}"
+      dst="${stack_config_dir}/$(basename "$f")"
+      echo "$(date) Copying ${src} to ${dst}..."
+      cp "${src}" "${dst}"
+    fi
   done
 done
 

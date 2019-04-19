@@ -89,7 +89,7 @@ add_stack_configs()
   # Create the global configs
   for gconf in "${global_confs[@]}"
   do
-    docker config rm "$stack-${gconf}" &> /dev/null
+    docker config rm "$stack-${gconf}" "stack-$gconf_opt"&> /dev/null
     echo "adding docker config $stack-${gconf}..."
     if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") ; then
       echo "${_0}: error creating config $stack-${gconf}"
