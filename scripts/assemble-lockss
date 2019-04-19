@@ -95,6 +95,10 @@ add_stack_configs()
       echo "${_0}: error creating config $stack-${gconf}"
       exit 1
     fi
+    if ! docker config create --template-driver golang $stack-${gconf}_opt $(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") ; then
+      echo "${_0}: error creating config $stack-${gconf}_opt"
+      exit 1
+    fi
   done
   # Create the configs for each lockss service
   for sconf in "${service_confs[@]}"
