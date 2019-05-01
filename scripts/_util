@@ -87,8 +87,11 @@ Add_Secret()
   local NAME="${1}"
   local VALUE="${2}"
 
-  docker secret rm ${1} &> /dev/null
-  echo "creating docker secret ${NAME}..."
+  if docker secret inspect ${1} &> /dev/null; then
+    echo "removing stored password for ${1}"
+    docker secret rm
+  fi
+  echo "Storing docker secret ${NAME}..."
   if ! echo ${VALUE} | docker secret create ${NAME} - ; then
     echo "Docker secret creation failed for ${NAME}"
     return 1

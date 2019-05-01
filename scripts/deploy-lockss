@@ -62,7 +62,7 @@ declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 STACK_PREFIX="lockss-stack"
 
 # Check our secrets
-check_installed_secrets
+check_installed_secrets()
 {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'

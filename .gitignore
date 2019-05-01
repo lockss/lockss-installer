@@ -9,4 +9,4 @@
 /config/*.sec
 /config/configs/*
 /config/useropts/*
-
+/config/useropts/templates/*
