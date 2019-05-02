@@ -76,6 +76,7 @@ services:
       - "${CFG_REST_PORT}:${CFG_DEFAULT_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_DEFAULT_UI_PORT}"
       - "${JMS_PORT}:${JMS_DEFAULT_PORT}"
+      - "${LOCKSS_UI_PORT}:${CFG_DEFAULT_UI_PORT}"
     volumes:
       - lockss-cfg-data:/data
       - lockss-cfg-logs:/var/log/lockss
@@ -162,6 +163,10 @@ services:
       - "${POL_REST_PORT}:${POL_DEFAULT_REST_PORT}"
       - "${POL_UI_PORT}:${POL_DEFAULT_UI_PORT}"
       - "${LOCKSS_LCAP_PORT}:${LOCKSS_LCAP_PORT}"
+      - "${SERV_PORT}:${SERV_DEFAULT_PORT}"
+      - "${LOCKSS_PROXY_PORT}:${LOCKSS_DEFAULT_PROXY_PORT}"
+      - "${LOCKSS_AUDIT_PORT}:${LOCKSS_DEFAULT_AUDIT_PORT}"
+      - "${LOCKSS_ICP_PORT}:${LOCKSS_DEFAULT_ICP_PORT}"
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss

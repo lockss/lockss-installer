@@ -170,7 +170,7 @@ build_config_file() {
             LOCKSS_V3_PORT="${ANS}"
         fi
         if [ "X${LOCKSS_PROXY_PORT}" = X ]; then
-            LOCKSS_PROXY_PORT=8080
+            LOCKSS_PROXY_PORT=24670
         fi
         ask_for_input "PROXY port" ${LOCKSS_PROXY_PORT}
         if [ "X${ANS}" != "X" ]; then
