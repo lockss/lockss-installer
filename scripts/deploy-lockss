@@ -1,5 +1,7 @@
 #!/bin/bash
-
+# ---------------------------------------------------------------------------
+# deploy-lockss - Collect host system information needed to run a LOCKSS stack
+#
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -28,6 +30,15 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
+# Usage: deploy-lockss [-h|--help]
+
+# Revision history:
+# 2019-04-18 version 1
+# ---------------------------------------------------------------------------
+PROGNAME=${0##*/}
+VERSION="1.0"
+
 ##
 ## Relative paths
 ##
@@ -60,6 +71,51 @@ declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_propertie
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
 STACK_PREFIX="lockss-stack"
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Deploy the lockss stacks to docker.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
 
 # Check our secrets
 check_installed_secrets()
@@ -135,6 +191,9 @@ deploy_stack()
 ##
 ## MAIN
 ##
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
 
 # Sanity checks
 Check_Installed 'docker'
@@ -144,20 +203,36 @@ Check_LocalPersistPlugin
 
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
+STACK_NUM=0
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    [1-9])
+       STACK_NUM=$1;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
 
 if [[ NUM_STACKS -eq 0 ]]; then
-  echo "Unable to find generated stack info, run configure, generate and install first."
-  exit 1
-elif [[ $# -eq 0 ]]; then
+  error_exit "Unable to find generated stack info, run configure, generate and install first."
+elif [[ ${STACK_NUM} -eq 0 ]]; then
   echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
     check_stack_installed $num
     deploy_stack $num
   done
-elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}$1" ]]; then
-    check_stack_installed $1
-    deploy_stack $1
+elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
+    check_stack_installed ${STACK_NUM}
+    deploy_stack ${STACK_NUM}
 else
-  echo "Unable to find generated stack info for $1"
-  exit 1
+  error_exit "Unable to find generated stack info for ${STACK_NUM}"
 fi
+
+graceful_exit

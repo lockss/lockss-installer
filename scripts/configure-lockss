@@ -1,11 +1,96 @@
 #!/bin/bash
+# ---------------------------------------------------------------------------
+# configure-lockss - Collect host system information needed to run a LOCKSS stack
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
+# Usage: configure-lockss [-h|--help] <num stacks>
+
+# Revision history:
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
 ##
 ## Relative paths
 ##
 
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help] [<num stacks>]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Collect host system information needed to run a LOCKSS stack.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+  <num stacks> Optional number of stacks to run on this host.
+
+_EOF_
+  return
+}
+
 
 ##
 ## Load _util
@@ -376,16 +461,32 @@ EOF
 ###
 # Start
 ###
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
+
 CONFIG_USER=$(whoami)
+CONFIG_COUNT=1
+LOCKSS_TEAM=lockssdiag@lockss.org
+LOCKSS_USER=lockss
+LOCAL_HOSTNAME=$(uname -n)
+CONFIG_FILE=${CONFIG_DIR}/config.info
+
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
 Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
-    LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
+   if [ "X$(which ifconfig)" == "X" ]; then
+       SUDO="sudo"
+   else
+       SUDO=""
+   fi
+    LOCAL_IPADDR=$($SUDO ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
     ;;
 Darwin)
     LOCKSS_HOME=
@@ -393,15 +494,27 @@ Darwin)
     LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
     ;;
 *)
-    echo "${OS_TYPE} not supported"
-    exit 1
+    error_exit "${OS_TYPE} not supported"
     ;;
 esac
-LOCKSS_TEAM=lockssdiag@lockss.org
-LOCKSS_USER=lockss
-LOCAL_HOSTNAME=$(uname -n)
-CONFIG_FILE=${CONFIG_DIR}/config.info
-declare -i CONFIG_COUNT
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    [1-9])
+      CONFIG_COUNT=$1;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
+
+# Main logic
 
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
@@ -409,17 +522,14 @@ if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
     read_config ${CONFIG_FILE}
 fi
-#get the number of stacks
-case "${1}" in
-  '') CONFIG_COUNT=1 ; break ;;
-  [1-9]) CONFIG_COUNT="${1}" ; break ;;
-  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
-esac
 #build config file
-echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
+echo "Creating config info for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-
+echo ""
 #call generate-lockss
-. "${_D0}/generate-lockss"
+echo "Generating lockss config files for ${CONFIG_COUNT} stacks..."
+${_D0}/generate-lockss ${CONFIG_COUNT}
 echo ""
 echo "Call assemble-lockss to prepare for deploy-lockss"
+
+graceful_exit

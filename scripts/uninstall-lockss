@@ -1,5 +1,7 @@
 #!/bin/bash
-
+# ---------------------------------------------------------------------------
+# uninstall-lockss - Undeploy all stacks and remove all installed stack info..
+#
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -28,6 +30,15 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: uninstall-lockss [-h|--help]
+#
+# Revision history:
+# 2019-04-18 version 1
+# ---------------------------------------------------------------------------
+PROGNAME=${0##*/}
+VERSION="1.0"
+
 ##
 ## Relative paths
 ##
@@ -41,12 +52,71 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
-##
-## Definitions
-##
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Undeploy all stacks and remove all installed stack info.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
 ##
 ## MAIN
 ##
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
 
 # Sanity checks
 Check_Installed 'docker'
@@ -72,3 +142,5 @@ if [[ $# -eq 0 ]]; then
   echo "Successfully undeployed all stacks and removed all installed stack info."
   echo "You will need to rerun assemble-lockss and deploy-lockss to run again."
 fi
+
+graceful_exit

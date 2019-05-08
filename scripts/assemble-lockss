@@ -1,4 +1,6 @@
 #!/bin/bash
+# ---------------------------------------------------------------------------
+# assemble-lockss - Assemble lockss stack by installing generated configs files, volumes and networks..
 
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -28,6 +30,15 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: assemble-lockss [-h|--help]
+#
+# Revision history:
+# 2019-04-18 version 1
+# ---------------------------------------------------------------------------
+PROGNAME=${0##*/}
+VERSION="1.0"
+
 ##
 ## Relative paths
 ##
@@ -62,6 +73,51 @@ declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_propertie
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
 STACK_PREFIX="lockss-stack"
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Assemble lockss stack by installing generated configs files, volumes and networks.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
 
 # $1=file $2=blankfile
 Config_Or_Blank()
@@ -159,10 +215,35 @@ assemble_stack() {
   add_stack_network $stack
   add_stack_volumes $stack
 }
+###
+# Start
+###
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
 
 ##
 ## MAIN
 ##
+STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+NUM_STACKS=${#STACK_DIRS[@]}
+STACK_NUM=0
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    [1-9])
+       STACK_NUM=$1;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
 
 # Source config.info and env.sh
 set -a
@@ -176,22 +257,22 @@ Check_Stack
 Check_LocalPersistPlugin
 Check_Physical_Volumes
 
-STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
-NUM_STACKS=${#STACK_DIRS[@]}
 
 if [[ NUM_STACKS -eq 0 ]]; then
-  echo "No configuration files have been generated, run generate-lockss first."
-  exit 1
-elif [[ $# -eq 0 ]]; then
+  error_exit "No configuration files have been generated, run generate-lockss first."
+elif [[ ${STACK_NUM} -eq 0 ]]; then
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
     assemble_stack $num
   done
-elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}$1" ]]; then
-  assemble_stack $1
+elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
+  assemble_stack ${STACK_NUM}
 else
-  echo "Unable to find generated stack $1"
-  exit 1
+  error_exit "Unable to find generated stack ${STACK_NUM}"
 fi
+
 echo ""
 echo "Successfully installed into docker all configs and volumes and networks."
+echo ""
 echo "Run deploy-lockss to deploy the assembled stack(s)."
+
+graceful_exit
