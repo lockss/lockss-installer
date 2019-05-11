@@ -36,6 +36,10 @@ repo.spec=custom
 repo.index.spec=solr
 repo.index.solr.solrUrl=http://{{{{{SOLR_HOST}}}}}:{{{{{SOLR_DEFAULT_PORT}}}}}/solr/{{{{{SOLR_CORE_REPO}}}}}
 
-repo.datastore.spec=hdfs
-repo.datastore.hdfs.server=hdfs://{{{{{HDFS_HOST}}}}}:{{{{{HDFS_DEFAULT_FS_PORT}}}}}
-repo.datastore.hdfs.basedir={{{{{REPO_BASEDIR}}}}}
+#local disk store
+repo.datastore.spec=local
+repo.datastore.local.basedir={{{{{REPO_LOCAL_BASEDIR}}}}}
+
+#repo.datastore.spec=hdfs
+#repo.datastore.hdfs.server=hdfs://{{{{{HDFS_HOST}}}}}:{{{{{HDFS_DEFAULT_FS_PORT}}}}}
+#repo.datastore.hdfs.basedir={{{{{REPO_HDFS_BASEDIR}}}}}
