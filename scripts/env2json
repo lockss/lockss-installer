@@ -11,7 +11,7 @@ done
 
 echo '{'
 for f in "$@" ; do
-  env -i /bin/sh -c "set -a ; source \"$(realpath "${f}")\" ; set +a ; env | sort"
+  env -i /bin/sh -c "set -a ; . \"$(realpath "${f}")\" ; set +a ; env | sort"
 done | while read line ; do
   echo "  \"${line%%=*}\": \"${line#*=}\","
 done
