@@ -43,3 +43,7 @@ repo.index.solr.solrUrl=http://{{{{{SOLR_HOST}}}}}:{{{{{SOLR_DEFAULT_PORT}}}}}/s
 repo.datastore.spec=hdfs
 repo.datastore.hdfs.server=hdfs://{{{{{HDFS_HOST}}}}}:{{{{{HDFS_DEFAULT_FS_PORT}}}}}
 repo.datastore.hdfs.basedir={{{{{REPO_HDFS_BASEDIR}}}}}
+
+# Not currently default
+spring.http.multipart.max-file-size=-1
+spring.http.multipart.max-request-size=-1
