@@ -44,6 +44,11 @@ x-lockss-service-common: &lockss-service-common
       parallelism: 2
       delay: 10s
   stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: 3
 
 #
 # SERVICES
