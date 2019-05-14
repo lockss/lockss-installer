@@ -128,15 +128,15 @@ if [[ $# -eq 0 ]]; then
   echo "Remvoing all lockss stacks..."
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
 
-  echo "Stopping and remvoing all lockss containers..."
+  echo "Stopping and removing all lockss containers..."
   docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop
   docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
 
-  echo "Remvoing all installed lockss config..."
+  echo "Removing all installed lockss config..."
   docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
-  echo "Remvoing all docker mount points for lockss volumes..."
+  echo "Removing all docker mount points for lockss volumes..."
   docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
-  echo "Remvoing all docker networks for lockss stacks..."
+  echo "Removing all docker networks for lockss stacks..."
   docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
   echo ""
   echo "Successfully undeployed all stacks and removed all installed stack info."
