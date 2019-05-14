@@ -1,122 +1,37 @@
 # LOCKSS Installer
 
-## Introduction
+The `lockss-installer` project provides a collection of scripts to setup and run the [LOCKSS 2.0-alpha](https://lockss.github.io/software/releases/2.0-alpha) system. LOCKSS 2.0-alpha is the first publicly available prototype of the next generation of the [LOCKSS Program](https://www.lockss.org/)'s distributed digital preservation system.
 
-The `lockss-installer` project provides a collection of scripts to setup the alpha environment
-for the LOCKSS (LOCKSS Architected As Web Services) components of the LOCKSS
-software. The alpha environment consists of three main groups of components:
+## Resources
 
-*   Support components. This includes a Hadoop HDFS cluster, a Solr database and
-    a Postgres database. These support components run from Docker containers.
+*   **LOCKSS 2.0-alpha release page: <https://lockss.github.io/software/releases/2.0-alpha>**
+*   **LOCKSS system manual: <https://lockss.github.io/software/manual>**
 
-*   LOCKSS components. This includes the Repository, Configuration, Metadata, Poller
-    Docker instances.
+## Quickstart
 
-*   Auxiliary components. This includes Pywb replayers and a Solr-based text indexer. 
-    These components run from Docker containers.
+Please refer to the [LOCKSS 2.0-alpha release page](https://lockss.github.io/software/releases/2.0-alpha) for system pre-requisites, installation instructions and frequently asked questions. This section presents an abbreviated version of this information.
 
-## Pre-Requisites
+In order to install and test the LOCKSS 2.0-alpha system, you will need:
 
-For all running modes:
+*   64-bit Linux host (physical or virtual) with 4 cores and 8 GB of memory
+*   Docker running in Swarm mode and with the Local-Persist volume plugin
+*   Git to download a small project from GitHub
+*   The Setuptools and Pystache Python modules
 
-*   Docker (Docker has [installation guides](https://docs.docker.com/install/)
-    for various platforms.)
-*   Docker Compose
-*		File System for [persistent storage](https://github.com/CWSpear/local-persist)
-*		opt. Portainer <portainer.io> or similiar docker ui for managing and viewing containers.
+To bring up a LOCKSS 2.0-alpha cluster:
 
-If you have not already done so, clone this Git repository
-(`git clone git@github.com:lockss/lockss-installer`) and run commands from its
-top-level directory.
-
-### Using a Props Server
-
-## Bringing up the LOCKSS Environment
-
-### Docker Mode
-
-If necessary, start Docker (e.g. `sudo systemctl start docker`). Check that
-Docker is running with `docker info`.
-
-*		Determine the file system and location for the lockss cache and mount it into docker.
-
-*   Bring up the LOCKSS Docker Componenets:
-    
-    ```
-    scripts/run-lockss-docker
-    ```
-
-## Default Components and Ports
-
-You can connect to various ports on the host system to interact with components:
-
-| Component                   | Name                               | REST port | Web UI port |
-|-----------------------------|------------------------------------|-----------|-------------|
-| Repository service          | lockss-repository-service          | 24610     | n/a         |
-| Configuration service       | lockss-configuration-service       | 24620     | 24621       |
-| Poller service              | lockss-poller                      | 24630     | 24631       | 
-| Metadata Extraction service | lockss-metadata-extraction-service | 24640     | 24641       |
-| Metadata service            | lockss-metadata-service            | 24650     | 24651       | 
-| OpenWayback Replay          | lockss-openwayback                  | n/a       | 8000        |
-
-For those components that have a REST port, a Swagger UI is also running under
-the path `/swagger-ui.html`, e.g. `http://<host>:24621/swagger-ui.html` for
-the Repository service.
-
-The LAAWS components are running a "classic" LOCKSS Web UI at the indicated
-port, with the example username/password `lockss-u`/`lockss-p`.
-
-The OpenWayback instance can be accessed at `http://<host>:8000/wayback/`. 
-
-### Roles
-
-By default, the Configuration service is configured to crawl remote plugin
-registries on behalf of the cluster, and to act as a JMS broker for the cluster.
-(JMS is a Java component used for inter-process communication.)
-
-Although this could be done with any component, by default the Poller service is
-configured to act as a crawler (except for remote plugin registries), so it is
-the component to which you would add archival units (AUs) to be collected as you
-might with a "classic" standalone LOCKSS daemon.
-
-### Installation 
-
-*   Configure the environment with config-lockss script.
-
-### Logs
-
-In Docker mode, the logs for the LAAWS components are found at
-`logs/${component}/app.log`.
-
-To see the Docker logging for a Docker-bound component, use this command:
-
-```
-scripts/param-docker-compose logs ${component}
-```
-
-Use `... logs --follow ...` to keep tailing the log. Use
-`... logs --no-color ...` if piping the output to a command or redirecting to a
-file.
-
-## Manual Configuration
-
-The configuration files are in the `config/` directory. In most
-directories, a given file `<service>.ext` might be accompanied by `<service>.docker.ext`
-configuration for Docker mode. Furthermore, in many cases if there is a file `lockss.txt`, you can modify the properties in the file `lockss.opt`, that is ignored by Git. In other words, you should not edit the `.txt` files, and instead consider them as a baseline to  customized in `.opt` files.
-
-The `config/conf/` directory contains top-level parameterization for the
-entire environment.
-
-The `config/cluster/` directory contains configuration for the LOCKSS
-cluster.
-
-The `config/plugins/` and `config/tdbxml/` directories are used when a local
-props server is in use (as opposed to the demo props server). 
-
-Each component also has a `config/` subdirectory where configuration information
-is found.
-
-## Support
+*   `git clone https://github.com/lockss/lockss-installer`
+*   `cd lockss-installer`
+*   `scripts/configure-lockss`
+*   `scripts/generate-lockss`
+*   `scripts/assemble-lockss`
+*   `scripts/deploy-lockss`
+*   Use the system (try `http://<your IP address>:24600`)
+*   `scripts/shutdown-lockss`
 
 Please contact LOCKSS Support by writing to `lockss-support (at) lockss (dot) org`
 for questions and help.
+
+## Git Branches
+
+The `master` branch contains stable releases; the `develop` branch is where day to day development work happens.
