@@ -1,0 +1,278 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# assemble-lockss - Assemble lockss stack by installing generated configs files, volumes and networks..
+
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: assemble-lockss [-h|--help]
+#
+# Revision history:
+# 2019-04-18 version 1
+# ---------------------------------------------------------------------------
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+##
+## Definitions
+##
+
+# Directories
+COMPOSE_DIR="${_D0}/.."
+CONFIG_DIR="${_D0}/../config"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
+
+# Files
+DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
+EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
+
+#Data
+declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
+declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
+
+STACK_PREFIX="lockss-stack"
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Assemble lockss stack by installing generated configs files, volumes and networks.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
+
+# $1=file $2=blankfile
+Config_Or_Blank()
+{
+  if [ -f "${1}/${2}" ]; then
+    echo "${1}/${2}"
+  else
+    echo "${1}/${3}"
+  fi
+}
+
+Check_Physical_Volumes() {
+  if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
+    echo "LOCKSS_DATA_DIR and LOCKSS_LOGS_DIR are not set; exiting"
+    exit 1
+  fi
+}
+
+# Create configs for each stack
+add_stack_configs()
+{
+  local stack=$1
+  local stack_path="${DOCKER_CONFIGS_DIR}/$stack"
+
+  # Create the global configs
+  for gconf in "${global_confs[@]}"
+  do
+    docker config rm $stack-${gconf} $stack-${gconf}_opt &> /dev/null
+    echo "adding docker config $stack-${gconf}..."
+    if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") ; then
+      echo "${_0}: error creating config $stack-${gconf}"
+      exit 1
+    fi
+    if ! docker config create --template-driver golang $stack-${gconf}_opt $(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") ; then
+      echo "${_0}: error creating config $stack-${gconf}_opt"
+      exit 1
+    fi
+  done
+  # Create the configs for each lockss service
+  for sconf in "${service_confs[@]}"
+  do
+    echo "adding docker config ${sconf}..."
+    docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
+    if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path "${sconf}-service" "blank_lockss") ; then
+      echo "${_0}: error creating config $stack-${sconf}-service"
+      exit 1
+    fi
+    if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path "${sconf}-service_opt" "blank_lockss_opt") ; then
+      echo "${_0}: error creating config $stack-${sconf}-service_opt"
+      exit 1
+    fi
+  done
+}
+
+# Create a mount points for each stack
+add_stack_volumes()
+{
+  local stack=$1
+  for svc in "${svcs[@]}"
+  do
+    echo "creating docker data and log volumes for $stack-${svc}..."
+    docker volume remove $stack-${svc}-data $stack-${svc}-logs &> /dev/null
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data ; then
+      echo "${_0}: error creating volume $stack-${svc}-data"
+      exit 1
+    fi
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs ; then
+      echo "${_0}: error creating volume $stack-${svc}-logs"
+      exit 1
+    fi
+  done
+}
+
+# Create stack network
+add_stack_network() {
+  local stack=$1
+  # Create a lockss network
+  echo "Creating lockss network"
+  docker network remove $stack-network
+  if ! docker network create -d overlay --opt encrypted $stack-network; then
+    echo "$stack-network: error creating network."
+    exit 1
+  fi
+}
+
+assemble_stack() {
+  local stack=${STACK_PREFIX}$1
+  echo "Processing stack $stack"
+  # Source config.info and env.sh for this stack
+  set -a
+    . "${CONFIG_DIR}/config.info"
+    . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
+  add_stack_configs $stack
+  add_stack_network $stack
+  add_stack_volumes $stack
+}
+###
+# Start
+###
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
+##
+## MAIN
+##
+STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+NUM_STACKS=${#STACK_DIRS[@]}
+STACK_NUM=0
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    [1-9])
+       STACK_NUM=$1;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
+
+# Source config.info and env.sh
+set -a
+. "${CONFIG_DIR}/config.info"
+set +a
+
+# Sanity checks
+Check_Installed 'docker'
+Check_Docker
+Check_Stack
+Check_LocalPersistPlugin
+Check_Physical_Volumes
+
+
+if [[ NUM_STACKS -eq 0 ]]; then
+  error_exit "No configuration files have been generated, run generate-lockss first."
+elif [[ ${STACK_NUM} -eq 0 ]]; then
+  for ((num=1 ; num <= $NUM_STACKS ; num++)); do
+    assemble_stack $num
+  done
+elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
+  assemble_stack ${STACK_NUM}
+else
+  error_exit "Unable to find generated stack ${STACK_NUM}"
+fi
+
+echo ""
+echo "Successfully installed into docker all configs and volumes and networks."
+echo ""
+echo "Run deploy-lockss to deploy the assembled stack(s)."
+
+graceful_exit

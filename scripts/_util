@@ -1,0 +1,296 @@
+#!/bin/bash
+
+# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+_0=$(basename "${0}")
+
+
+##
+## function Check_SWarm
+##
+
+Check_Stack()
+{
+  if ! docker stack ls &> /dev/null ; then
+    echo "${_0}: Docker Swarm is not inited"
+    exit 1
+  fi
+}
+
+
+##
+## function Check_Docker
+##
+
+Check_Docker()
+{
+  if ! docker info &> /dev/null ; then
+    echo "${_0}: Docker is not running"
+    exit 1
+  fi
+}
+
+##
+## function Check_Docker
+##
+
+Check_LocalPersistPlugin()
+{
+  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
+    echo "${_0}: The local-persist volume plugin is not available. See readme for instructions."
+    exit 1
+  fi
+}
+
+##
+## Check For installed secret
+## 
+
+Check_Secret()
+{
+  if ! docker secret inspect ${1} &> /dev/null ; then
+    echo "${1}: Docker Secret has not been installed."
+    echo "Run configure and install scripts."
+    exit 1
+  fi
+
+}
+
+Add_Secret()
+{
+  local NAME="${1}"
+  local VALUE="${2}"
+
+  if docker secret inspect ${NAME} &> /dev/null; then
+    echo "removing stored password for ${NAME}"
+    docker secret rm ${NAME}
+  fi
+  echo "Storing ${NAME} as a docker secret .."
+  if ! echo ${VALUE} | docker secret create ${NAME} - ; then
+    echo "Docker secret creation failed for ${NAME}"
+    return 1
+  else
+    return 0
+  fi
+}
+
+Check_Volume()
+{
+    if ! docker volume inspect ${1} &> /dev/null  ; then
+      echo "${1}: Docker Volume has not been installed."
+      echo "Run generate and install scripts."
+      exit 1
+    fi
+}
+
+
+Check_Config()
+{
+    if ! docker config inspect ${1} &> /dev/null ; then
+      echo "${1}: Config file is missing. Run configure and install scripts.."
+      echo "Run generate and install scripts."
+      exit 1
+    fi
+}
+
+Check_Network()
+{
+    if ! docker network inspect ${1} &> /dev/null  ; then
+      echo "${1}: Docker network has not been installed."
+      echo "Run generate and install scripts."
+      exit 1
+    fi
+}
+
+##
+## function Check_Installed
+##
+
+Check_Installed()
+{
+  while [ "X${1}" != "X" ]; do
+    if ! which "${1}" &> /dev/null ; then
+      echo "${_0}: ${1} not on the PATH (${PATH})"
+      exit 1
+    fi
+    shift
+  done
+}
+
+##
+## function Get_Value
+##
+
+Get_Value()
+{
+  local PAIR="${1}"
+  echo "${PAIR}" | sed -e 's@^[^=]\+=@@'
+}
+
+##
+## function Wait_For_200
+##
+
+Wait_For_200()
+{
+  local HOST="${1}"
+  local PORT="${2}"
+  local SLEEP="${3}"
+  if [ "X${SLEEP}" = "X" ]; then
+    SLEEP='30'
+  fi
+  local URL="http://${HOST}:${PORT}/status"
+  while true ; do
+    echo "Waiting for ${URL} ... " && curl --silent --fail --output /dev/null "${URL}" && echo "succeeded" && break
+    echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
+  done
+}
+
+##
+## function Wait_For_Port
+##
+
+Wait_For_Port()
+{
+  local HOST="${1}"
+  local PORT="${2}"
+  local SLEEP="${3}"
+  if [ "X${SLEEP}" = "X" ]; then
+    SLEEP='30'
+  fi
+  while true ; do
+    echo "Waiting for ${HOST}:${PORT} ... " && nc -z "${HOST}" "${PORT}" && echo "succeeded" && break
+    echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
+  done
+}
+
+ask_for_input() {
+    echo "$1: [$2] "
+    read ANS
+    if [ "X${ANS}" = "X" ]
+    then
+        ANS=$2
+    fi
+}
+
+ask_for_input_shadow() {
+    echo "$1: [$2] "
+    local STTY_ORIG=`stty -g`
+    stty -echo
+    read ANS
+    stty "$STTY_ORIG"
+    echo
+    if [ "X${ANS}" = "X" ]
+    then
+        ANS=$2
+    fi
+}
+
+is_yes() {
+    local WORD="$1"
+    if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_pos() {
+  pattern='^[0-9]+$'
+  [[ $1 =~ $pattern ]]
+  return $?
+}
+
+parse_ip_address() {
+    local INP=$1
+    local OLD_IFS="${IFS}"
+    IFS="."
+    local COUNT=0
+    local GOODCOUNT=0
+    local IPADDR=0
+    for A in ${INP}; do
+      if  ( expr ${A} + 1 >/dev/null 2>&1 ); then
+          if [ ${A} -ge 0 -a ${A} -lt 256 ]; then
+              GOODCOUNT=`expr ${GOODCOUNT} + 1`
+              IPADDR=`expr ${IPADDR} \* 256 + ${A}`
+          fi
+      fi
+      COUNT=`expr ${COUNT} + 1`
+    done
+    IFS="${OLD_IFS}"
+    if [ ${COUNT} != 4 -o ${GOODCOUNT} != 4 ]; then
+        echo 0
+    else
+        echo ${IPADDR}
+    fi
+}
+
+valid_ip_address() {
+    local IPADDR=`parse_ip_address "$1"`
+    if [ ${IPADDR} -eq 0 ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+valid_subnet() {
+    local INP=$1
+    if ! echo ${INP} | grep -s '/' >/dev/null; then
+        oct='[0-9]{1,3}'
+        if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
+            return 0
+        fi
+        return 1
+    fi
+    local NET=`echo ${INP} | sed 's/\/.*//'`
+    local MASK=`echo ${INP} | sed 's/.*\///'`
+    local NETADDR=`parse_ip_address "${NET}"`
+    if [ ${NETADDR} -eq 0 ]; then
+        return 1
+    fi
+    if echo ${MASK} | grep -s '\.' >/dev/null; then
+        local MASKADDR=`parse_ip_address "${MASK}"`
+        if [ ${MASKADDR} -eq 0 ]; then
+            return 1
+        fi
+        # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
+        return 0;
+    else
+        if ! expr ${MASK} + 1 >/dev/null 2>&1; then
+            return 1
+        fi
+        if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
+            return 1
+        fi
+        # should check legal cidr
+        return 0;
+    fi
+}
+
