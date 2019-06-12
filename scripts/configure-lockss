@@ -1,96 +1,48 @@
 #!/bin/bash
-# ---------------------------------------------------------------------------
-# configure-lockss - Collect host system information needed to run a LOCKSS stack
-#
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+#---------------------------------------------------------------------------
+# configure-lockss - Collect host system information needed to run LOCKSS stack(s).
+
+# Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
 # 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
 #
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-
-# Usage: configure-lockss [-h|--help] <num stacks>
-
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: configure-lockss [-h|--help] [-s|--stacks]
+#
 # Revision history:
 # ---------------------------------------------------------------------------
 
 PROGNAME=${0##*/}
 VERSION="1.0"
+
 ##
 ## Relative paths
 ##
-
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
-
-clean_up() { # Perform pre-exit housekeeping
-	return
-}
-
-error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
-}
-
-graceful_exit() {
-	clean_up
-	exit
-}
-
-signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
-}
-
-usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [<num stacks>]"
-}
-
-help_message() {
-  cat <<- _EOF_
-  $PROGNAME ver. $VERSION
-  Collect host system information needed to run a LOCKSS stack.
-
-  $(usage)
-
-  Options:
-  -h, --help  Display this help message and exit.
-  <num stacks> Optional number of stacks to run on this host.
-
-_EOF_
-  return
-}
-
 
 ##
 ## Load _util
@@ -103,7 +55,14 @@ _EOF_
 ##
 
 # Directories
-CONFIG_DIR="${_D0}/../config"
+COMPOSE_DIR=$(normalize_path "${_D0}/..")
+CONFIG_DIR="${COMPOSE_DIR}/config"
+
+# Files
+SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
+SERVICES_FILE="${CONFIG_DIR}/services.json"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+
 
 #
 # Query user and write local LOCKSS config values to /etc/lockss/config.info
@@ -122,83 +81,8 @@ read_config() {
     IFS="${OLD_IFS}"
 }
 
-# check_writable dir user
-check_writable() {
-    local DIR="$1"
-    true &
-    local PROBE_FILE=${DIR}/probe_$!
-    case $(uname -s) in
-    Linux)
-        if [ "X${CONFIG_USER}" != "X${2}" ]; then
-            SUDO="sudo -u ${2}"
-        else
-            SUDO=""
-        fi
-        if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
-            rm -f ${PROBE_FILE}
-            return 0
-        fi
-        ;;
-    Darwin)
-        if [ "X${CONFIG_USER}" != "X${2}" ]; then
-            SUDO="sudo -u ${2}"
-        else
-            SUDO=""
-        fi
-        if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
-            rm -f ${PROBE_FILE}
-            return 0
-        fi
-        ;;
-    esac
-    return 1
-}
 
-# init_one_dir(dir, user)
-init_one_dir() {
-    local DIR="$1"
-    if [ ! -d "${DIR}" ]; then
-        ask_for_input "${DIR} does not exist; shall I create it" Y
-        if is_yes "${ANS}"; then
-            mkdir -p "${DIR}"
-            if [ "X${CONFIG_USER}" != "X${2}" ]; then
-                chown ${2} "${DIR}"
-            fi
-            chmod 750 "${DIR}"
-            if check_writable "${DIR}" ${2}; then
-                return 0
-            else
-                echo "${DIR} not writable by user ${2}"
-                echo " Please make it so (check parent dir execute bits)"
-                echo " LOCKSS will not run properly without it."
-            fi
-        else
-            echo "Please create ${DIR} and make it writable by user ${2};"
-            echo " LOCKSS will not run properly without it."
-        fi
-        return 0
-    fi
-    if check_writable "${DIR}" $2; then
-        echo "${DIR} exists and is writable by ${2}"
-    else
-        ask_for_input "${DIR} is not writable; shall I chown it" Y
-        if is_yes "${ANS}"; then
-            chown ${2} "${DIR}"
-            if check_writable "${DIR}" $2; then
-                return 0
-            else
-                echo "${DIR} still not writable by user ${2}"
-                echo " Please make it so (check parent dir execute bits)"
-                echo " LOCKSS will not run properly without it."
-            fi
-        else
-            echo "Please ensure that ${DIR} is writable by user ${2};"
-            echo " LOCKSS will not run properly without it."
-        fi
-    fi
-}
-
-# build_config_file(file, user)
+# build_config_file file user
 build_config_file() {
     echo "Writing config file ${1} for user ${2}"
     CONFIG_OK=N
@@ -394,29 +278,43 @@ build_config_file() {
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
         export LOCKSS_CONFIG_VERSION=2
         cat >${TMP_CONFIG} <<EOF
-LOCKSS_CONFIG_VERSION=${LOCKSS_CONFIG_VERSION}
+LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${2}"
-LOCKSS_HOSTNAME=${LOCKSS_HOSTNAME}
-LOCKSS_IPADDR=${LOCKSS_IPADDR}
-LOCKSS_EXTERNAL_IPADDR=${LOCKSS_EXTERNAL_IPADDR}
-LOCKSS_V3_PORT=${LOCKSS_V3_PORT}
+LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
+LOCKSS_IPADDR="${LOCKSS_IPADDR}"
+LOCKSS_EXTERNAL_IPADDR="${LOCKSS_EXTERNAL_IPADDR}"
+LOCKSS_V3_PORT="${LOCKSS_V3_PORT}"
 LOCKSS_ACCESS_SUBNET="${LOCKSS_ACCESS_SUBNET}"
-LOCKSS_MAILHUB=${LOCKSS_MAILHUB}
-LOCKSS_MAILHUB_USER=${LOCKSS_MAILHUB_USER}
-LOCKSS_MAILHUB_PASSWORD=${LOCKSS_MAILHUB_PASSWORD}
-LOCKSS_EMAIL=${LOCKSS_EMAIL}
+LOCKSS_MAILHUB="${LOCKSS_MAILHUB}"
+LOCKSS_MAILHUB_USER="${LOCKSS_MAILHUB_USER}"
+LOCKSS_MAILHUB_PASSWORD="${LOCKSS_MAILHUB_PASSWORD}"
+LOCKSS_EMAIL="${LOCKSS_EMAIL}"
 LOCKSS_PROPS_URL="${LOCKSS_PROPS_URL}"
 LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
 LOCKSS_TEST_GROUP="${LOCKSS_TEST_GROUP}"
 LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
 LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
-LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}
-LOCKSS_ADMIN_PASSWD=${LOCKSS_ADMIN_PASSWD}
-LOCKSS_DB_PASSWD=${LOCKSS_DB_PASSWD}
-LOCKSS_PROXY_PORT=${LOCKSS_PROXY_PORT}
-LOCKSS_TMPDIR=${LOCKSS_TMPDIR}
-LOCKSS_CLEAR_TMPDIR=${LOCKSS_CLEAR_TMPDIR:-yes}
+LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
+LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
+LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
+LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
+LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
+LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
+EOF
+
+cat <<EOF > ${SERVICES_FILE}
+{
+  "USE_LOCKSS_CFG": ${USE_LOCKSS_CFG:-true},
+  "USE_LOCKSS_MDQ": ${USE_LOCKSS_MDQ:-true},
+  "USE_LOCKSS_MDX": ${USE_LOCKSS_MDX:-true},
+  "USE_LOCKSS_POL": ${USE_LOCKSS_POL:-true},
+  "USE_LOCKSS_REPO": ${USE_LOCKSS_REPO:-true},
+  "USE_LOCKSS_POSTGRES": ${USE_LOCKSS_POSTGRES:-true},
+  "USE_LOCKSS_SOLR": ${USE_LOCKSS_SOLR:-true},
+  "USE_LOCKSS_HDFS": ${USE_LOCKSS_HDFS:-false},
+  "USE_LOCKSS_PYWB": ${USE_LOCKSS_PYWB:-true}
+}
 EOF
         echo
         echo "Configuration:"
@@ -461,32 +359,17 @@ EOF
 ###
 # Start
 ###
-# Trap signals
-trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
-
 Check_Installed 'docker'
 Check_Docker
 Check_Stack
 
 CONFIG_USER=$(whoami)
-CONFIG_COUNT=1
-LOCKSS_TEAM=lockssdiag@lockss.org
-LOCKSS_USER=lockss
-LOCAL_HOSTNAME=$(uname -n)
-CONFIG_FILE=${CONFIG_DIR}/config.info
-
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
 Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
-   if [ "X$(which ifconfig)" == "X" ]; then
-       SUDO="sudo"
-   else
-       SUDO=""
-   fi
-    LOCAL_IPADDR=$($SUDO ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
+    LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
     ;;
 Darwin)
     LOCKSS_HOME=
@@ -494,27 +377,15 @@ Darwin)
     LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
     ;;
 *)
-    error_exit "${OS_TYPE} not supported"
+    echo "${OS_TYPE} not supported"
+    exit 1
     ;;
 esac
-
-# Parse command-line
-while [[ -n $1 ]]; do
-  case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-      CONFIG_COUNT=$1;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
-  esac
-  shift
-done
-
-# Main logic
+LOCKSS_TEAM=lockssdiag@lockss.org
+LOCKSS_USER=lockss
+LOCAL_HOSTNAME=$(uname -n)
+CONFIG_FILE=${CONFIG_DIR}/config.info
+declare -i CONFIG_COUNT
 
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
@@ -522,14 +393,18 @@ if [ -r "${CONFIG_FILE}" ]; then
     echo "Setting defaults from existing config: ${CONFIG_FILE}"
     read_config ${CONFIG_FILE}
 fi
+#get the number of stacks
+case "${1}" in
+  '') CONFIG_COUNT=1 ; break ;;
+  [1-9]) CONFIG_COUNT="${1}" ; break ;;
+  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
+esac
 #build config file
-echo "Creating config info for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
+echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-echo ""
+#check local-persist-plugin is installed and running
+
 #call generate-lockss
-echo "Generating lockss config files for ${CONFIG_COUNT} stacks..."
-${_D0}/generate-lockss ${CONFIG_COUNT}
+. "${_D0}/generate-lockss"
 echo ""
 echo "Call assemble-lockss to prepare for deploy-lockss"
-
-graceful_exit

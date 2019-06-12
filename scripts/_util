@@ -31,6 +31,7 @@
 _0=$(basename "${0}")
 
 
+
 ##
 ## function Check_SWarm
 ##
@@ -70,7 +71,7 @@ Check_LocalPersistPlugin()
 
 ##
 ## Check For installed secret
-## 
+##
 
 Check_Secret()
 {
@@ -213,7 +214,7 @@ ask_for_input_shadow() {
 }
 
 is_yes() {
-    local WORD="$1"
+    local WORD="${1}"
     if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
         return 0
     else
@@ -227,6 +228,68 @@ is_pos() {
   return $?
 }
 
+# init_one_dir dir user
+init_one_dir() {
+    local DIR="$1"
+    if [ ! -d "${DIR}" ]; then
+        ask_for_input "${DIR} does not exist; shall I create it" Y
+        if is_yes "${ANS}"; then
+            mkdir -p "${DIR}"
+            if [ "X${CONFIG_USER}" != "X${2}" ] ; then
+                chown ${2} "${DIR}"
+            fi
+            chmod 750 "${DIR}"
+            if check_writable "${DIR}" ${2} ; then
+                return 0
+            else
+                echo "${DIR} not writable by user ${2}"
+                echo " Please make it so (check parent dir execute bits)"
+                echo " LOCKSS will not run properly without it."
+            fi
+        else
+            echo "Please create ${DIR} and make it writable by user ${2};"
+            echo " LOCKSS will not run properly without it."
+        fi
+        return 0
+    fi
+    if check_writable "${DIR}" $2 ; then
+        echo "${DIR} exists and is writable by ${2}"
+    else
+        ask_for_input "${DIR} is not writable; shall I chown it" Y
+        if is_yes "${ANS}"; then
+            chown ${2} "${DIR}"
+            if check_writable "${DIR}" $2 ; then
+                return 0
+            else
+                echo "${DIR} still not writable by user ${2}"
+                echo " Please make it so (check parent dir execute bits)"
+                echo " LOCKSS will not run properly without it."
+            fi
+        else
+            echo "Please ensure that ${DIR} is writable by user ${2};"
+            echo " LOCKSS will not run properly without it."
+        fi
+    fi
+}
+
+# check_writable (dir, user)
+check_writable() {
+    local DIR="$1"
+    true&
+    local PROBE_FILE=${DIR}/probe_$!
+    if [ "X${CONFIG_USER}" != "X${2}" ]; then
+        SUDO="sudo -u ${2}"
+    else
+        SUDO=""
+    fi
+    if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
+        rm -f ${PROBE_FILE}
+        return 0
+    fi
+    return 1
+}
+
+#parse_ip_address inp
 parse_ip_address() {
     local INP=$1
     local OLD_IFS="${IFS}"
@@ -251,6 +314,20 @@ parse_ip_address() {
     fi
 }
 
+# read_config file
+read_config() {
+    local FILE="$1"
+    local OLD_IFS="${IFS}"
+    IFS='
+'
+    for A in `sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+\1=\2/' $1` ; do
+        eval "$A"
+    done
+    IFS="${OLD_IFS}"
+}
+
+# valid_ip_address address
 valid_ip_address() {
     local IPADDR=`parse_ip_address "$1"`
     if [ ${IPADDR} -eq 0 ]; then
@@ -260,6 +337,9 @@ valid_ip_address() {
     fi
 }
 
+#
+# Usage: valid_subnet address
+#
 valid_subnet() {
     local INP=$1
     if ! echo ${INP} | grep -s '/' >/dev/null; then
@@ -294,3 +374,25 @@ valid_subnet() {
     fi
 }
 
+#
+# Usage: normalize_path PATH
+#
+# Remove /./ and dir/.. sequences from a pathname and write result to stdout.
+# from https://www.linuxjournal.com/content/normalizing-path-names-bash
+#
+function normalize_path()
+{
+    # Remove all /./ sequences.
+    local path=${1//\/.\//\/}
+
+    # Remove first dir/.. sequence.
+    local npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+
+    # Remove remaining dir/.. sequence.
+    while [[ $npath != $path ]]
+    do
+        path=$npath
+        npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+    done
+    echo $path
+}

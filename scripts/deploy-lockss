@@ -66,6 +66,8 @@ TEMPLATES_DIR="${CONFIG_DIR}/templates"
 DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
 #Data
+declare -a arr deploy_service_names={"lockss-configuration-service", "lockss-metadata-service", "lockss-metadata-extraction-service",
+"lockss-poller-service", "lockss-repository-service", "lockss-postgres", "lockss-solr", "lockss-pywb"}
 declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
 declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
 declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
@@ -164,6 +166,16 @@ check_installed_network()
   Check_Network "$stack-network"
 }
 
+check_pulled_images()
+{
+   # Check the mountpoints
+  for svc_name in "${deploy_service_name[@]}"
+  do
+    echo "pulling image for ${svc_name}..."
+    docker-compose pull ${svc_name}
+  done
+}
+
 check_stack_installed()
 {
   local stack=${STACK_PREFIX}$1
@@ -226,10 +238,14 @@ elif [[ ${STACK_NUM} -eq 0 ]]; then
   echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
     check_stack_installed $num
+    if [[ $num -eq 1 ]]; then
+      check_pulled_images
+    fi
     deploy_stack $num
   done
 elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
     check_stack_installed ${STACK_NUM}
+    check_pulled_images
     deploy_stack ${STACK_NUM}
 else
   error_exit "Unable to find generated stack info for ${STACK_NUM}"

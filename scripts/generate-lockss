@@ -46,24 +46,33 @@ _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
 ##
+## Load _util
+##
+. "${_D0}/_util"
+
+##
 ## Definitions
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${_D0}/../config"
+COMPOSE_DIR=$(normalize_path "${_D0}/..")
+CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 PORT_BASE=245
 
 # Files
-ENV_FILE="${CONFIG_DIR}/env.mustache"
-USER_CONF_FILE="${CONFIG_DIR}/config.info"
+ENV_TMPL="${CONFIG_DIR}/env.mustache"
+COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
+SERVICES_FILE="${CONFIG_DIR}/services.json"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+
+STACK_PREFIX="lockss-stack"
 
 # Variables
 declare -i STACK_COUNT=1
-STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -110,6 +119,7 @@ help_message() {
 _EOF_
   return
 }
+
 ##
 ## MAIN
 ##
@@ -134,14 +144,18 @@ while [[ -n $1 ]]; do
   shift
 done
 
-# Source user-config
+# Source system config file
 set -a
-. "${CONFIG_DIR}/config.info"
+. "${SYSTEM_CONF_FILE}"
 set +a
 
 
 echo "$(date) Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
+
+echo "$(date) Generating docker-compose file..."
+pystache "${COMPOSE_TMPL}" "${SERVICES_FILE}" > "${COMPOSE_FILE}"
+
 echo "$(date) Generating config files for $STACK_COUNT stacks..."
 for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   stack_port_base=$((${PORT_BASE} + $num))
@@ -149,17 +163,24 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   stack_config_dir="${DOCKER_CONFIGS_DIR}/${stack_name}"
   stack_env_file="${stack_config_dir}/env.sh"
   stack_lcap_port=$((${LOCKSS_V3_PORT} + $num -1))
+  stack_context=${stack_config_dir}/env.json
 
   echo "Stack ${num} named ${stack_name} is using port base of ${stack_port_base}."
   mkdir -p ${stack_config_dir}
-  #generate the env files.
-  pystache "${ENV_FILE}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
+
+  #generate the env file.
+  pystache "${ENV_TMPL}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
+
+  #generate the stack context and store it for reuse.
+  echo "Generating env context for stack..."
+  ${_D0}/env2json "${SYSTEM_CONF_FILE}" "${stack_env_file}" > "${stack_context}"
+
   #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do
     src="${f}"
     dst="${stack_config_dir}/$(basename "${f}" .mustache)"
     echo "$(date) Rendering ${src} to ${dst}..."
-    pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}"
+    pystache "${src}" "${stack_context}" > "${dst}"
   done
   #add the user config file templates
   for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
@@ -167,7 +188,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
       src="${f}"
       dst="${stack_config_dir}/$(basename "${f}" .mustache)"
       echo "$(date) Rendering ${src} to ${dst}..."
-      pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}" 
+      pystache "${src}" "${stack_context}" > "${dst}"
     fi
   done
   #add any remaining user opt files
