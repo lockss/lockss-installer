@@ -35,13 +35,15 @@
 org.lockss.metadataManager.onDemandMetadataExtractionOnly=true
 
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.metadataDbManager.datasource.serverName={{{{{POSTGRES_HOST}}}}}
-org.lockss.metadataDbManager.datasource.portNumber={{{{{POSTGRES_DEFAULT_PORT}}}}}
-org.lockss.metadataDbManager.datasource.user=LOCKSS
-org.lockss.metadataDbManager.datasource.password={{ secret "lockss-postgres-pass" }}
+org.lockss.metadataDbManager.datasource.serverName={{POSTGRES_HOST}}
+org.lockss.metadataDbManager.datasource.portNumber={{POSTGRES_DEFAULT_PORT}}
+org.lockss.metadataDbManager.datasource.user={{POSTGRES_USER}}
+org.lockss.metadataDbManager.datasource.password={{{POSTGRES_PASSWD}}}
+org.lockss.metadataDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
 
 org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.jobDbManager.datasource.serverName={{{{{POSTGRES_HOST}}}}}
-org.lockss.jobDbManager.datasource.portNumber={{{{{POSTGRES_DEFAULT_PORT}}}}}
-org.lockss.jobDbManager.datasource.user=LOCKSS
-org.lockss.jobDbManager.datasource.password={{ secret "lockss-postgres-pass" }}
+org.lockss.jobDbManager.datasource.serverName={{POSTGRES_HOST}}
+org.lockss.jobDbManager.datasource.portNumber={{POSTGRES_DEFAULT_PORT}}
+org.lockss.jobDbManager.datasource.user={{POSTGRES_USER}}
+org.lockss.jobDbManager.datasource.password={{{POSTGRES_PASSWD}}}
+org.lockss.jobDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
