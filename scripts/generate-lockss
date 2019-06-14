@@ -49,7 +49,7 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 . "${_D0}/_util"
-
+. "${_D0}/lib/mo"
 ##
 ## Definitions
 ##
@@ -65,8 +65,7 @@ PORT_BASE=245
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
-SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
-SERVICES_FILE="${CONFIG_DIR}/services.json"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
 STACK_PREFIX="lockss-stack"
@@ -153,34 +152,33 @@ set +a
 echo "$(date) Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
-echo "$(date) Generating docker-compose file..."
-pystache "${COMPOSE_TMPL}" "${SERVICES_FILE}" > "${COMPOSE_FILE}"
-
 echo "$(date) Generating config files for $STACK_COUNT stacks..."
 for (( num=1 ; num<=$STACK_COUNT ; num++)); do
-  stack_port_base=$((${PORT_BASE} + $num))
-  stack_name="${STACK_PREFIX}$num"
+  export STACK_PORT_BASE=$((${PORT_BASE} + $num))
+  export STACK_NAME="${STACK_PREFIX}$num"
+  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num -1))
   stack_config_dir="${DOCKER_CONFIGS_DIR}/${stack_name}"
   stack_env_file="${stack_config_dir}/env.sh"
-  stack_lcap_port=$((${LOCKSS_V3_PORT} + $num -1))
-  stack_context=${stack_config_dir}/env.json
+  stack_compose_file="${stack_config_dir}/docker-compose.yml"
 
-  echo "Stack ${num} named ${stack_name} is using port base of ${stack_port_base}."
-  mkdir -p ${stack_config_dir}
+  echo "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
+  mkdir -p "${stack_config_dir}"
 
-  #generate the env file.
-  pystache "${ENV_TMPL}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
-
-  #generate the stack context and store it for reuse.
-  echo "Generating env context for stack..."
-  ${_D0}/env2json "${SYSTEM_CONF_FILE}" "${stack_env_file}" > "${stack_context}"
+  echo "generate the stack env.sh file..."
+  mo "${ENV_TMPL}" > "${stack_env_file}"
+  set -a
+  . "${stack_env_file}"
+  set +a
+ 
+  echo "$(date) Generating stack docker-compose file..."
+  mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
   #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do
     src="${f}"
     dst="${stack_config_dir}/$(basename "${f}" .mustache)"
     echo "$(date) Rendering ${src} to ${dst}..."
-    pystache "${src}" "${stack_context}" > "${dst}"
+    mo "${src}" > "${dst}"
   done
   #add the user config file templates
   for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
@@ -188,7 +186,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
       src="${f}"
       dst="${stack_config_dir}/$(basename "${f}" .mustache)"
       echo "$(date) Rendering ${src} to ${dst}..."
-      pystache "${src}" "${stack_context}" > "${dst}"
+      mo "${src}" > "${dst}"
     fi
   done
   #add any remaining user opt files

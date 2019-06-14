@@ -121,7 +121,7 @@ done
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
-Check_Stack
+Check_Swarm
 
 if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks

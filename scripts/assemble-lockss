@@ -253,7 +253,7 @@ set +a
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
-Check_Stack
+Check_Swarm
 Check_LocalPersistPlugin
 Check_Physical_Volumes
 

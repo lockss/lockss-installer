@@ -90,37 +90,33 @@ ensure_lockss_user() {
 }
 
 ensure_persistent_plugin() {
-if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
-  echo "${_0}: The local-persist volume plugin is not available."
-  ask_for_input "OK to install local persist plugin." Y
-  if is_yes "${ANS}"; then
-    case `uname -s ` in
-    Linux)
-      curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | sudo bash 
-      ;;
-    Darwin)
-      local PLUGIN_DATA_PATH
-      local DATA_VOLUME_PATH
+  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
+    echo "${_0}: The local-persist volume plugin is not available."
+    ask_for_input "OK to install local persist plugin." Y
+    if is_yes "${ANS}"; then
+      case `uname -s ` in
+      Linux)
+        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | sudo bash 
+        ;;
+      Darwin)
+        local PLUGIN_DATA_PATH
+        local DATA_VOLUME_PATH
 
-      ask_for_input "Path to store plugin data" "${PLUGIN_DATA_PATH}"
-        PLUGIN_DATA_PATH=${ANS}
-      init_one_dir PLUGIN_DATA_PATH
-      ask_for_input "Path to store persistant volume" "${DATA_VOLUME_PATH}"
-        DATA_VOLUME_PATH=${ANS}
-      init_one_dir DATA_VOLUME_PATH
-      docker run -d \
-      -v /run/docker/plugins/:/run/docker/plugins/ \
-      -v $PLUGIN_DATA_PATH:/var/lib/docker/plugin-data/ \
-      -v $DATA_VOLUME_PATH:$DATA_VOLUME_PATH \
-        cwspear/docker-local-persist-volume-plugin
-      ;;
-    esac
+        ask_for_input "Path to store plugin data" "${PLUGIN_DATA_PATH}"
+          PLUGIN_DATA_PATH=${ANS}
+        init_one_dir PLUGIN_DATA_PATH
+        ask_for_input "Path to store persistant volume" "${DATA_VOLUME_PATH}"
+          DATA_VOLUME_PATH=${ANS}
+        init_one_dir DATA_VOLUME_PATH
+        docker run -d \
+        -v /run/docker/plugins/:/run/docker/plugins/ \
+        -v $PLUGIN_DATA_PATH:/var/lib/docker/plugin-data/ \
+        -v $DATA_VOLUME_PATH:$DATA_VOLUME_PATH \
+          cwspear/docker-local-persist-volume-plugin
+        ;;
+      esac
+    fi
   fi
-fi
-}
-
-ensure_pystache() {
-  
 }
 
 # Trap signals
@@ -151,7 +147,17 @@ done
 
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
-echo "${_0}: Checking for Docker local-persist plugin."
+
+Check_Installed 'docker'
+
+echo "${_0}: Checking for Docker local-persist plugin..."
+ensure_persistent_plugin
+
+echo "${_0}: Checking Docker is running..."
+Check_Docker
+
+echo "${_0}: Checking docker swarm is running..."
+Check_Swarm
 
 graceful_exit
 

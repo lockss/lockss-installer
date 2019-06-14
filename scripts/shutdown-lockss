@@ -126,7 +126,7 @@ done
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
-Check_Stack
+Check_Swarm
 
 if [[ ${STACK_NUM} -eq 0 ]]; then
   echo "Shutting down all LOCKSS stacks..."

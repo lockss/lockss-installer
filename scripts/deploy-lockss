@@ -176,7 +176,7 @@ check_pulled_images()
   done
 }
 
-check_stack_installed()
+Check_Swarm_installed()
 {
   local stack=${STACK_PREFIX}$1
 
@@ -210,7 +210,7 @@ trap "signal_exit INT"  INT
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
-Check_Stack
+Check_Swarm
 Check_LocalPersistPlugin
 
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
@@ -237,14 +237,14 @@ if [[ NUM_STACKS -eq 0 ]]; then
 elif [[ ${STACK_NUM} -eq 0 ]]; then
   echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
-    check_stack_installed $num
+    Check_Swarm_installed $num
     if [[ $num -eq 1 ]]; then
       check_pulled_images
     fi
     deploy_stack $num
   done
 elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
-    check_stack_installed ${STACK_NUM}
+    Check_Swarm_installed ${STACK_NUM}
     check_pulled_images
     deploy_stack ${STACK_NUM}
 else

@@ -59,9 +59,7 @@ COMPOSE_DIR=$(normalize_path "${_D0}/..")
 CONFIG_DIR="${COMPOSE_DIR}/config"
 
 # Files
-SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
-SERVICES_FILE="${CONFIG_DIR}/services.json"
-COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 
 #
@@ -301,20 +299,15 @@ LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
 LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
 LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
-EOF
-
-cat <<EOF > ${SERVICES_FILE}
-{
-  "USE_LOCKSS_CFG": ${USE_LOCKSS_CFG:-true},
-  "USE_LOCKSS_MDQ": ${USE_LOCKSS_MDQ:-true},
-  "USE_LOCKSS_MDX": ${USE_LOCKSS_MDX:-true},
-  "USE_LOCKSS_POL": ${USE_LOCKSS_POL:-true},
-  "USE_LOCKSS_REPO": ${USE_LOCKSS_REPO:-true},
-  "USE_LOCKSS_POSTGRES": ${USE_LOCKSS_POSTGRES:-true},
-  "USE_LOCKSS_SOLR": ${USE_LOCKSS_SOLR:-true},
-  "USE_LOCKSS_HDFS": ${USE_LOCKSS_HDFS:-false},
-  "USE_LOCKSS_PYWB": ${USE_LOCKSS_PYWB:-true}
-}
+USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
+USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
+USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
+USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
+USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
+USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
+USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
+USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
+USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 EOF
         echo
         echo "Configuration:"
@@ -359,9 +352,8 @@ EOF
 ###
 # Start
 ###
-Check_Installed 'docker'
-Check_Docker
-Check_Stack
+echo "$(date) Checking system installs"
+. check_sys
 
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
@@ -384,27 +376,29 @@ esac
 LOCKSS_TEAM=lockssdiag@lockss.org
 LOCKSS_USER=lockss
 LOCAL_HOSTNAME=$(uname -n)
-CONFIG_FILE=${CONFIG_DIR}/config.info
 declare -i CONFIG_COUNT
 
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
-if [ -r "${CONFIG_FILE}" ]; then
-    echo "Setting defaults from existing config: ${CONFIG_FILE}"
-    read_config ${CONFIG_FILE}
+if [ -r "${SYSTEM_CONF_FILE}" ]; then
+    echo "$(date) Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+    read_config ${SYSTEM_CONF_FILE}
 fi
+
 #get the number of stacks
 case "${1}" in
   '') CONFIG_COUNT=1 ; break ;;
   [1-9]) CONFIG_COUNT="${1}" ; break ;;
-  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
+  *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
+
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
-build_config_file ${CONFIG_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-#check local-persist-plugin is installed and running
+build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 #call generate-lockss
+echo "$(date) generating docker files for for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
 . "${_D0}/generate-lockss"
 echo ""
-echo "Call assemble-lockss to prepare for deploy-lockss"
+
+echo "$(date) Call assemble-lockss to prepare for deploy-lockss"
