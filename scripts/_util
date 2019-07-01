@@ -191,6 +191,22 @@ Wait_For_Port()
   done
 }
 
+#
+# Read existing config info and populate environment
+# Must be run before LOCKSS daemon can be started
+#
+read_config() {
+    local FILE="$1"
+    local OLD_IFS="${IFS}"
+    IFS='
+'
+    for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+\1=\2/' $1); do
+        eval "$A"
+    done
+    IFS="${OLD_IFS}"
+}
+
 ask_for_input() {
     echo "$1: [$2] "
     read ANS

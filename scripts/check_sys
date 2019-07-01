@@ -89,6 +89,11 @@ ensure_lockss_user() {
   grep -q ^lockss: /etc/passwd || ( if useradd -s /bin/false lockss ; then mkdir -p /home/lockss ; chown lockss:lockss /home/lockss ; chmod 755 /home/lockss ; echo "Created user 'lockss'" ; else echo "Can't create user lockss" ; exit 1 ; fi )
 }
 
+ensure_docker() {
+
+}
+
+
 ensure_persistent_plugin() {
   if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
     echo "${_0}: The local-persist volume plugin is not available."
@@ -96,7 +101,7 @@ ensure_persistent_plugin() {
     if is_yes "${ANS}"; then
       case `uname -s ` in
       Linux)
-        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | sudo bash 
+        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | sudo bash
         ;;
       Darwin)
         local PLUGIN_DATA_PATH
@@ -115,6 +120,16 @@ ensure_persistent_plugin() {
           cwspear/docker-local-persist-volume-plugin
         ;;
       esac
+    fi
+  fi
+}
+
+ensure_docker_swarm() {
+  if ! docker stack ls &> /dev/null ; then
+    echo "${_0}: Docker Swarm is not inited"
+    ask_for_input "OK to init swarm on this machine." Y
+    if is_yes "${ANS}"; then
+        docker swarm init --advertise-addr $LOCAL_IP
     fi
   fi
 }
@@ -147,17 +162,12 @@ done
 
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
-
-Check_Installed 'docker'
-
+echo "${_0}: Checking for Docker..."
+ensure_docker
 echo "${_0}: Checking for Docker local-persist plugin..."
 ensure_persistent_plugin
-
-echo "${_0}: Checking Docker is running..."
-Check_Docker
-
 echo "${_0}: Checking docker swarm is running..."
-Check_Swarm
-
+ensure_docker_swarm
+echo "${_0}: Essential compoments have been sucessfully installed."
 graceful_exit
 

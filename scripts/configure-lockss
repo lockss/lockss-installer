@@ -61,22 +61,116 @@ CONFIG_DIR="${COMPOSE_DIR}/config"
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
+configure_services() {
+    # check config service
+    if [ "X${USE_LOCKSS_CFG}" = X ]; then
+         USE_LOCKSS_CFG=true
+    fi
+    ask_for_input "Use LOCKSS Config Service?" ${USE_LOCKSS_CFG}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_CFG = true
+    else
+        USE_LOCKSS_CFG = false
+    fi
+    #check metadata service
+    if [ "X${USE_LOCKSS_MDQ}" = X ]; then
+         USE_LOCKSS_MDQ=true
+    fi
+    ask_for_input "Use LOCKSS Metadata Service?" ${USE_LOCKSS_MDQ}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_MDQ = true
+    else
+        USE_LOCKSS_MDQ = false
+    fi
+    #check metadata extractor service
+    if [ "X${USE_LOCKSS_MDX}" = X ]; then
+         USE_LOCKSS_MDX=true
+    fi
+    ask_for_input "Use LOCKSS Metadata Extractor Service?" ${USE_LOCKSS_MDX}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_MDX = true
+    else
+        USE_LOCKSS_MDX = false
+    fi
+    #check repository service
+    if [ "X${USE_LOCKSS_REPO}" = X ]; then
+         USE_LOCKSS_REPO=true
+    fi
+    ask_for_input "Use LOCKSS Repository Service?" ${USE_LOCKSS_REPO}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_REPO = true
+    else
+        USE_LOCKSS_REPO = false
+    fi
+    #check postgres service
+    if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
+         USE_LOCKSS_POSTGRES=true
+    fi
+    ask_for_input "Use LOCKSS Postgres DB Service?" ${USE_LOCKSS_POSTGRES}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_POSTGRES = true
+        LOCKSS_POSTGRES_HOST='lockss-postgres'
+        LOCKSS_POSTGRES_PORT=5432
+        LOCKSS_POSTGRES_USER="LOCKSS"
+        LOCKSS_POSTGRES_SCHEMA=$LOCKSS_POSTGRES_USER
+    else
+        USE_LOCKSS_POSTGRES = false
 
-#
-# Query user and write local LOCKSS config values to /etc/lockss/config.info
-# Must be run before LOCKSS daemon can be started
-#
+        if [ "X${LOCKSS_POSTGRES_HOST}" = X ]; then
+            LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
+        fi
+        ask_for_input "Fully qualified hostname (FQDN) of Postgres host" "${LOCKSS_POSTGRES_HOST}"
+        LOCKSS_POSTGRES_HOST=${ANS}
 
-read_config() {
-    local FILE="$1"
-    local OLD_IFS="${IFS}"
-    IFS='
-'
-    for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1); do
-        eval "$A"
-    done
-    IFS="${OLD_IFS}"
+        if [ "X${LOCKSS_POSTGRES_PORT}" = X ]; then
+            LOCKSS_POSTGRES_PORT=5432
+        fi
+        ask_for_input "Port used by Postgres host" "${LOCKSS_POSTGRES_PORT}"
+        LOCKSS_POSTGRES_PORT=${ANS}
+
+        if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
+            LOCKSS_POSTGRES_USER="LOCKSS"
+        fi
+        ask_for_input "Login name for Postgres service" "${LOCKSS_POSTGRES_USER}"
+        LOCKSS_POSTGRES_USER=${ANS}
+
+        if [ "X${LOCKSS_POSTGRES_SCHEMA}" = X ]; then
+            LOCKSS_POSTGRES_SCHEMA="$LOCKSS_POSTGRES_USER"
+        fi
+        ask_for_input "Login name for Postgres service" "${LOCKSS_POSTGRES_SCHEMA}"
+        LOCKSS_POSTGRES_SCHEMA=${ANS}
+    fi
+
+    #check SOLR service
+    if [ "X${USE_LOCKSS_SOLR}" = X ]; then
+         USE_LOCKSS_SOLR=true
+    fi
+    ask_for_input "Use LOCKSS SOLR Service?" ${USE_LOCKSS_SOLR}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_SOLR = true
+    else
+        USE_LOCKSS_SOLR = false
+    fi
+    #check HDFS service
+    if [ "X${USE_LOCKSS_HDFS}" = X ]; then
+         USE_LOCKSS_HDFS=false
+    fi
+    ask_for_input "Use LOCKSS HDFS Service?" ${USE_LOCKSS_HDFS}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_HDFS = true
+    else
+        USE_LOCKSS_HDFS = false
+    fi
+    #check PYWB service
+    if [ "X${USE_LOCKSS_PYWB}" = X ]; then
+         USE_LOCKSS_PYWB=true
+    fi
+    ask_for_input "Use LOCKSS SOLR Service?" ${USE_LOCKSS_PYWB}
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_PYWB = true
+    else
+        USE_LOCKSS_PYWB = false
+    fi
 }
 
 
@@ -256,22 +350,7 @@ build_config_file() {
                 Add_Secret "lockss_ui_pass" "${UI_PASS}"
             fi
         done
-        LOCKSS_DB_PASSWD=""
-        POSTGRES_PASSWD=""
-        while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
-            P1=
-            while [ "X${P1}" = X ]; do
-                ask_for_input_shadow "Password for database" ""
-                P1="${ANS}"
-            done
-            ask_for_input_shadow "Password for database (again)" ""
-            if [ "X${ANS}" = "X${P1}" ]; then
-                SHA256=$(echo -n "${P1}" | ${SHA256SUM})
-                SHA256=$(echo ${SHA256} | sed 's/ .*$//')
-                LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-                POSTGRES_PASS=${P1}
-                Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
-            fi
+        configure_services
         done
         TMP_CONFIG=${CONFIG_DIR}/config.tmp
         export LOCKSS_CONFIG_VERSION=2
