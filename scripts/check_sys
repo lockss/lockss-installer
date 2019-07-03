@@ -38,6 +38,12 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
 clean_up() { # Perform pre-exit housekeeping
 	return
 }
@@ -90,6 +96,23 @@ ensure_lockss_user() {
 }
 
 ensure_docker() {
+  if ! which "${1}" &> /dev/null ; then
+     echo "${_0}: Docker does not appear to be on the path."
+     ask_for_input "OK to install Docker?" Y
+    if is_yes "${ANS}"; then
+      case `uname -s ` in
+      Linux)
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        ;;
+      Darwin)
+        echo "Docker mac must be installed  as an application available from DockerHub."
+        echo "If you have homebrew: `homebrew cask install docker`"
+        echo "Full instructions for Mac, can be found in the README."
+        exit 1
+        ;;
+      esac
+ fi
 
 }
 
@@ -97,7 +120,7 @@ ensure_docker() {
 ensure_persistent_plugin() {
   if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
     echo "${_0}: The local-persist volume plugin is not available."
-    ask_for_input "OK to install local persist plugin." Y
+    ask_for_input "OK to install local persist plugin?" Y
     if is_yes "${ANS}"; then
       case `uname -s ` in
       Linux)

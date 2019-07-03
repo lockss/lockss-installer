@@ -238,6 +238,15 @@ is_yes() {
     fi
 }
 
+is_true() {
+    local WORD="${1}"
+    if [ "X${WORD}" = Xt* -o "X${WORD}" = XT* ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 is_pos() {
   pattern='^[0-9]+$'
   [[ $1 =~ $pattern ]]
