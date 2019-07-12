@@ -1,4 +1,4 @@
-#!/usr/local/bin/zsh
+#!/bin/bash
 # ---------------------------------------------------------------------------
 # check_sys - Check the host system for all necessary components for running LOCKSS stack.
 #
@@ -37,7 +37,11 @@
 
 PROGNAME=${0##*/}
 VERSION="1.0"
-
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
 ##
 ## Load _util
 ##
@@ -92,28 +96,61 @@ _EOF_
 }
 
 ensure_lockss_user() {
-  grep -q ^lockss: /etc/passwd || ( if useradd -s /bin/false lockss ; then mkdir -p /home/lockss ; chown lockss:lockss /home/lockss ; chmod 755 /home/lockss ; echo "Created user 'lockss'" ; else echo "Can't create user lockss" ; exit 1 ; fi )
+  if ! $(grep -q ^lockss: /etc/passwd) ; then
+    echo "${_0}: The is no 'lockss' user account."
+    ask_for_input "OK to create account for 'lockss' user?" Y
+    if is_yes "${ANS}" ; then
+      case `uname -s ` in
+        Linux)
+          if useradd -s /bin/false lockss ; then
+            mkdir -p /home/lockss
+            chown lockss:lockss /home/lockss
+            chmod 755 /home/lockss
+            echo "Created user 'lockss'" 
+          else 
+            err "Can't create user lockss" 
+            exit 1;
+          fi
+          ;;
+        Darwin)
+          dscl . create /Users/lockss uid 799
+          dscl . create /Users/lockss gid 799
+          dscl . create /Users/lockss shell /bin/bash
+          dscl . create /Users/lockss home /Users/lockss
+          dscl . create /Users/lockss realname "lockss"
+          dscl . create /Groups/lockss gid 799
+          dscl . create /Groups/lockss passwd \*
+          passwd lockss
+          ;;
+        *)
+          err "Unsupported system, create the user lockss in group lockss manually."
+          ;;
+      esac
+    fi
+  fi
 }
 
 ensure_docker() {
   if ! which "${1}" &> /dev/null ; then
-     echo "${_0}: Docker does not appear to be on the path."
-     ask_for_input "OK to install Docker?" Y
+    echo "${_0}: Docker does not appear to be on the path."
+    ask_for_input "OK to install Docker?" Y
     if is_yes "${ANS}"; then
       case `uname -s ` in
-      Linux)
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sh get-docker.sh
-        ;;
-      Darwin)
-        echo "Docker mac must be installed  as an application available from DockerHub."
-        echo "If you have homebrew: `homebrew cask install docker`"
-        echo "Full instructions for Mac, can be found in the README."
-        exit 1
-        ;;
+        Linux)
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          $(sh get-docker.sh)
+          ;;
+        Darwin)
+          err "Docker mac must be installed  as an application available from DockerHub."
+          err "If you have homebrew: `homebrew cask install docker`"
+          err "Full instructions for Mac, can be found in the README."
+          exit 1
+          ;;
+        *)
+          err "Unsupported system, install docker manually."
       esac
+    fi
  fi
-
 }
 
 

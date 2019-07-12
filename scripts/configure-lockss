@@ -67,7 +67,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_CFG}" = X ]; then
          USE_LOCKSS_CFG=true
     fi
-    ask_for_input "Use LOCKSS Config Service?" ${USE_LOCKSS_CFG}
+    ask_for_input "Use LOCKSS Config Service?" $(to_yes_no ${USE_LOCKSS_CFG})
     if is_yes "${ANS}"; then
         USE_LOCKSS_CFG=true
     else
@@ -77,7 +77,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_MDQ}" = X ]; then
          USE_LOCKSS_MDQ=true
     fi
-    ask_for_input "Use LOCKSS Metadata Service?" ${USE_LOCKSS_MDQ}
+    ask_for_input "Use LOCKSS Metadata Service?" $(to_yes_no ${USE_LOCKSS_MDQ})
     if is_yes "${ANS}"; then
         USE_LOCKSS_MDQ=true
     else
@@ -87,7 +87,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_MDX}" = X ]; then
          USE_LOCKSS_MDX=true
     fi
-    ask_for_input "Use LOCKSS Metadata Extractor Service?" ${USE_LOCKSS_MDX}
+    ask_for_input "Use LOCKSS Metadata Extractor Service?" $(to_yes_no ${USE_LOCKSS_MDX})
     if is_yes "${ANS}"; then
         USE_LOCKSS_MDX=true
     else
@@ -97,7 +97,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_REPO}" = X ]; then
          USE_LOCKSS_REPO=true
     fi
-    ask_for_input "Use LOCKSS Repository Service?" ${USE_LOCKSS_REPO}
+    ask_for_input "Use LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_REPO})
     if is_yes "${ANS}"; then
         USE_LOCKSS_REPO=true
     else
@@ -107,7 +107,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_POSTGRES}"=X ]; then
          USE_LOCKSS_POSTGRES=true
     fi
-    ask_for_input "Use LOCKSS Postgres DB Service?" ${USE_LOCKSS_POSTGRES}
+    ask_for_input "Use LOCKSS Postgres DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
     if is_yes "${ANS}"; then
         USE_LOCKSS_POSTGRES=true
         LOCKSS_POSTGRES_HOST='lockss-postgres'
@@ -171,7 +171,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_SOLR}" = X ]; then
          USE_LOCKSS_SOLR=true
     fi
-    ask_for_input "Use LOCKSS SOLR Service?" ${USE_LOCKSS_SOLR}
+    ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
     if is_yes "${ANS}"; then
         USE_LOCKSS_SOLR=true
         LOCKSS_SOLR_HOST='lockss-solr'
@@ -422,12 +422,12 @@ LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
 LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
 LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
 LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
-LOCKSS_POSTGRES_HOST=${LOCKSS_POSTGRES_HOST}
-LOCKSS_POSTGRES_PORT=${LOCKSS_POSTGRES_PORT}
-LOCKSS_POSTGRES_USER=${LOCKSS_POSTGRES_USER}
-LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_SCHEMA}
-LOCKSS_DBNAME_PREFIX=${LOCKSS_DBNAME_PREFIX}
-LOCKSS_SOLR_HOST=${LOCKSS_SOLR_HOST}
+LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST}"
+LOCKSS_POSTGRES_PORT="${LOCKSS_POSTGRES_PORT}"
+LOCKSS_POSTGRES_USER="${LOCKSS_POSTGRES_USER}"
+LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA}"
+LOCKSS_DBNAME_PREFIX="${LOCKSS_DBNAME_PREFIX}"
+LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO=${LOCKSS_SOLR_CORE_REPO}
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
@@ -469,12 +469,12 @@ EOF
             CONFIG_OK=Y
             FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
             egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-            if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-                echo "Sending mail failed. Please check mail configuration."
-                UNSENT_FILE=/tmp/unsent-lockss-config
-                cp ${FILT_CONFIG} ${UNSENT_FILE}
-                echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-            fi
+#           if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+#               echo "Sending mail failed. Please check mail configuration."
+#               UNSENT_FILE=/tmp/unsent-lockss-config
+#               cp ${FILT_CONFIG} ${UNSENT_FILE}
+#              echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+#            fi
             rm -f ${FILT_CONFIG}
 
        fi
@@ -484,9 +484,6 @@ EOF
 ###
 # Start
 ###
-#echo "$(date) Checking system installs"
-#. check_sys
-
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
 case ${OS_TYPE} in
@@ -523,6 +520,9 @@ case "${1}" in
   [1-9]) CONFIG_COUNT="${1}" ; break ;;
   *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
+
+echo "$(date) Checking system installs"
+. check_sys
 
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."

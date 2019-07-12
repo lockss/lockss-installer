@@ -148,16 +148,21 @@ set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
 
-
+echo "COMPOSE_DIR"
 echo "$(date) Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
 echo "$(date) Generating config files for $STACK_COUNT stacks..."
 for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   export STACK_PORT_BASE=$((${PORT_BASE} + $num))
-  export STACK_NAME="${STACK_PREFIX}$num"
+  if [ ${STACK_COUNT} = 1 ]; then
+    STACK_NAME="${STACK_PREFIX}"
+  else
+    STACK_NAME="${STACK_PREFIX}$num"
+  fi
+  export STACK_NAME
   export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num -1))
-  stack_config_dir="${DOCKER_CONFIGS_DIR}/${stack_name}"
+  stack_config_dir="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
   stack_env_file="${stack_config_dir}/env.sh"
   stack_compose_file="${stack_config_dir}/docker-compose.yml"
 
@@ -169,7 +174,8 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   set -a
   . "${stack_env_file}"
   set +a
- 
+  export POSTGRES_PASSWD="{{ secret "lockss-postgres-pass" }}"
+
   echo "$(date) Generating stack docker-compose file..."
   mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 

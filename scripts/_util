@@ -28,9 +28,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+##
+## Relative paths
+##
 _0=$(basename "${0}")
+_D0=$(dirname "${0}")
 
-
+err() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+}
 
 ##
 ## function Check_Swarm
@@ -39,7 +45,7 @@ _0=$(basename "${0}")
 Check_Swarm()
 {
   if ! docker stack ls &> /dev/null ; then
-    echo "${_0}: Docker Swarm is not inited"
+    err "${_0}: Docker Swarm is not inited"
     exit 1
   fi
 }
@@ -52,7 +58,7 @@ Check_Swarm()
 Check_Docker()
 {
   if ! docker info &> /dev/null ; then
-    echo "${_0}: Docker is not running"
+    err "${_0}: Docker is not running"
     exit 1
   fi
 }
@@ -64,7 +70,7 @@ Check_Docker()
 Check_LocalPersistPlugin()
 {
   if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
-    echo "${_0}: The local-persist volume plugin is not available. See readme for instructions."
+    err "${_0}: The local-persist volume plugin is not available. See readme for instructions."
     exit 1
   fi
 }
@@ -76,8 +82,8 @@ Check_LocalPersistPlugin()
 Check_Secret()
 {
   if ! docker secret inspect ${1} &> /dev/null ; then
-    echo "${1}: Docker Secret has not been installed."
-    echo "Run configure and install scripts."
+    err "${1}: Docker Secret has not been installed."
+    err "     Run configure and install scripts."
     exit 1
   fi
 
@@ -94,7 +100,7 @@ Add_Secret()
   fi
   echo "Storing ${NAME} as a docker secret .."
   if ! echo ${VALUE} | docker secret create ${NAME} - ; then
-    echo "Docker secret creation failed for ${NAME}"
+    err "Docker secret creation failed for ${NAME}"
     return 1
   else
     return 0
@@ -103,9 +109,9 @@ Add_Secret()
 
 Check_Volume()
 {
-    if ! docker volume inspect ${1} &> /dev/null  ; then
-      echo "${1}: Docker Volume has not been installed."
-      echo "Run generate and install scripts."
+    if ! docker volume inspect ${1} &> /dev/null; then
+      err "${1}: Docker Volume has not been installed."
+      err "${1}: Run generate and install scripts."
       exit 1
     fi
 }
@@ -113,9 +119,9 @@ Check_Volume()
 
 Check_Config()
 {
-    if ! docker config inspect ${1} &> /dev/null ; then
-      echo "${1}: Config file is missing. Run configure and install scripts.."
-      echo "Run generate and install scripts."
+    if ! docker config inspect ${1} &> /dev/null; then
+      err "${1}: Config file is missing. Run configure and install scripts.."
+      err "${1}: Run generate and install scripts."
       exit 1
     fi
 }
@@ -123,8 +129,8 @@ Check_Config()
 Check_Network()
 {
     if ! docker network inspect ${1} &> /dev/null  ; then
-      echo "${1}: Docker network has not been installed."
-      echo "Run generate and install scripts."
+      err "${1}: Docker network has not been installed."
+      err "${1}: Run generate and install scripts."
       exit 1
     fi
 }
@@ -136,8 +142,8 @@ Check_Network()
 Check_Installed()
 {
   while [ "X${1}" != "X" ]; do
-    if ! which "${1}" &> /dev/null ; then
-      echo "${_0}: ${1} not on the PATH (${PATH})"
+    if ! which "${1}" &> /dev/null; then
+      err "${_0}: ${1} not on the PATH (${PATH})"
       exit 1
     fi
     shift
@@ -238,12 +244,11 @@ is_yes() {
     fi
 }
 
-is_true() {
-    local WORD="${1}"
-    if [ "X${WORD}" = Xt* -o "X${WORD}" = XT* ]; then
-        return 0
+to_yes_no() {
+    if [ ${1} ]; then
+        echo "Y"
     else
-        return 1
+        echo "N"
     fi
 }
 
