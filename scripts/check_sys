@@ -99,7 +99,7 @@ ensure_lockss_user() {
   if ! $(grep -q ^lockss: /etc/passwd) ; then
     echo "${_0}: The is no 'lockss' user account."
     ask_for_input "OK to create account for 'lockss' user?" Y
-    if is_yes "${ANS}" ; then
+    if is_yes "${ANS}" ;
       case `uname -s ` in
         Linux)
           if useradd -s /bin/false lockss ; then
