@@ -57,20 +57,22 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${_D0}/../config"
+COMPOSE_DIR=$(normalize_path "${_D0}/..")
+CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
-DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
 #Data
-declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
 declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
-declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
+declare -a arr svcs
+declare -a arr svcs_confs
+
+
 
 STACK_PREFIX="lockss-stack"
 
@@ -135,6 +137,40 @@ Check_Physical_Volumes() {
     exit 1
   fi
 }
+#initialize the service arrays based on system.cfg info.
+init_service_arrays() {
+  if ${USE_LOCKSS_CFG}; then
+    svcs+=("cfg")
+    svcs_confs+=("cfg")
+  fi
+  if ${USE_LOCKSS_MDQ}; then
+    svcs+=("mdq")
+    svcs_confs+=("mdq")
+  fi  
+  if ${USE_LOCKSS_MDX}; then
+    svcs+=("mdx")
+    svcs_confs+=("mdx")
+  fi  
+  if ${USE_LOCKSS_POL}; then
+    svcs+=("pol")
+    svcs_confs+=("pol")
+  fi  
+  if ${USE_LOCKSS_REPO}; then
+      svcs+=("repo")
+  fi  
+  if ${USE_LOCKSS_POSTGRES}; then
+     svcs+=("postgres")
+  fi  
+  if ${USE_LOCKSS_SOLR}; then
+      svcs+=("solr")
+  fi  
+  if ${USE_LOCKSS_HDFS}; then
+      svcs+=("hdfs")
+  fi  
+  if ${USE_LOCKSS_PYWB}; then
+      svcs+=("pywb")
+  fi  
+}
 
 # Create configs for each stack
 add_stack_configs()
@@ -162,12 +198,10 @@ add_stack_configs()
     echo "adding docker config ${sconf}..."
     docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
     if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path "${sconf}-service" "blank_lockss") ; then
-      echo "${_0}: error creating config $stack-${sconf}-service"
-      exit 1
+      error_exit "${_0}: error creating config $stack-${sconf}-service"
     fi
     if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path "${sconf}-service_opt" "blank_lockss_opt") ; then
-      echo "${_0}: error creating config $stack-${sconf}-service_opt"
-      exit 1
+      error_exit "${_0}: error creating config $stack-${sconf}-service_opt"
     fi
   done
 }
@@ -181,12 +215,10 @@ add_stack_volumes()
     echo "creating docker data and log volumes for $stack-${svc}..."
     docker volume remove $stack-${svc}-data $stack-${svc}-logs &> /dev/null
     if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data ; then
-      echo "${_0}: error creating volume $stack-${svc}-data"
-      exit 1
+      error_exit "${_0}: error creating volume $stack-${svc}-data"
     fi
     if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs ; then
-      echo "${_0}: error creating volume $stack-${svc}-logs"
-      exit 1
+      error_exit "${_0}: error creating volume $stack-${svc}-logs"
     fi
   done
 }
@@ -198,8 +230,7 @@ add_stack_network() {
   echo "Creating lockss network"
   docker network remove $stack-network
   if ! docker network create -d overlay --opt encrypted $stack-network; then
-    echo "$stack-network: error creating network."
-    exit 1
+    error_exit "$stack-network: error creating network."
   fi
 }
 
@@ -208,13 +239,14 @@ assemble_stack() {
   echo "Processing stack $stack"
   # Source config.info and env.sh for this stack
   set -a
-    . "${CONFIG_DIR}/config.info"
     . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
+  
   add_stack_configs $stack
   add_stack_network $stack
   add_stack_volumes $stack
 }
+
 ###
 # Start
 ###
@@ -245,9 +277,9 @@ while [[ -n $1 ]]; do
   shift
 done
 
-# Source config.info and env.sh
+# Source system config file
 set -a
-. "${CONFIG_DIR}/config.info"
+. "${SYSTEM_CONF_FILE}"
 set +a
 
 # Sanity checks
@@ -257,14 +289,17 @@ Check_Swarm
 Check_LocalPersistPlugin
 Check_Physical_Volumes
 
+init_service_arrays
 
-if [[ NUM_STACKS -eq 0 ]]; then
+if [ ${NUM_STACKS} -eq 0 ]; then
   error_exit "No configuration files have been generated, run generate-lockss first."
-elif [[ ${STACK_NUM} -eq 0 ]]; then
+elif [ ${NUM_STACKS} -eq 1 ]; then
+  assemble_stack ""
+elif [ ${STACK_NUM} -eq 0 ]; then
   for ((num=1 ; num <= $NUM_STACKS ; num++)); do
     assemble_stack $num
   done
-elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
+elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
   assemble_stack ${STACK_NUM}
 else
   error_exit "Unable to find generated stack ${STACK_NUM}"

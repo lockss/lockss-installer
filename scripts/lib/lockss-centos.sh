@@ -107,3 +107,16 @@ ipm_update_native() {
 ipm_upgrade_native() {
   yum --assumeyes update
 }
+
+ipm_install_docker() {
+  sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+  yum-config-manager \
+    --add-repo \/Users/claire/projects/lockss/lockss-installer/scripts/generate-lockss
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+  yum install docker-ce docker-ce-cli containerd.io
+  yum install docker-ce-<VERSION_STRING> docker-ce-cli-<VERSION_STRING> containerd.io
+  systemctl start docker
+}

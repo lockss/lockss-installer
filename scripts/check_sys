@@ -131,7 +131,8 @@ ensure_lockss_user() {
 }
 
 ensure_docker() {
-  if ! which "${1}" &> /dev/null ; then
+  // todo pass the 'docker' argument
+  if ! which "docker" &> /dev/null ; then
     echo "${_0}: Docker does not appear to be on the path."
     ask_for_input "OK to install Docker?" Y
     if is_yes "${ANS}"; then
@@ -139,10 +140,11 @@ ensure_docker() {
         Linux)
           curl -fsSL https://get.docker.com -o get-docker.sh
           $(sh get-docker.sh)
+          sudo usermod -G docker -a lockss
           ;;
         Darwin)
           err "Docker mac must be installed  as an application available from DockerHub."
-          err "If you have homebrew: `homebrew cask install docker`"
+          err "If you have homebrew: homebrew cask install docker"
           err "Full instructions for Mac, can be found in the README."
           exit 1
           ;;
@@ -150,18 +152,19 @@ ensure_docker() {
           err "Unsupported system, install docker manually."
       esac
     fi
+    else
  fi
 }
 
 
 ensure_persistent_plugin() {
   if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
-    echo "${_0}: The local-persist volume plugin is not available."
+    echo "${_0}: The local-persist volume plugin is not installed."
     ask_for_input "OK to install local persist plugin?" Y
     if is_yes "${ANS}"; then
       case `uname -s ` in
       Linux)
-        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | sudo bash
+        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | bash
         ;;
       Darwin)
         local PLUGIN_DATA_PATH
@@ -180,6 +183,8 @@ ensure_persistent_plugin() {
           cwspear/docker-local-persist-volume-plugin
         ;;
       esac
+    else
+      error_exit "Unable to run without local-persisist plugin."
     fi
   fi
 }
@@ -187,7 +192,7 @@ ensure_persistent_plugin() {
 ensure_docker_swarm() {
   if ! docker stack ls &> /dev/null ; then
     echo "${_0}: Docker Swarm is not inited"
-    ask_for_input "OK to init swarm on this machine." Y
+    ask_for_input "OK to init swarm on this machine?" Y
     if is_yes "${ANS}"; then
         docker swarm init --advertise-addr $LOCAL_IP
     fi
@@ -219,13 +224,14 @@ done
 
 
 # Main logic
-
+// todo: add 'curl' check and install
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
 echo "${_0}: Checking for Docker..."
 ensure_docker
+//ensure_docker_running
 echo "${_0}: Checking for Docker local-persist plugin..."
-ensure_persistent_plugin
+ensure_local_persist_plugin
 echo "${_0}: Checking docker swarm is running..."
 ensure_docker_swarm
 echo "${_0}: Essential compoments have been sucessfully installed."

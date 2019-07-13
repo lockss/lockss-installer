@@ -57,56 +57,59 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR=$(normalize_path "${_D0}/..")
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 # Files
-DOCKER_COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+DOCKER_COMPOSE_FILE="docker-compose.yml"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 #Data
-declare -a arr deploy_service_names={"lockss-configuration-service", "lockss-metadata-service", "lockss-metadata-extraction-service",
-"lockss-poller-service", "lockss-repository-service", "lockss-postgres", "lockss-solr", "lockss-pywb"}
-declare -a arr svcs=( "cfg" "mdq" "mdx" "pol" "repo" "postgres" "solr" "hdfs" "pywb")
+declare -a arr deploy_service_names
+declare -a arr svcs
+declare -a arr svcs_confs
 declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
-declare -a arr service_confs=("cfg" "mdq" "mdx" "pol")
 
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  return
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
   Deploy the lockss stacks to docker.
 
@@ -119,65 +122,91 @@ _EOF_
   return
 }
 
+#initialize the service arrays based on system.cfg info.
+init_service_arrays() {
+  if ${USE_LOCKSS_CFG}; then
+    svcs+=("cfg")
+    svcs_confs+=("cfg")
+    deploy_service_names+=("lockss-configuration-service")
+  fi
+  if ${USE_LOCKSS_MDQ}; then
+    svcs+=("mdq")
+    svcs_confs+=("mdq")
+    deploy_service_names+=("lockss-metadata-service")
+  fi
+  if ${USE_LOCKSS_MDX}; then
+    svcs+=("mdx")
+    svcs_confs+=("mdx")
+    deploy_service_names+=("lockss-metadata-extraction-service")
+  fi
+  if ${USE_LOCKSS_POL}; then
+    svcs+=("pol")
+    svcs_confs+=("pol")
+    deploy_service_names+=("lockss-poller-service")
+  fi
+  if ${USE_LOCKSS_REPO}; then
+    svcs+=("repo")
+    deploy_service_names+=("lockss-repository-service")
+  fi
+  if ${USE_LOCKSS_POSTGRES}; then
+    svcs+=("postgres")
+    deploy_service_names+=("lockss-postgres")
+  fi
+  if ${USE_LOCKSS_SOLR}; then
+    svcs+=("solr")
+    deploy_service_names+=("lockss-solr")
+  fi
+  if ${USE_LOCKSS_HDFS}; then
+    svcs+=("hdfs")
+    deploy_service_names+=("lockss-hdfs")
+  fi
+  if ${USE_LOCKSS_PYWB}; then
+    svcs+=("pywb")
+    deploy_service_names+=("lockss-pywb")
+  fi
+}
+
 # Check our secrets
-check_installed_secrets()
-{
+check_installed_secrets() {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss_ui_pass'
 }
 
 # Check the global configs
-check_installed_configs()
-{
+check_installed_configs() {
   local stack=$1
 
-  for gconf in "${global_confs[@]}"
-  do
-  echo "checking installed configs for $stack-${gconf}..."
-  Check_Config "$stack-${gconf}"
-  Check_Config "$stack-${gconf}_opt"
+  for gconf in "${global_confs[@]}"; do
+    echo "checking installed configs for $stack-${gconf}..."
+    Check_Config "$stack-${gconf}"
+    Check_Config "$stack-${gconf}_opt"
   done
 
   # Check the configs for each lockss service
-  for sconf in "${service_confs[@]}"
-  do
+  for sconf in "${service_confs[@]}"; do
     echo "checking installed configs for $stack-${sconf}..."
     Check_Config "$stack-${sconf}-service"
     Check_Config "$stack-${sconf}-service_opt"
   done
 }
 
-check_installed_volumes()
-{
+check_installed_volumes() {
   local stack=$1
- # Check the mountpoints
-  for svc in "${svcs[@]}"
-  do
+  # Check the mountpoints
+  for svc in "${svcs[@]}"; do
     echo "checking docker mountpoints for $stack-${svc}..."
     Check_Volume "$stack-${svc}-data"
     Check_Volume "$stack-${svc}-logs"
   done
 }
 
-check_installed_network()
-{
+check_installed_network() {
   local stack=$1
   Check_Network "$stack-network"
 }
 
-check_pulled_images()
-{
-   # Check the mountpoints
-  for svc_name in "${deploy_service_name[@]}"
-  do
-    echo "pulling image for ${svc_name}..."
-    docker-compose pull ${svc_name}
-  done
-}
-
-Check_Swarm_installed()
-{
+Check_Swarm_installed() {
   local stack=${STACK_PREFIX}$1
 
   echo "Checking installation for stack $stack..."
@@ -187,17 +216,23 @@ Check_Swarm_installed()
 }
 
 # Deploy the stack with incoming stack num
-deploy_stack()
-{
+deploy_stack() {
   local stack=${STACK_PREFIX}$1
-  echo "Deploying to docker stack $stack..."
+  local compose_file=${DOCKER_CONFIGS_DIR}/$stack/${DOCKER_COMPOSE_FILE}
+
+  echo "Deploying service from ${compose_file} as docker stack $stack..."
   # Source config.info and env.sh
   set -a
-    . "${CONFIG_DIR}/config.info"
-    . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-
+  pushd .
+  cd "${DOCKER_CONFIGS_DIR}/$stack"
+  for svc_name in "${deploy_service_names[@]}"; do
+    echo "pulling image for ${svc_name}..."
+    docker-compose pull ${svc_name}  &> /dev/null
+  done
   docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
+  popd 
 }
 
 ##
@@ -205,13 +240,7 @@ deploy_stack()
 ##
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
-
-# Sanity checks
-Check_Installed 'docker'
-Check_Docker
-Check_Swarm
-Check_LocalPersistPlugin
+trap "signal_exit INT" INT
 
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
@@ -219,34 +248,49 @@ STACK_NUM=0
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-       STACK_NUM=$1;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  [1-9])
+    STACK_NUM=$1
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
 
-if [[ NUM_STACKS -eq 0 ]]; then
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+# Sanity checks
+Check_Installed 'docker'
+Check_Docker
+Check_Swarm
+Check_LocalPersistPlugin
+
+init_service_arrays
+
+if [ ${NUM_STACKS} -eq 0 ]; then
   error_exit "Unable to find generated stack info, run configure, generate and install first."
-elif [[ ${STACK_NUM} -eq 0 ]]; then
+elif [ ${NUM_STACKS} -eq 1 ]; then
+  deploy_stack ""
+elif [ ${STACK_NUM} -eq 0 ]; then
   echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
-  for ((num=1 ; num <= $NUM_STACKS ; num++)); do
+  for ((num = 1; num <= $NUM_STACKS; num++)); do
     Check_Swarm_installed $num
-    if [[ $num -eq 1 ]]; then
-      check_pulled_images
-    fi
     deploy_stack $num
   done
-elif [[ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]]; then
-    Check_Swarm_installed ${STACK_NUM}
-    check_pulled_images
-    deploy_stack ${STACK_NUM}
+elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
+  Check_Swarm_installed ${STACK_NUM}
+  deploy_stack ${STACK_NUM}
 else
   error_exit "Unable to find generated stack info for ${STACK_NUM}"
 fi
