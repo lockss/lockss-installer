@@ -346,11 +346,11 @@ build_config_file() {
         ask_for_input "Configuration proxy (host:port)" ${LOCKSS_PROPS_PROXY}
         LOCKSS_PROPS_PROXY="${ANS}"
 
-        if [ "X${LOCKSS_TEST_GROUP}" = X ]; then
-            LOCKSS_TEST_GROUP="demo"
+        if [ "X${LOCKSS_PRESERVATION_GROUP}" = X ]; then
+            LOCKSS_PRESERVATION_GROUP="demo"
         fi
-        ask_for_input "Preservation group(s)" "${LOCKSS_TEST_GROUP}"
-        LOCKSS_TEST_GROUP="${ANS}"
+        ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}"
+        LOCKSS_PRESERVATION_GROUP="${ANS}"
         DATA_PATHS_OK=N
         until is_yes ${DATA_PATHS_OK}; do
             ask_for_input "Content data storage directory" ${LOCKSS_DATA_DIR}
@@ -414,7 +414,7 @@ LOCKSS_EMAIL="${LOCKSS_EMAIL}"
 LOCKSS_PROPS_URL="${LOCKSS_PROPS_URL}"
 LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
-LOCKSS_TEST_GROUP="${LOCKSS_TEST_GROUP}"
+LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP}"
 LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
 LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
 LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
