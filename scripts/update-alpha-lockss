@@ -164,10 +164,10 @@ for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
 done
 
 echo "$(date) Regenerating stack files..."
-. "${_D0}/generate-lockss"
+"${_D0}/generate-lockss"
 
 echo "$(date) Restoring stack assembly..."
-. "${_D0}/assemble-lockss"
+"${_D0}/assemble-lockss"
 
 echo ""
 echo "$(date) Call deploy-lockss to run converted stack."
