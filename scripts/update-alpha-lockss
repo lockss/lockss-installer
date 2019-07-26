@@ -173,4 +173,4 @@ echo "$(date) Restoring stack assembly..."
 . "${_D0}/assemble-lockss"
 
 echo ""
-echo "$(date) Call deploy-lockss run converted stack."
+echo "$(date) Call deploy-lockss to run converted stack."
