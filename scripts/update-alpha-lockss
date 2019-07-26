@@ -166,8 +166,11 @@ for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
     mv "$dir" "${new_dir}"  
 done
 
-echo "$(date) Regenerating stack files"
+echo "$(date) Regenerating stack files..."
 . "${_D0}/generate-lockss"
 
-echo "$(date) Restoring stack assembly"
+echo "$(date) Restoring stack assembly..."
 . "${_D0}/assemble-lockss"
+
+echo ""
+echo "$(date) Call deploy-lockss run converted stack."
