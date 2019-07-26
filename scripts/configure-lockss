@@ -530,10 +530,10 @@ build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 #call generate-lockss
 echo "$(date) Generating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
-. "${_D0}/generate-lockss"
+"${_D0}/generate-lockss"
 
 echo "$(date) Assembling docker stack elements..."
-. "${_D0}/assemble-lockss"
+"${_D0}/assemble-lockss"
 echo ""
 echo "$(date) Call deploy-lockss when ready to run stack..."
 
