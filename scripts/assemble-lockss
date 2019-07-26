@@ -193,7 +193,7 @@ add_stack_configs()
     fi
   done
   # Create the configs for each lockss service
-  for sconf in "${service_confs[@]}"
+  for sconf in "${svcs_confs[@]}"
   do
     echo "adding docker config ${sconf}..."
     docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
