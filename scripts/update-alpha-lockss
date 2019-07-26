@@ -1,0 +1,173 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# update-alpha-lockss - Undeploy all stacks and remove all installed stack info..
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: update-alpha-lockss [-h|--help]
+#
+# Revision history:
+# 2019-04-18 version 1
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+##
+## Definitions
+##
+
+# Directories
+COMPOSE_DIR=$(normalize_path "${_D0}/..")
+CONFIG_DIR="${COMPOSE_DIR}/config"
+
+# Files
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
+
+write_config()
+{
+            cat >${1} <<EOF
+LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
+LOCKSS_USER="${LOCKSS_USER}"
+LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
+LOCKSS_IPADDR="${LOCKSS_IPADDR}"
+LOCKSS_EXTERNAL_IPADDR="${LOCKSS_EXTERNAL_IPADDR}"
+LOCKSS_V3_PORT="${LOCKSS_V3_PORT}"
+LOCKSS_ACCESS_SUBNET="${LOCKSS_ACCESS_SUBNET}"
+LOCKSS_MAILHUB="${LOCKSS_MAILHUB}"
+LOCKSS_MAILHUB_USER="${LOCKSS_MAILHUB_USER}"
+LOCKSS_MAILHUB_PASSWORD="${LOCKSS_MAILHUB_PASSWORD}"
+LOCKSS_EMAIL="${LOCKSS_EMAIL}"
+LOCKSS_PROPS_URL="${LOCKSS_PROPS_URL}"
+LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
+LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
+LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP}"
+LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
+LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
+LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
+LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
+LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
+LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
+LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
+LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST}"
+LOCKSS_POSTGRES_PORT="${LOCKSS_POSTGRES_PORT}"
+LOCKSS_POSTGRES_USER="${LOCKSS_POSTGRES_USER}"
+LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA}"
+LOCKSS_DBNAME_PREFIX="${LOCKSS_DBNAME_PREFIX}"
+LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
+LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
+LOCKSS_SOLR_CORE_REPO=${LOCKSS_SOLR_CORE_REPO}
+LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
+USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
+USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
+USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
+USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
+USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
+USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
+USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
+USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
+USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
+EOF
+}
+# Sanity checks
+
+Check_Installed 'docker'
+Check_Docker    
+Check_Swarm
+
+
+echo "Shutting down all LOCKSS alpha stacks..."
+docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
+
+echo "Stopping and removing containers..."
+docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop &> /dev/null
+docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm &> /dev/null
+
+echo "Clearing lockss image cache..."
+docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
+
+echo "Removing all installed lockss config..."
+docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
+echo "Removing all docker mount points for lockss volumes..."
+docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
+echo "Removing all docker networks for lockss stacks..."
+docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
+
+echo "Converting old config file..."
+if [ -r "${SYSTEM_CONF_FILE}" ]; then
+    echo "$(date) Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+    echo "You appear to be running beta1 already.  No conversion will take place"
+else [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
+    echo "$(date) Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
+    read_config ${OLD_SYSTEM_CONF_FILE}
+    LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
+    LOCKSS_POSTGRES_HOST='lockss-postgres'
+    LOCKSS_POSTGRES_PORT=5432
+    LOCKSS_POSTGRES_USER="LOCKSS"
+    LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
+    LOCKSS_DBNAME_PREFIX="Lockss"
+    LOCKSS_SOLR_HOST='lockss-solr'
+    LOCKSS_SOLR_PORT='8983'
+    LOCKSS_SOLR_CORE_REPO='lockss-repo'
+    write_config ${SYSTEM_CONF_FILE}
+fi
+
+echo "$(date) Renaming data volumes..."
+for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
+    new_dir="${dir/stack1/stack}"
+    if [ ! -e ${new_dir} ]; then
+        mv "$dir" "${new_dir}"
+    fi
+done
+
+echo "$(date) Renaming log volumes..."
+for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
+    new_dir="${dir/stack1/stack}"
+    mv "$dir" "${new_dir}"  
+done
+
+echo "$(date) Regenerating stack files"
+. "${_D0}/generate-lockss"
+
+echo "$(date) Restoring stack assembly"
+. "${_D0}/assemble-lockss"
