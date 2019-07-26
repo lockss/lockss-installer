@@ -62,7 +62,7 @@ CONFIG_DIR="${COMPOSE_DIR}/config"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
-    
+    echo "configuring installed service..."
     # check config service
     if [ "X${USE_LOCKSS_CFG}" = X ]; then
          USE_LOCKSS_CFG=true
@@ -201,7 +201,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_HDFS}" = X ]; then
          USE_LOCKSS_HDFS=false
     fi
-    ask_for_input "Use LOCKSS HDFS Service?" ${USE_LOCKSS_HDFS}
+    ask_for_input "Use LOCKSS HDFS Service?" $(to_yes_no ${USE_LOCKSS_HDFS})
     if is_yes "${ANS}"; then
         USE_LOCKSS_HDFS=true
     else
@@ -211,7 +211,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_PYWB}" = X ]; then
          USE_LOCKSS_PYWB=true
     fi
-    ask_for_input "Use LOCKSS SOLR Service?" ${USE_LOCKSS_PYWB}
+    ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
         USE_LOCKSS_PYWB=true
     else
@@ -222,7 +222,7 @@ configure_services() {
 
 # build_config_file file user
 build_config_file() {
-    echo "Writing config file ${1} for user ${2}"
+    echo "Building config file info ${1} for user ${2}..."
     CONFIG_OK=N
     until is_yes ${CONFIG_OK}; do
         if [ "X${LOCKSS_HOSTNAME}" = X ]; then
@@ -516,8 +516,8 @@ fi
 
 #get the number of stacks
 case "${1}" in
-  '') CONFIG_COUNT=1 ; break ;;
-  [1-9]) CONFIG_COUNT="${1}" ; break ;;
+  '') CONFIG_COUNT=1 ;;
+  [1-9]) CONFIG_COUNT="${1}" ;;
   *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
@@ -529,8 +529,11 @@ echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 #call generate-lockss
-echo "$(date) generating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
+echo "$(date) Generating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
 . "${_D0}/generate-lockss"
-echo ""
 
-echo "$(date) Call assemble-lockss to prepare for deploy-lockss"
+echo "$(date) Assembling docker stack elements..."
+. "${_D0}/assemble-lockss"
+echo ""
+echo "$(date) Call deploy-lockss when ready to run stack..."
+

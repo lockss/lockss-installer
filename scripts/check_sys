@@ -96,13 +96,13 @@ _EOF_
 }
 
 ensure_lockss_user() {
-  if ! $(grep -q ^lockss: /etc/passwd) ; then
+  if  [! $(grep -q ^lockss: /etc/passwd) ] ; then
     echo "${_0}: The is no 'lockss' user account."
     ask_for_input "OK to create account for 'lockss' user?" Y
-    if is_yes "${ANS}" ;
+    if [ is_yes "${ANS}" ] ; then
       case `uname -s ` in
         Linux)
-          if useradd -s /bin/false lockss ; then
+          if [ useradd -s /bin/false lockss ] ; then
             mkdir -p /home/lockss
             chown lockss:lockss /home/lockss
             chmod 755 /home/lockss
@@ -120,11 +120,9 @@ ensure_lockss_user() {
           dscl . create /Users/lockss realname "lockss"
           dscl . create /Groups/lockss gid 799
           dscl . create /Groups/lockss passwd \*
-          passwd lockss
-          ;;
+          passwd lockss ;;
         *)
-          err "Unsupported system, create the user lockss in group lockss manually."
-          ;;
+          err "Unsupported system, create the user lockss in group lockss manually." ;;
       esac
     fi
   fi
@@ -132,27 +130,24 @@ ensure_lockss_user() {
 
 ensure_docker() {
   // todo pass the 'docker' argument
-  if ! which "docker" &> /dev/null ; then
+  if [ ! which "docker" &> /dev/null ]; then
     echo "${_0}: Docker does not appear to be on the path."
     ask_for_input "OK to install Docker?" Y
-    if is_yes "${ANS}"; then
+    if [ is_yes "${ANS}" ]; then
       case `uname -s ` in
         Linux)
           curl -fsSL https://get.docker.com -o get-docker.sh
           $(sh get-docker.sh)
-          sudo usermod -G docker -a lockss
-          ;;
+          sudo usermod -G docker -a lockss;;
         Darwin)
           err "Docker mac must be installed  as an application available from DockerHub."
           err "If you have homebrew: homebrew cask install docker"
           err "Full instructions for Mac, can be found in the README."
-          exit 1
-          ;;
+          exit 1 ;;
         *)
-          err "Unsupported system, install docker manually."
+          err "Unsupported system, install docker manually." ;;
       esac
     fi
-    else
  fi
 }
 
