@@ -158,7 +158,7 @@ done
 echo "$(date) Renaming log volumes..."
 for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
     new_dir="${dir/stack1/stack}"
-    if [! -e ${new_dir}] ; then
+    if [! -e ${new_dir} ] ; then
         mv "$dir" "${new_dir}"
     fi 
 done
