@@ -231,7 +231,7 @@ deploy_stack() {
     echo "pulling image for ${svc_name}..."
     docker-compose pull ${svc_name}  &> /dev/null
   done
-  docker stack deploy --prune --compose-file ${compose_file} $stack
+  docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
   popd 
 }
 
