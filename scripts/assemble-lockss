@@ -228,7 +228,7 @@ add_stack_network() {
   local stack=$1
   # Create a lockss network
   echo "Creating lockss network"
-  docker network remove $stack-network
+  docker network remove $stack-network &> /dev/null
   if ! docker network create -d overlay --opt encrypted $stack-network; then
     error_exit "$stack-network: error creating network."
   fi
