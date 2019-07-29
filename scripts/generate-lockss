@@ -174,7 +174,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   set -a
   . "${stack_env_file}"
   set +a
-  export POSTGRES_PASSWD="{{ secret "lockss-postgres-pass" }}"
+  export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
   echo "$(date) Generating stack docker-compose file..."
   mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
