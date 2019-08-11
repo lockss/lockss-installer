@@ -195,9 +195,9 @@ services:
         target: /run/configs/lockss.properties
       - source: lockss_bootstrap
         target: /run/configs/lockss_bootstrap
-      - source: pol_service
+      - source: repo_service
         target: /run/configs/lockss_service
-      - source: pol_service_opt
+      - source: repo_service_opt
         target: /run/configs/lockss_service_opt
     ports:
       - "${REPO_REST_PORT}:${REPO_DEFAULT_REST_PORT}"
@@ -329,6 +329,12 @@ configs:
   repo_properties:
     external: true
     name: ${STACK}-repo_properties
+  repo_service:
+    external: true
+    name: ${STACK}-repo-service
+  repo_service_opt:
+    external: true
+    name: ${STACK}-repo-service_opt
 
 #
 # SECRETS
