@@ -76,7 +76,6 @@ services:
       - LOCKSS_IS_CONFIG=true
       - "LOCKSS_PROPS_URL=${LOCKSS_PROPS_URL}"
       - "LOCKSS_WAIT_FOR_PORT=${POSTGRES_HOST}:${POSTGRES_DEFAULT_PORT} ${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
-      - "LOCKSS_WAIT_FOR_200=${REPO_HOST}:${REPO_DEFAULT_REST_PORT}"
     ports:
       - "${CFG_REST_PORT}:${CFG_DEFAULT_REST_PORT}"
       - "${CFG_UI_PORT}:${CFG_DEFAULT_UI_PORT}"
@@ -194,16 +193,22 @@ services:
     configs:
       - source: repo_properties
         target: /run/configs/lockss.properties
+      - source: lockss_bootstrap
+        target: /run/configs/lockss_bootstrap
+      - source: pol_service
+        target: /run/configs/lockss_service
+      - source: pol_service_opt
+        target: /run/configs/lockss_service_opt
     ports:
       - "${REPO_REST_PORT}:${REPO_DEFAULT_REST_PORT}"
     environment:
       - LOCKSS_IS_REPO=true
+      - "LOCKSS_CONFIG_URL=${CFG_URL}"
+      - "LOCKSS_ADMIN_USER=${LOCKSS_ADMIN_USER}"
 #      - "LOCKSS_HDFS_HOST=${HDFS_HOST}"
 #      - "LOCKSS_HDFS_PORT=${HDFS_DEFAULT_FS_PORT}"
       - "LOCKSS_SOLR_HOST=${SOLR_HOST}"
       - "LOCKSS_SOLR_PORT=${SOLR_DEFAULT_PORT}"
-      - "LOCKSS_JMS_HOST=${JMS_HOST}"
-      - "LOCKSS_JMS_PORT=${JMS_DEFAULT_PORT}"
       - "LOCKSS_WAIT_FOR_PORT=${SOLR_HOST}:${SOLR_DEFAULT_PORT}"
       - "-Dlog4j2.debug"
     volumes:
