@@ -156,7 +156,8 @@ init_service_arrays() {
     svcs_confs+=("pol")
   fi  
   if ${USE_LOCKSS_REPO}; then
-      svcs+=("repo")
+    svcs+=("repo")
+    svcs_confs+=("repo")
   fi  
   if ${USE_LOCKSS_POSTGRES}; then
      svcs+=("postgres")
