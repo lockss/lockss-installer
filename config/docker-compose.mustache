@@ -210,8 +210,8 @@ services:
       - "{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}"
     environment:
       - LOCKSS_IS_REPO=true
-      - "LOCKSS_CONFIG_URL=${{CFG_URL}}"
-      - "LOCKSS_ADMIN_USER=${{LOCKSS_ADMIN_USER}}"
+      - "LOCKSS_CONFIG_URL={{CFG_URL}}"
+      - "LOCKSS_ADMIN_USER={{LOCKSS_ADMIN_USER}}"
 #      - "LOCKSS_HDFS_HOST={{HDFS_HOST}}"
 #      - "LOCKSS_HDFS_PORT={{HDFS_DEFAULT_FS_PORT}}"
       - "LOCKSS_SOLR_HOST={{SOLR_HOST}}"
