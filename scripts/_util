@@ -424,5 +424,4 @@ function normalize_path()
         path=$npath
         npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
     done
-    echo $path
 }
