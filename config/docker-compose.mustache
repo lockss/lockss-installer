@@ -206,7 +206,7 @@ services:
         target: /run/configs/lockss_service
       - source: repo_service_opt
         target: /run/configs/lockss_service_opt
- ports:
+    ports:
       - "{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}"
     environment:
       - LOCKSS_IS_REPO=true
