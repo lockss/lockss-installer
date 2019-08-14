@@ -54,9 +54,6 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${COMPOSE_DIR}/config"
-
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 

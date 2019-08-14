@@ -105,7 +105,6 @@ elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
     LOCKSS_SOLR_HOST='lockss-solr'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO='lockss-repo'
-
     cat >${SYSTEM_CONF_FILE} <<EOF
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER}"
@@ -150,8 +149,9 @@ USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 EOF
 fi
 
-echo "$(date) Looking for old volumes..."
-if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1*" ]; then
+echo "$(date) Looking for old directories..."
+if [ -d "${LOCKSS_DATA_DIR}/lockss-stack-cfg-data" ]; then
+
     echo "$(date) Renaming data volumes..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
         new_dir="${dir/stack1/stack}"
@@ -159,12 +159,15 @@ if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1*" ]; then
             mv "$dir" "${new_dir}"
         fi
     done
-
+fi
+if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     echo "$(date) Renaming log volumes..."
     for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
         new_dir="${dir/stack1/stack}"
-        if [! -d "${new_dir}" ] ; then
+        if [ ! -d "${new_dir}" ] ; then
             mv "$dir" "${new_dir}"
+        fi 
+    fi 
         fi 
     done
 fi
