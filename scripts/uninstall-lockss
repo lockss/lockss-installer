@@ -138,6 +138,8 @@ if [[ $# -eq 0 ]]; then
   docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
   echo "Removing all docker networks for lockss stacks..."
   docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
+  echo "Clearing lockss image cache..."
+  docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
   echo ""
   echo "Successfully undeployed all stacks and removed all installed stack info."
   echo "You will need to rerun assemble-lockss and deploy-lockss to run again."

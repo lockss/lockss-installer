@@ -57,7 +57,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR=$(normalize_path "${_D0}/..")
+COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${COMPOSE_DIR}/config"
 
 # Files
@@ -93,7 +93,9 @@ if [ -r "${SYSTEM_CONF_FILE}" ]; then
     echo "You appear to be running beta1 already.  No conf file conversion will take place"
 elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
     echo "$(date) Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
-    read_config ${OLD_SYSTEM_CONF_FILE}
+    set -a
+    . "${OLD_SYSTEM_CONF_FILE}"
+    set +a
     LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
     LOCKSS_POSTGRES_HOST='lockss-postgres'
     LOCKSS_POSTGRES_PORT=5432
@@ -103,6 +105,7 @@ elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
     LOCKSS_SOLR_HOST='lockss-solr'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO='lockss-repo'
+
     cat >${SYSTEM_CONF_FILE} <<EOF
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER}"
@@ -147,21 +150,24 @@ USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 EOF
 fi
 
-echo "$(date) Renaming data volumes..."
-for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
-    new_dir="${dir/stack1/stack}"
-    if [ ! -e ${new_dir} ]; then
-        mv "$dir" "${new_dir}"
-    fi
-done
+echo "$(date) Looking for old volumes..."
+if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1*" ]; then
+    echo "$(date) Renaming data volumes..."
+    for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
+        new_dir="${dir/stack1/stack}"
+        if [ ! -d "${new_dir}" ]; then
+            mv "$dir" "${new_dir}"
+        fi
+    done
 
-echo "$(date) Renaming log volumes..."
-for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
-    new_dir="${dir/stack1/stack}"
-    if [! -e ${new_dir} ] ; then
-        mv "$dir" "${new_dir}"
-    fi 
-done
+    echo "$(date) Renaming log volumes..."
+    for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
+        new_dir="${dir/stack1/stack}"
+        if [! -d "${new_dir}" ] ; then
+            mv "$dir" "${new_dir}"
+        fi 
+    done
+fi
 
 echo "$(date) Regenerating stack files..."
 "${_D0}/generate-lockss"

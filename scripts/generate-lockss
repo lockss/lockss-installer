@@ -55,7 +55,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR=$(normalize_path "${_D0}/..")
+COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
