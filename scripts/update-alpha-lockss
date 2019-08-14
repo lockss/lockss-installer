@@ -167,8 +167,6 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
         if [ ! -d "${new_dir}" ] ; then
             mv "$dir" "${new_dir}"
         fi 
-    fi 
-        fi 
     done
 fi
 
