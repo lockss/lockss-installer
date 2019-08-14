@@ -162,7 +162,7 @@ if [ -d "${LOCKSS_DATA_DIR}/lockss-stack-cfg-data" ]; then
 fi
 if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     echo "$(date) Renaming log volumes..."
-    for dir in $(ls -d ${LOCKSS_LOG_DIR}/*/); do
+    for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
         new_dir="${dir/stack1/stack}"
         if [ ! -d "${new_dir}" ] ; then
             mv "$dir" "${new_dir}"
