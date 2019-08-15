@@ -225,6 +225,8 @@ services:
       - lockss-repo-logs:/var/log/lockss
     networks:
       - lockss-network
+    secrets:
+      - lockss_ui_pass
 {{/USE_LOCKSS_REPO}}
 
 {{#USE_LOCKSS_POSTGRES}}
