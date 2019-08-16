@@ -257,7 +257,7 @@ while [[ -n $1 ]]; do
     ;;
   -a | --args)
     shift
-    ARGS_ADDITIONAL="$1"
+    export ARGS_ADDITIONAL="$1"
     echo "Adding addtional runtime args $ARGS_ADDITIONAL"
     shift
     ;;
