@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: updateAndRestart
+# Usage: updateAndRestart [-h|--help] [-a|--args ARGS_ADDITIONAL]
 #
 # Revision history:
 # ---------------------------------------------------------------------------
@@ -37,7 +37,89 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-./scripts/shutdown-lockss
-./scripts/generate-lockss
-./scripts/assemble-lockss
-./scripts/deploy-lockss
+#
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  "Restart the running LOCKSS stack."
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+  -a, --args ARGS_ADDITIONAL  Add addtional runtime options."
+    Where 'ARGS_ADDITIONAL' are the arguments.
+
+_EOF_
+  return
+}
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
+
+ARGS_ADDITIONAL=""
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    -a | --args)
+      shift
+      export ARGS_ADDITIONAL="$1"
+      echo "Adding addtional runtime args $ARGS_ADDITIONAL";
+      shift
+    ;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
+
+# Main logic
+"${_D0}"/shutdown-lockss
+"${_D0}"/generate-lockss
+"${_D0}"/assemble-lockss
+"${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+
+graceful_exit

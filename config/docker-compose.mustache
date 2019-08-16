@@ -255,7 +255,7 @@ services:
 #      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
-       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     secrets:
       - lockss-postgres-pass
     networks:
