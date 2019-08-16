@@ -76,7 +76,8 @@ services:
       - LOCKSS_IS_CONFIG=true
       - "LOCKSS_PROPS_URL={{LOCKSS_PROPS_URL}}"
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
-    ports:
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+  ports:
       - "{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}"
       - "{{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
       - "{{JMS_PORT}}:{{JMS_DEFAULT_PORT}}"
@@ -116,7 +117,8 @@ services:
       - "LOCKSS_ADMIN_USER={{LOCKSS_ADMIN_USER}}"
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{MDX_HOST}}:{{MDX_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{MDX_HOST}}:{{MDX_DEFAULT_REST_PORT}}"
-    secrets:
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+  secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
@@ -147,7 +149,8 @@ services:
       - "LOCKSS_ADMIN_USER={{LOCKSS_ADMIN_USER}}"
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
-    secrets:
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+   secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
@@ -184,7 +187,8 @@ services:
       - "LOCKSS_ADMIN_USER={{LOCKSS_ADMIN_USER}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
-    secrets:
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+   secrets:
       - lockss_ui_pass
     networks:
       - lockss-network
@@ -220,6 +224,7 @@ services:
       - "LOCKSS_JMS_PORT={{JMS_DEFAULT_PORT}}"
       - "LOCKSS_WAIT_FOR_PORT={{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}"
       - "-Dlog4j2.debug"
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     volumes:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
@@ -250,7 +255,8 @@ services:
 #      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
-    secrets:
+       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+   secrets:
       - lockss-postgres-pass
     networks:
       - lockss-network
@@ -290,7 +296,7 @@ services:
 {{/USE_LOCKSS_HDFS}}
 
 {{#USE_LOCKSS_PYWB}}
-  # 
+  #
   # SERVICE lockss-pywb
   #
   lockss-pywb:
@@ -305,7 +311,8 @@ services:
       - "REPO_REST_PORT={{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
-    networks:
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+   networks:
       - lockss-network
 {{/USE_LOCKSS_PYWB}}
 
