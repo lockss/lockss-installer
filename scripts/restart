@@ -1,4 +1,4 @@
-#!/usr/local/bin/zsh
+#!/bin/bash
 # ---------------------------------------------------------------------------
 # restart - "Restart the running LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
