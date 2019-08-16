@@ -100,7 +100,7 @@ configure_services() {
         USE_LOCKSS_REPO=false
     fi
     #check postgres service
-    if [ "X${USE_LOCKSS_POSTGRES}"=X ]; then
+    if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
          USE_LOCKSS_POSTGRES=true
     fi
     ask_for_input "Use LOCKSS Postgres DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
@@ -465,12 +465,12 @@ EOF
             CONFIG_OK=Y
             FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
             egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-#           if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-#               echo "Sending mail failed. Please check mail configuration."
-#               UNSENT_FILE=/tmp/unsent-lockss-config
-#               cp ${FILT_CONFIG} ${UNSENT_FILE}
-#              echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-#            fi
+           if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+               echo "Sending mail failed. Please check mail configuration."
+               UNSENT_FILE=/tmp/unsent-lockss-config
+               cp ${FILT_CONFIG} ${UNSENT_FILE}
+              echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+            fi
             rm -f ${FILT_CONFIG}
 
        fi

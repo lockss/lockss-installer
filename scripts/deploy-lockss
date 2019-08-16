@@ -117,6 +117,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
+  -a, --args ARGS_ADDITIONAL  Add addtional runtime options."
+    Where 'ARGS_ADDITIONAL' is the addtional arguments.
 
 _EOF_
   return
@@ -245,6 +247,7 @@ trap "signal_exit INT" INT
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
+ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
@@ -252,10 +255,16 @@ while [[ -n $1 ]]; do
     help_message
     graceful_exit
     ;;
+  -a | --args)
+    shift
+    ARGS_ADDITIONAL="$1"
+    echo "Adding addtional runtime args $ARGS_ADDITIONAL"
+    shift
+    ;;
   [1-9])
     STACK_NUM=$1
     ;;
-  -* | --*)
+  -* |--*)
     usage
     error_exit "Unknown option $1"
     ;;
