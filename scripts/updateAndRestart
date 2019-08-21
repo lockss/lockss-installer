@@ -42,6 +42,11 @@ VERSION="1.0"
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+##
+## Load _util
+##
+
+. "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -117,6 +122,10 @@ while [[ -n $1 ]]; do
 done
 
 # Main logic
+ask_for_input "Do you want to update current branch from remote?" Y
+if is_yes "${ANS}"; then
+  git pull
+fi
 "${_D0}"/shutdown-lockss
 "${_D0}"/generate-lockss
 "${_D0}"/assemble-lockss
