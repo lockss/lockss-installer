@@ -276,7 +276,7 @@ services:
     image: {{SOLR_IMG}}:{{SOLR_VERSION}}
     ports:
       - "{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}}"
-    command: solr-precreate lockss-repo
+    command: {{SOLR_CMD}}
     volumes:
       - lockss-solr-data:/opt/solr/server/solr/mycores
       - lockss-solr-logs:/opt/solr/server/logs
