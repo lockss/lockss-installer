@@ -67,16 +67,32 @@ OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
 # Sanity checks
 echo "Checking docker..."
 Check_Installed 'docker'
-Check_Docker    
+Check_Docker
 Check_Swarm
 
-echo "Shutting down all LOCKSS alpha stacks..."
+echo "removing all LOCKSS alpha stacks..."
 docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
 
-echo "Stopping and removing containers..."
-docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop &> /dev/null
-docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm &> /dev/null
+echo "restart single stack based on current config..."
+"${_D0}/deploy-lockss"
 
+if [ -r "${SYSTEM_CONF_FILE}" ]; then
+  SQL_FILE="alpha-to-beta-db-rename-after.sql"
+  POSTGRES="$(docker stack services lockss_stack | grep 'lockss-postgres' | awk '(print $1)')"
+else
+  SQL_FILE="alpha-to-beta-db-rename.sql"
+  POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '(print $1)')"
+fi
+echo "Updating Database..."
+docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
+docker container start ${POSTGRES}
+docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < ${SQL_FILE}
+echo "Cleaning up stacks"
+docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
+echo "Stopping lockss containers..."
+docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
+echo "Removing lockss containers..."
+docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
 echo "Clearing lockss image cache..."
 docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
 
@@ -150,8 +166,7 @@ EOF
 fi
 
 echo "$(date) Looking for old directories..."
-if [ -d "${LOCKSS_DATA_DIR}/lockss-stack-cfg-data" ]; then
-
+if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
     echo "$(date) Renaming data volumes..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
         new_dir="${dir/stack1/stack}"
@@ -166,7 +181,7 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
         new_dir="${dir/stack1/stack}"
         if [ ! -d "${new_dir}" ] ; then
             mv "$dir" "${new_dir}"
-        fi 
+        fi
     done
 fi
 
