@@ -197,6 +197,11 @@ Wait_For_Port()
   done
 }
 
+# check if running as root
+am_i_root() {
+    [ "$(id -u)" -eq 0 ]
+}
+
 #
 # Read existing config info and populate environment
 # Must be run before LOCKSS daemon can be started

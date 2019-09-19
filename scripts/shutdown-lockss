@@ -44,6 +44,7 @@ _D0=$(dirname "${0}")
 
 
 clean_up() { # Perform pre-exit housekeeping
+	unalias xargs
 	return
 }
 
@@ -127,7 +128,11 @@ done
 Check_Installed 'docker'
 Check_Docker
 Check_Swarm
-
+if which "gxargs" &> /dev/null; then
+  alias xargs='gxargs -r'
+else
+  alias xargs='xargs -r'
+fi
 if [[ ${STACK_NUM} -eq 0 ]]; then
   echo "Shutting down all LOCKSS stacks..."
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm

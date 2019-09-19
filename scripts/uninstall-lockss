@@ -53,6 +53,7 @@ _D0=$(dirname "${0}")
 . "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
+  unalias xargs
 	return
 }
 
@@ -122,6 +123,12 @@ done
 Check_Installed 'docker'
 Check_Docker
 Check_Swarm
+
+if which "gxargs" &> /dev/null; then
+  alias xargs='gxargs -r'
+else
+  alias xargs='xargs -r'
+fi
 
 if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks

@@ -42,6 +42,8 @@ VERSION="1.0"
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+COMPOSE_DIR="${_D0}/.."
+
 ##
 ## Load _util
 ##
@@ -122,10 +124,22 @@ while [[ -n $1 ]]; do
 done
 
 # Main logic
+if $(am_i_root) ; then
+  error_exit "This script should not be run as root. Run as the lockss user."
+fi
+
 ask_for_input "Do you want to update current branch from remote?" Y
 if is_yes "${ANS}"; then
+  cd "${COMPOSE_DIR}"
   git pull
+  cd -
 fi
+  for svc_name in "${deploy_service_names[@]}"; do
+    echo "pulling image for ${svc_name}..."
+    docker-compose pull ${svc_name}  &> /dev/null
+  done
+  docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
+
 "${_D0}"/shutdown-lockss
 "${_D0}"/generate-lockss
 "${_D0}"/assemble-lockss
