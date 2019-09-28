@@ -51,38 +51,41 @@ COMPOSE_DIR="${_D0}/.."
 . "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  return
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
+  echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
   "Restart the running LOCKSS stack."
 
@@ -99,32 +102,35 @@ _EOF_
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
-
+trap "signal_exit INT" INT
 
 ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    -a | --args)
-      shift
-      export ARGS_ADDITIONAL="$1"
-      echo "Adding addtional runtime args $ARGS_ADDITIONAL";
-      shift
+  -h | --help)
+    help_message
+    graceful_exit
     ;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -a | --args)
+    shift
+    export ARGS_ADDITIONAL="$1"
+    echo "Adding addtional runtime args $ARGS_ADDITIONAL"
+    shift
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
 
 # Main logic
-if $(am_i_root) ; then
+if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
@@ -134,15 +140,31 @@ if is_yes "${ANS}"; then
   git pull
   cd -
 fi
-  for svc_name in "${deploy_service_names[@]}"; do
-    echo "pulling image for ${svc_name}..."
-    docker-compose pull ${svc_name}  &> /dev/null
-  done
-  docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
+for svc_name in "${deploy_service_names[@]}"; do
+  echo "pulling image for ${svc_name}..."
+  docker-compose pull ${svc_name} &>/dev/null
+done
 
-"${_D0}"/shutdown-lockss
-"${_D0}"/generate-lockss
-"${_D0}"/assemble-lockss
-"${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+#call shutdown and wait for it to complete
+echo "$(date) Shutting down lockss stack..."
+"${_D0}"/shutdown-lockss &
+wait $!
+
+#call generate-lockss
+echo "$(date) Regenerating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
+if ! "${_D0}/generate-lockss"; then
+  err_exit "Configuration template generation failed."
+fi
+echo "$(date) Reassembling docker stack elements..."
+if ! "${_D0}/assemble-lockss"; then
+  err_exit "Assemblage of docker components failed."
+fi
+echo ""
+ask_for_input "OK to deploy lockss-stack?" "Y"
+if is_yes "${ANS}"; then
+  "${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+else
+  echo "Run deploy-lockss script when ready to deploy."
+fi
 
 graceful_exit
