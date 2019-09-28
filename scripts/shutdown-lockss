@@ -134,17 +134,25 @@ else
   alias xargs='xargs -r'
 fi
 if [[ ${STACK_NUM} -eq 0 ]]; then
-  echo "Shutting down all LOCKSS stacks..."
-  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
-  docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
-  docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
-  echo "Stopped all containers and removed containers and stacks. Run deploy-lockss to run again."
+  if docker stack ps 'lockss-stack' &> /dev/null; then
+    echo "Shutting down all LOCKSS stacks..."
+    docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
+    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
+    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
+    echo "Stopped all containers and removed containers and stacks. Run deploy-lockss to run again."
+  else
+    echo "The stack 'lockss-stack' is not running. Run deploy-lockss to run again."
+  fi
 else
-  echo "Shutting down lockss-stack${STACK_NUM}"
-  docker stack ls | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker stack rm
-  docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container stop
-  docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container rm
-  echo "Stopped all containers and removed containers for lockss-stack${STACK_NUM}. Run deploy-lockss ${STACK_NUM} to run again."
+  if docker stack ps 'lockss-stack${STACK_NUM}' &> /dev/null; then
+    echo "Shutting down lockss-stack${STACK_NUM}"
+    docker stack ls | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker stack rm
+    docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container stop
+    docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container rm
+    echo "Stopped all containers and removed containers for lockss-stack${STACK_NUM}. Run deploy-lockss ${STACK_NUM} to run again."
+  else
+    echo "The stack 'lockss-stack${STACK_NUM}' is not running. Run deploy-lockss ${STACK_NUM} to run again."
+  fi
 fi
 
 graceful_exit

@@ -227,14 +227,14 @@ deploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  pushd . &> /dev/null
+  pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
   for svc_name in "${deploy_service_names[@]}"; do
     echo "pulling image for ${svc_name}..."
-    docker-compose pull ${svc_name}  &> /dev/null
+    docker-compose pull ${svc_name} &>/dev/null
   done
   docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
-  popd &> /dev/null
+  popd &>/dev/null
 }
 
 ##
@@ -264,7 +264,7 @@ while [[ -n $1 ]]; do
   [1-9])
     STACK_NUM=$1
     ;;
-  -* |--*)
+  -* | --*)
     usage
     error_exit "Unknown option $1"
     ;;

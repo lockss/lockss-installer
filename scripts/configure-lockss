@@ -501,6 +501,7 @@ esac
 LOCKSS_TEAM=lockssdiag@lockss.org
 LOCKSS_USER=lockss
 LOCAL_HOSTNAME=$(uname -n)
+
 declare -i CONFIG_COUNT
 
 echo "LOCKSS host configuration for ${OS_TYPE}."
@@ -519,6 +520,11 @@ esac
 
 echo "$(date) Checking system installs"
 . check_sys
+# Sanity checks
+Check_Installed 'docker'
+Check_Docker
+Check_Swarm
+Check_LocalPersistPlugin
 
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
@@ -526,10 +532,14 @@ build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 #call generate-lockss
 echo "$(date) Generating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
-"${_D0}/generate-lockss"
-
+if ! "${_D0}/generate-lockss" ; then
+  err_exit "Configuration template generation failed."
+fi
 echo "$(date) Assembling docker stack elements..."
-"${_D0}/assemble-lockss"
+if ! "${_D0}/assemble-lockss" ; then
+  err_exit "Assemblage of docker components failed."
+fi
 echo ""
+
 echo "$(date) Call deploy-lockss when ready to run stack..."
 
