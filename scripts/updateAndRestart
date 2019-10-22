@@ -149,12 +149,14 @@ done
 echo "$(date) Shutting down lockss stack..."
 "${_D0}"/shutdown-lockss &
 wait $!
+sleep 10
 
 #call generate-lockss
 echo "$(date) Regenerating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
 if ! "${_D0}/generate-lockss"; then
   err_exit "Configuration template generation failed."
 fi
+sleep 2
 echo "$(date) Reassembling docker stack elements..."
 if ! "${_D0}/assemble-lockss"; then
   err_exit "Assemblage of docker components failed."
