@@ -71,7 +71,9 @@ Check_Docker
 Check_Swarm
 
 echo "removing all LOCKSS alpha stacks..."
-docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
+if docker stack ps 'lockss-stack' &> /dev/null; then
+  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
+fi
 
 echo "restart single stack based on current config..."
 "${_D0}/deploy-lockss"
@@ -185,11 +187,13 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     done
 fi
 
-echo "$(date) Regenerating stack files..."
-"${_D0}/generate-lockss"
-
-echo "$(date) Restoring stack assembly..."
-"${_D0}/assemble-lockss"
+if ! "${_D0}/generate-lockss" ; then
+  err_exit "Configuration template generation failed."
+fi
+echo "$(date) Assembling docker stack elements..."
+if ! "${_D0}/assemble-lockss" ; then
+  err_exit "Assemblage of docker components failed."
+fi
 
 echo ""
 echo "$(date) Call deploy-lockss to run converted stack."

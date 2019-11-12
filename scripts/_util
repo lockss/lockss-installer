@@ -312,6 +312,7 @@ init_one_dir() {
     fi
 }
 
+
 # check_writable (dir, user)
 check_writable() {
     local DIR="$1"

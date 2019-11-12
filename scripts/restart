@@ -114,7 +114,6 @@ while [[ -n $1 ]]; do
   shift
 done
 # Main logic
-"${_D0}"/shutdown-lockss
-"${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+"${_D0}"/shutdown-lockss && "${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 graceful_exit
 
