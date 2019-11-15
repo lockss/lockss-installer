@@ -80,10 +80,10 @@ services:
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     ports:
-      - "{{LOCKSS_IPADDR}}:{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{JMS_PORT}}:{{JMS_DEFAULT_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{LOCKSS_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
+      - "{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}"
+      - "{{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
+      - "{{JMS_PORT}}:{{JMS_DEFAULT_PORT}}"
+      - "{{LOCKSS_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
     volumes:
       - lockss-cfg-data:/data
       - lockss-cfg-logs:/var/log/lockss
@@ -91,7 +91,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_CFG}}
 
  {{#USE_LOCKSS_MDQ}}
@@ -109,8 +109,8 @@ services:
       - source: mdq_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{LOCKSS_IPADDR}}:{{MDQ_REST_PORT}}:{{MDQ_DEFAULT_REST_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{MDQ_UI_PORT}}:{{MDQ_DEFAULT_UI_PORT}}"
+      - "{{MDQ_REST_PORT}}:{{MDQ_DEFAULT_REST_PORT}}"
+      - "{{MDQ_UI_PORT}}:{{MDQ_DEFAULT_UI_PORT}}"
     volumes:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
@@ -125,7 +125,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_MDQ}}
  {{#USE_LOCKSS_MDX}}
   #
@@ -142,8 +142,8 @@ services:
       - source: mdx_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{LOCKSS_IPADDR}}:{{MDX_REST_PORT}}:{{MDX_DEFAULT_REST_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{MDX_UI_PORT}}:{{MDX_DEFAULT_UI_PORT}}"
+      - "{{MDX_REST_PORT}}:{{MDX_DEFAULT_REST_PORT}}"
+      - "{{MDX_UI_PORT}}:{{MDX_DEFAULT_UI_PORT}}"
     volumes:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
@@ -158,7 +158,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_MDX}}
 
  {{#USE_LOCKSS_POL}}
@@ -176,13 +176,13 @@ services:
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{LOCKSS_IPADDR}}:{{POL_REST_PORT}}:{{POL_DEFAULT_REST_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{POL_UI_PORT}}:{{POL_DEFAULT_UI_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{LOCKSS_LCAP_PORT}}:{{LOCKSS_LCAP_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{SERV_PORT}}:{{SERV_DEFAULT_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{LOCKSS_PROXY_PORT}}:{{LOCKSS_DEFAULT_PROXY_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{LOCKSS_AUDIT_PORT}}:{{LOCKSS_DEFAULT_AUDIT_PORT}}"
-      - "{{LOCKSS_IPADDR}}:{{LOCKSS_ICP_PORT}}:{{LOCKSS_DEFAULT_ICP_PORT}}"
+      - "{{POL_REST_PORT}}:{{POL_DEFAULT_REST_PORT}}"
+      - "{{POL_UI_PORT}}:{{POL_DEFAULT_UI_PORT}}"
+      - "{{LOCKSS_LCAP_PORT}}:{{LOCKSS_LCAP_PORT}}"
+      - "{{SERV_PORT}}:{{SERV_DEFAULT_PORT}}"
+      - "{{LOCKSS_PROXY_PORT}}:{{LOCKSS_DEFAULT_PROXY_PORT}}"
+      - "{{LOCKSS_AUDIT_PORT}}:{{LOCKSS_DEFAULT_AUDIT_PORT}}"
+      - "{{LOCKSS_ICP_PORT}}:{{LOCKSS_DEFAULT_ICP_PORT}}"
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
@@ -196,7 +196,7 @@ services:
     secrets:
       - lockss_ui_pass
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_POL}}
 
 {{#USE_LOCKSS_REPO}}
@@ -216,7 +216,7 @@ services:
       - source: repo_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{LOCKSS_IPADDR}}:{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}"
+      - "{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}"
     environment:
       - LOCKSS_IS_REPO=true
       - "LOCKSS_CONFIG_URL={{CFG_URL}}"
@@ -235,7 +235,7 @@ services:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
     networks:
-      - host-network
+      - host
     secrets:
       - lockss_ui_pass
 {{/USE_LOCKSS_REPO}}
@@ -248,7 +248,7 @@ services:
     <<: *lockss-service-common
     image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
     ports:
-      - '{{LOCKSS_IPADDR}}:{{POSTGRES_PORT}}:{{POSTGRES_DEFAULT_PORT}}'
+      - '{{POSTGRES_PORT}}:{{POSTGRES_DEFAULT_PORT}}'
     volumes:
       - lockss-postgres-data:/data
       - lockss-postgres-logs:/var/logs/postgres
@@ -265,7 +265,7 @@ services:
     secrets:
       - lockss-postgres-pass
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_POSTGRES}}
 
 {{#USE_LOCKSS_SOLR}}
@@ -276,13 +276,13 @@ services:
     <<: *lockss-service-common
     image: {{SOLR_IMG}}:{{SOLR_VERSION}}
     ports:
-      - "{{LOCKSS_IPADDR}}:{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}}"
+      - "{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}}"
     command: {{SOLR_CMD}}
     volumes:
       - lockss-solr-data:/opt/solr/server/solr/mycores
       - lockss-solr-logs:/opt/solr/server/logs
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_SOLR}}
 
 {{#USE_LOCKSS_HDFS}}
@@ -293,12 +293,12 @@ services:
     <<: *lockss-service-common
     image: {{HDFS_IMG}}:{{HDFS_VERSION}}
     ports:
-      - "{{LOCKSS_IPADDR}}:{{HDFS_FS_PORT}}:{{HDFS_DEFAULT_FS_PORT}}"
+      - "{{HDFS_FS_PORT}}:{{HDFS_DEFAULT_FS_PORT}}"
     volumes:
       - lockss-hdfs-data:/hadoop
       - lockss-hdfs-logs:/var/log/hadoop
     networks:
-      host-network:
+      - host
 {{/USE_LOCKSS_HDFS}}
 
 {{#USE_LOCKSS_PYWB}}
@@ -309,7 +309,7 @@ services:
     <<: *lockss-service-common
     image: {{PYWB_IMG}}:{{PYWB_VERSION}}
     ports:
-      - "{{LOCKSS_IPADDR}}:{{PYWB_PORT}}:{{PYWB_DEFAULT_PORT}}"
+      - "{{PYWB_PORT}}:{{PYWB_DEFAULT_PORT}}"
     volumes:
       - lockss-pywb-data:/data
     environment:
@@ -319,7 +319,7 @@ services:
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
-      - host-network
+      - host
 {{/USE_LOCKSS_PYWB}}
 
 #
@@ -327,6 +327,7 @@ services:
 #
 configs:
   lockss_bootstrap:
+    external: true
     external: true
     name: {{STACK}}-lockss-bootstrap
   lockss_cluster:
@@ -470,6 +471,3 @@ networks:
   lockss-network:
     external: true
     name: {{STACK}}-network
-  host-network
-    external: true
-    name: host
