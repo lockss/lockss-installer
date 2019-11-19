@@ -34,7 +34,8 @@ version: '3.7'
 #
 x-lockss-service-common: &lockss-service-common
   deploy:
-    replicas: 1
+#    replicas: 1
+    mode: global
     restart_policy:
       condition: on-failure
       delay: 10s
@@ -80,10 +81,22 @@ services:
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     ports:
-      - "{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}"
-      - "{{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
-      - "{{JMS_PORT}}:{{JMS_DEFAULT_PORT}}"
-      - "{{LOCKSS_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{CFG_REST_PORT}}
+        target: {{CFG_DEFAULT_REST_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{CFG_UI_PORT}}
+        target: {{CFG_DEFAULT_UI_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{JMS_PORT}}
+        target: {{JMS_DEFAULT_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{LOCKSS_UI_PORT}}
+        target: {{CFG_DEFAULT_UI_PORT}}
     volumes:
       - lockss-cfg-data:/data
       - lockss-cfg-logs:/var/log/lockss
@@ -109,8 +122,14 @@ services:
       - source: mdq_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{MDQ_REST_PORT}}:{{MDQ_DEFAULT_REST_PORT}}"
-      - "{{MDQ_UI_PORT}}:{{MDQ_DEFAULT_UI_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{MDQ_REST_PORT}}
+        target: {{MDQ_DEFAULT_REST_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{MDQ_UI_PORT}}
+        target: {{MDQ_DEFAULT_UI_PORT}}
     volumes:
       - lockss-mdq-data:/data
       - lockss-mdq-logs:/var/log/lockss
@@ -142,8 +161,14 @@ services:
       - source: mdx_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{MDX_REST_PORT}}:{{MDX_DEFAULT_REST_PORT}}"
-      - "{{MDX_UI_PORT}}:{{MDX_DEFAULT_UI_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{MDX_REST_PORT}}
+        target: {{MDX_DEFAULT_REST_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{MDX_UI_PORT}}
+        target: {{MDX_DEFAULT_UI_PORT}}
     volumes:
       - lockss-mdx-data:/data
       - lockss-mdx-logs:/var/log/lockss
@@ -176,13 +201,34 @@ services:
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{POL_REST_PORT}}:{{POL_DEFAULT_REST_PORT}}"
-      - "{{POL_UI_PORT}}:{{POL_DEFAULT_UI_PORT}}"
-      - "{{LOCKSS_LCAP_PORT}}:{{LOCKSS_LCAP_PORT}}"
-      - "{{SERV_PORT}}:{{SERV_DEFAULT_PORT}}"
-      - "{{LOCKSS_PROXY_PORT}}:{{LOCKSS_DEFAULT_PROXY_PORT}}"
-      - "{{LOCKSS_AUDIT_PORT}}:{{LOCKSS_DEFAULT_AUDIT_PORT}}"
-      - "{{LOCKSS_ICP_PORT}}:{{LOCKSS_DEFAULT_ICP_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{POL_REST_PORT}}
+        target: {{POL_DEFAULT_REST_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{POL_UI_PORT}}
+        target: {{POL_DEFAULT_UI_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{LOCKSS_LCAP_PORT}}
+        target: {{LOCKSS_LCAP_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{SERV_PORT}}
+        target: {{SERV_DEFAULT_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{LOCKSS_PROXY_PORT}}
+        target: {{LOCKSS_DEFAULT_PROXY_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{LOCKSS_AUDIT_PORT}}
+        target: {{LOCKSS_DEFAULT_AUDIT_PORT}}
+      - mode: host
+        protocol: tcp
+        published: {{LOCKSS_ICP_PORT}}
+        target: {{LOCKSS_DEFAULT_ICP_PORT}}
     volumes:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
@@ -216,7 +262,10 @@ services:
       - source: repo_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - "{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{REPO_REST_PORT}}
+        target: {{REPO_DEFAULT_REST_PORT}}
     environment:
       - LOCKSS_IS_REPO=true
       - "LOCKSS_CONFIG_URL={{CFG_URL}}"
@@ -248,7 +297,10 @@ services:
     <<: *lockss-service-common
     image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
     ports:
-      - '{{POSTGRES_PORT}}:{{POSTGRES_DEFAULT_PORT}}'
+      - mode: host
+        protocol: tcp
+        published: {{POSTGRES_PORT}}
+        target: {{POSTGRES_DEFAULT_PORT}}
     volumes:
       - lockss-postgres-data:/data
       - lockss-postgres-logs:/var/logs/postgres
@@ -276,7 +328,10 @@ services:
     <<: *lockss-service-common
     image: {{SOLR_IMG}}:{{SOLR_VERSION}}
     ports:
-      - "{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{SOLR_PORT}}
+        target: {{SOLR_DEFAULT_PORT}}
     command: {{SOLR_CMD}}
     volumes:
       - lockss-solr-data:/opt/solr/server/solr/mycores
@@ -293,7 +348,10 @@ services:
     <<: *lockss-service-common
     image: {{HDFS_IMG}}:{{HDFS_VERSION}}
     ports:
-      - "{{HDFS_FS_PORT}}:{{HDFS_DEFAULT_FS_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{HDFS_FS_PORT}}
+        target: {{HDFS_DEFAULT_FS_PORT}}
     volumes:
       - lockss-hdfs-data:/hadoop
       - lockss-hdfs-logs:/var/log/hadoop
@@ -309,7 +367,10 @@ services:
     <<: *lockss-service-common
     image: {{PYWB_IMG}}:{{PYWB_VERSION}}
     ports:
-      - "{{PYWB_PORT}}:{{PYWB_DEFAULT_PORT}}"
+      - mode: host
+        protocol: tcp
+        published: {{PYWB_PORT}}
+        target: {{PYWB_DEFAULT_PORT}}
     volumes:
       - lockss-pywb-data:/data
     environment:
