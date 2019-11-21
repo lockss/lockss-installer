@@ -104,7 +104,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_CFG}}
 
  {{#USE_LOCKSS_MDQ}}
@@ -144,7 +144,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_MDQ}}
  {{#USE_LOCKSS_MDX}}
   #
@@ -183,7 +183,7 @@ services:
       - lockss-postgres-pass
       - lockss_ui_pass
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_MDX}}
 
  {{#USE_LOCKSS_POL}}
@@ -242,7 +242,7 @@ services:
     secrets:
       - lockss_ui_pass
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_POL}}
 
 {{#USE_LOCKSS_REPO}}
@@ -284,7 +284,7 @@ services:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
     networks:
-      - lockss-network
+      - host-network
     secrets:
       - lockss_ui_pass
 {{/USE_LOCKSS_REPO}}
@@ -317,7 +317,7 @@ services:
     secrets:
       - lockss-postgres-pass
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_POSTGRES}}
 
 {{#USE_LOCKSS_SOLR}}
@@ -337,7 +337,7 @@ services:
       - lockss-solr-data:/opt/solr/server/solr/mycores
       - lockss-solr-logs:/opt/solr/server/logs
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_SOLR}}
 
 {{#USE_LOCKSS_HDFS}}
@@ -356,7 +356,7 @@ services:
       - lockss-hdfs-data:/hadoop
       - lockss-hdfs-logs:/var/log/hadoop
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_HDFS}}
 
 {{#USE_LOCKSS_PYWB}}
@@ -380,7 +380,7 @@ services:
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
-      - lockss-network
+      - host-network
 {{/USE_LOCKSS_PYWB}}
 
 #
@@ -532,3 +532,6 @@ networks:
   lockss-network:
     external: true
     name: {{STACK}}-network
+  host-network:
+    external: true
+    name: host
