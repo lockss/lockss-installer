@@ -383,6 +383,30 @@ services:
       - host-network
 {{/USE_LOCKSS_PYWB}}
 
+{{#USE_LOCKSS_OPENWB}}
+  #
+  # SERVICE lockss-openwayback
+  #
+  lockss-openwayback:
+    <<: *lockss-service-common
+    image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
+    ports:
+      - mode: host
+        protocol: tcp
+        published: {{OPENWB_PORT}}
+        target: {{OPENWB_DEFAULT_PORT}}
+    volumes:
+      - lockss-openwb-data:/data
+    environment:
+      - "REPO_HOST={{REPO_HOST}}"
+      - "REPO_REST_PORT={{REPO_DEFAULT_REST_PORT}}"
+      - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+      - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+    networks:
+      - host-network
+{{/USE_LOCKSS_OPENWB}}
+
 #
 # CONFIGS
 #
@@ -525,6 +549,14 @@ volumes:
     external: true
     name: {{STACK}}-pywb-logs
 {{/USE_LOCKSS_PYWB}}
+{{#USE_LOCKSS_OPENWB}}
+  lockss-openwb-data:
+    external: true
+    name: {{STACK}}-openwb-data
+  lockss-openwb-logs:
+    external: true
+    name: {{STACK}}-openwb-logs
+{{/USE_LOCKSS_OPENWB}}
 #
 # NETWORKS
 #

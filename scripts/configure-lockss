@@ -106,7 +106,7 @@ configure_services() {
     ask_for_input "Use LOCKSS Postgres DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
     if is_yes "${ANS}"; then
         USE_LOCKSS_POSTGRES=true
-        LOCKSS_POSTGRES_HOST='lockss-postgres'
+        LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
         LOCKSS_POSTGRES_PORT=5432
         LOCKSS_POSTGRES_USER="LOCKSS"
         LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
@@ -146,7 +146,7 @@ configure_services() {
 
     fi
         LOCKSS_DB_PASSWD=""
-        POSTGRES_PASSWD=""
+        POSTGRES_PASS=""
         while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
             P1=
             while [ "X${P1}" = X ]; do
@@ -170,9 +170,9 @@ configure_services() {
     ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
     if is_yes "${ANS}"; then
         USE_LOCKSS_SOLR=true
-        LOCKSS_SOLR_HOST='lockss-solr'
+        LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
         LOCKSS_SOLR_PORT='8983'
-        LOCKSS_SOLR_CORE_REPO='lockss-repo'
+        LOCKSS_SOLR_CORE_REPO=${LOCAL_HOSTNAME}
     else
         USE_LOCKSS_SOLR=false
         if [ "X${LOCKSS_SOLR_HOST}" = X ]; then
@@ -203,15 +203,17 @@ configure_services() {
     else
         USE_LOCKSS_HDFS=false
     fi
-    #check PYWB service
-    if [ "X${USE_LOCKSS_PYWB}" = X ]; then
-         USE_LOCKSS_PYWB=true
-    fi
-    ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
+    ask_for_input "Use LOCKSS PyWayback Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
         USE_LOCKSS_PYWB=true
     else
         USE_LOCKSS_PYWB=false
+    fi
+    ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+    if is_yes "${ANS}"; then
+        USE_LOCKSS_OPENWB=true
+    else
+        USE_LOCKSS_OPENWB=false
     fi
 }
 
@@ -388,8 +390,9 @@ build_config_file() {
                 SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
-                 UI_PASS=${P1}
+                UI_PASS=${P1}
                 Add_Secret "lockss_ui_pass" "${UI_PASS}"
+                Add_Secret "lockss_auth_pass" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
             fi
         done
         configure_services
@@ -436,6 +439,7 @@ USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
 USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
+USE_LOCKSS_OPENWB=${USE_LOCKSS_OPENWB:-false}"
 EOF
         echo
         echo "Configuration:"
