@@ -199,10 +199,10 @@ ensure_persistent_plugin() {
 
         ask_for_input "Path to store plugin data" "${PLUGIN_DATA_PATH}"
         PLUGIN_DATA_PATH=${ANS}
-        init_one_dir PLUGIN_DATA_PATH
+        init_one_dir ${PLUGIN_DATA_PATH}
         ask_for_input "Path to store persistant data" "${DATA_VOLUME_PATH}"
         DATA_VOLUME_PATH=${ANS}
-        init_one_dir DATA_VOLUME_PATH
+        init_one_dir ${DATA_VOLUME_PATH}
         docker run -d \
           -v /run/docker/plugins/:/run/docker/plugins/ \
           -v $PLUGIN_DATA_PATH:/var/lib/docker/plugin-data/ \
