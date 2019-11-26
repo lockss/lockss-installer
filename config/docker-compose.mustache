@@ -103,6 +103,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
+      - lockss-auth
     networks:
       - host-network
 {{/USE_LOCKSS_CFG}}
@@ -143,6 +144,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
+      - lockss-auth
     networks:
       - host-network
 {{/USE_LOCKSS_MDQ}}
@@ -182,6 +184,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
+      - lockss-auth
     networks:
       - host-network
 {{/USE_LOCKSS_MDX}}
@@ -241,6 +244,7 @@ services:
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     secrets:
       - lockss_ui_pass
+      - lockss-auth
     networks:
       - host-network
 {{/USE_LOCKSS_POL}}
@@ -287,6 +291,7 @@ services:
       - host-network
     secrets:
       - lockss_ui_pass
+      - lockss-auth
 {{/USE_LOCKSS_REPO}}
 
 {{#USE_LOCKSS_POSTGRES}}
@@ -338,6 +343,8 @@ services:
       - lockss-solr-logs:/opt/solr/server/logs
     networks:
       - host-network
+    secrets:
+      - lockss-auth
 {{/USE_LOCKSS_SOLR}}
 
 {{#USE_LOCKSS_HDFS}}
@@ -357,6 +364,8 @@ services:
       - lockss-hdfs-logs:/var/log/hadoop
     networks:
       - host-network
+    secrets:
+      - lockss-auth
 {{/USE_LOCKSS_HDFS}}
 
 {{#USE_LOCKSS_PYWB}}
@@ -381,6 +390,8 @@ services:
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
       - host-network
+    secrets:
+      - lockss-auth
 {{/USE_LOCKSS_PYWB}}
 
 {{#USE_LOCKSS_OPENWB}}
@@ -396,15 +407,20 @@ services:
         published: {{OPENWB_PORT}}
         target: {{OPENWB_DEFAULT_PORT}}
     volumes:
-      - lockss-openwb-data:/data
+      - lockss-openwayback-data:/data
     environment:
       - "REPO_HOST={{REPO_HOST}}"
       - "REPO_REST_PORT={{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+      - "WAYBACK_URL_HOST={{OPENWB_HOST}}"
+      - "WAYBACK_URL_PREFIX=http://{{OPENWB_HOST}}:{{OPENWB_PORT}}"
+      - "WAYBACK_BASEDIR=/data"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
       - host-network
+    secrets:
+      - lockss-auth
 {{/USE_LOCKSS_OPENWB}}
 
 #
@@ -471,6 +487,8 @@ secrets:
   lockss-postgres-pass:
     external: true
   lockss_ui_pass:
+    external: true
+  lockss-auth:
     external: true
 
 #
@@ -550,20 +568,20 @@ volumes:
     name: {{STACK}}-pywb-logs
 {{/USE_LOCKSS_PYWB}}
 {{#USE_LOCKSS_OPENWB}}
-  lockss-openwb-data:
+  lockss-openwayback-data:
     external: true
-    name: {{STACK}}-openwb-data
-  lockss-openwb-logs:
+    name: {{STACK}}-openwayback-data
+  lockss-openwayback-logs:
     external: true
-    name: {{STACK}}-openwb-logs
+    name: {{STACK}}-openwayback-logs
 {{/USE_LOCKSS_OPENWB}}
 #
 # NETWORKS
 #
 networks:
-  lockss-network:
-    external: true
-    name: {{STACK}}-network
+#  lockss-network:
+#    external: true
+#    name: {{STACK}}-network
   host-network:
     external: true
     name: host

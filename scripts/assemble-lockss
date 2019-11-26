@@ -171,6 +171,9 @@ init_service_arrays() {
   if ${USE_LOCKSS_PYWB}; then
       svcs+=("pywb")
   fi  
+  if ${USE_LOCKSS_OPENWB}; then
+      svcs+=("openwayback")
+  fi
 }
 
 # Create configs for each stack

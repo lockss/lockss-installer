@@ -203,7 +203,7 @@ configure_services() {
     else
         USE_LOCKSS_HDFS=false
     fi
-    ask_for_input "Use LOCKSS PyWayback Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
+    ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
         USE_LOCKSS_PYWB=true
     else
@@ -392,7 +392,7 @@ build_config_file() {
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
                 UI_PASS=${P1}
                 Add_Secret "lockss_ui_pass" "${UI_PASS}"
-                Add_Secret "lockss_auth_pass" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
+                Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
             fi
         done
         configure_services

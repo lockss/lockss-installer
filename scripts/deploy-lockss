@@ -166,6 +166,10 @@ init_service_arrays() {
     svcs+=("pywb")
     deploy_service_names+=("lockss-pywb")
   fi
+  if ${USE_LOCKSS_OPENWB}; then
+    svcs+=("openwayback")
+    deploy_service_names+=("lockss-openwayback")
+  fi
 }
 
 # Check our secrets
@@ -173,6 +177,7 @@ check_installed_secrets() {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss_ui_pass'
+  Check_Secret 'lockss-auth'
 }
 
 # Check the global configs
