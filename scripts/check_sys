@@ -114,10 +114,9 @@ get_next_daemon_uid() {
 }
 
 ensure_lockss_user() {
-  echo "Checking lockss user and group..."
   case ${OS_TYPE} in
   Linux)
-    if [ ! $(grep -q ^lockss: /etc/passwd) ]; then
+    if [ ! $(id "lockss" >/dev/null 2>&1) ]; then
       echo "${_0}: The is no 'lockss' user account."
       ask_for_input "OK to create account for 'lockss' user?" Y
       if is_yes "${ANS}"; then

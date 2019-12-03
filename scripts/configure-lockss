@@ -55,6 +55,8 @@ _D0=$(dirname "${0}")
 ##
 
 # Files
+COMPOSE_DIR="${_D0}/.."
+CONFIG_DIR="${COMPOSE_DIR}/config"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
@@ -522,8 +524,7 @@ case "${1}" in
   *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
-echo "$(date) Checking system installs"
-. check_sys
+echo "$(date) Checking system state, run check_sys as root if needed."
 # Sanity checks
 Check_Installed 'docker'
 Check_Docker
