@@ -255,7 +255,8 @@ is_yes() {
 }
 
 to_yes_no() {
-    if [ ${1} ]; then
+   local WORD="${1}"
+    if [ "X${WORD}" = Xtrue -o "X${WORD}" = XTRUE ]; then
         echo "Y"
     else
         echo "N"

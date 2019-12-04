@@ -60,17 +60,18 @@ CONFIG_DIR="${COMPOSE_DIR}/config"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
+    echo ""
     echo "configuring installed service..."
-    # check config service
-    if [ "X${USE_LOCKSS_CFG}" = X ]; then
+    echo ""
+ #   if [ "X${USE_LOCKSS_CFG}" = X ]; then
          USE_LOCKSS_CFG=true
-    fi
-    ask_for_input "Use LOCKSS Config Service?" $(to_yes_no ${USE_LOCKSS_CFG})
-    if is_yes "${ANS}"; then
-        USE_LOCKSS_CFG=true
-    else
-        USE_LOCKSS_CFG=false
-    fi
+ #   fi
+#    ask_for_input "Use LOCKSS Config Service?" $(to_yes_no ${USE_LOCKSS_CFG})
+#    if is_yes "${ANS}"; then
+#        USE_LOCKSS_CFG=true
+#    else
+#        USE_LOCKSS_CFG=false
+#    fi
     #check metadata service
     if [ "X${USE_LOCKSS_MDQ}" = X ]; then
          USE_LOCKSS_MDQ=true
@@ -92,15 +93,15 @@ configure_services() {
         USE_LOCKSS_MDX=false
     fi
     #check repository service
-    if [ "X${USE_LOCKSS_REPO}" = X ]; then
+#    if [ "X${USE_LOCKSS_REPO}" = X ]; then
          USE_LOCKSS_REPO=true
-    fi
-    ask_for_input "Use LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_REPO})
-    if is_yes "${ANS}"; then
-        USE_LOCKSS_REPO=true
-    else
-        USE_LOCKSS_REPO=false
-    fi
+#    fi
+#    ask_for_input "Use LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_REPO})
+#    if is_yes "${ANS}"; then
+#        USE_LOCKSS_REPO=true
+#    else
+#        USE_LOCKSS_REPO=false
+#    fi
     #check postgres service
     if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
          USE_LOCKSS_POSTGRES=true
@@ -166,35 +167,38 @@ configure_services() {
         done
 
     #check SOLR service
-    if [ "X${USE_LOCKSS_SOLR}" = X ]; then
-         USE_LOCKSS_SOLR=true
-    fi
-    ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
-    if is_yes "${ANS}"; then
+#    if [ "X${USE_LOCKSS_SOLR}" = X ]; then
         USE_LOCKSS_SOLR=true
         LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
         LOCKSS_SOLR_PORT='8983'
-        LOCKSS_SOLR_CORE_REPO=${LOCAL_HOSTNAME}
-    else
-        USE_LOCKSS_SOLR=false
-        if [ "X${LOCKSS_SOLR_HOST}" = X ]; then
-            LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
-        fi
-        ask_for_input "Fully qualified hostname (FQDN) of SOLR host" "${LOCKSS_SOLR_HOST}"
-        LOCKSS_SOLR_HOST=${ANS}
-
-        if [ "X${LOCKSS_SOLR_PORT}" = X ]; then
-            LOCKSS_SOLR_PORT='8983'
-        fi
-        ask_for_input "Port used by SOLR host" "${LOCKSS_SOLR_PORT}"
-        LOCKSS_SOLR_PORT=${ANS}
-
-        if [ "X${LOCKSS_SOLR_CORE_REPO}" = X ]; then
-            LOCKSS_SOLR_CORE_REPO='lockss-repo'
-        fi
-        ask_for_input "SOLR core repo name" "${LOCKSS_SOLR_CORE_REPO}"
-        LOCKSS_SOLR_CORE_REPO=${ANS}
-    fi
+        LOCKSS_SOLR_CORE_REPO="lockss-repo"
+#   fi
+#     ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
+#     if is_yes "${ANS}"; then
+#         USE_LOCKSS_SOLR=true
+#         LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
+#         LOCKSS_SOLR_PORT='8983'
+#         LOCKSS_SOLR_CORE_REPO="lockss-repo"
+#     else
+#         USE_LOCKSS_SOLR=false
+#         if [ "X${LOCKSS_SOLR_HOST}" = X ]; then
+#             LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
+#         fi
+#         ask_for_input "Fully qualified hostname (FQDN) of SOLR host" "${LOCKSS_SOLR_HOST}"
+#         LOCKSS_SOLR_HOST=${ANS}
+#
+#         if [ "X${LOCKSS_SOLR_PORT}" = X ]; then
+#             LOCKSS_SOLR_PORT='8983'
+#         fi
+#         ask_for_input "Port used by SOLR host" "${LOCKSS_SOLR_PORT}"
+#         LOCKSS_SOLR_PORT=${ANS}
+#
+#         if [ "X${LOCKSS_SOLR_CORE_REPO}" = X ]; then
+#             LOCKSS_SOLR_CORE_REPO='lockss-repo'
+#         fi
+#         ask_for_input "SOLR core repo name" "${LOCKSS_SOLR_CORE_REPO}"
+#         LOCKSS_SOLR_CORE_REPO=${ANS}
+#     fi
     #check HDFS service
     if [ "X${USE_LOCKSS_HDFS}" = X ]; then
          USE_LOCKSS_HDFS=false
@@ -205,17 +209,18 @@ configure_services() {
     else
         USE_LOCKSS_HDFS=false
     fi
+    echo "You can use either Pywb or OpenWayback for content replay..."
     ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
         USE_LOCKSS_PYWB=true
     else
         USE_LOCKSS_PYWB=false
-    fi
-    ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
-    if is_yes "${ANS}"; then
-        USE_LOCKSS_OPENWB=true
-    else
-        USE_LOCKSS_OPENWB=false
+        ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+        if is_yes "${ANS}"; then
+          USE_LOCKSS_OPENWB=true
+        else
+          USE_LOCKSS_OPENWB=false
+        fi
     fi
 }
 
@@ -430,7 +435,7 @@ LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA}"
 LOCKSS_DBNAME_PREFIX="${LOCKSS_DBNAME_PREFIX}"
 LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
-LOCKSS_SOLR_CORE_REPO=${LOCKSS_SOLR_CORE_REPO}
+LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
@@ -540,11 +545,7 @@ echo "$(date) Generating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..
 if ! "${_D0}/generate-lockss" ; then
   err_exit "Configuration template generation failed."
 fi
-echo "$(date) Assembling docker stack elements..."
-if ! "${_D0}/assemble-lockss" ; then
-  err_exit "Assemblage of docker components failed."
-fi
 echo ""
 
-echo "$(date) Call deploy-lockss when ready to run stack..."
+echo "$(date) Call assemble-lockss when ready to prepare stack for deployment..."
 
