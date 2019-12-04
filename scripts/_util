@@ -99,12 +99,12 @@ Add_Secret()
   local NAME="${1}"
   local VALUE="${2}"
 
-  if docker secret inspect ${NAME} &> /dev/null; then
+  if docker secret inspect "${NAME}" &> /dev/null; then
     echo "removing stored password for ${NAME}"
-    docker secret rm ${NAME}
+    docker secret rm "${NAME}"
   fi
   echo "Storing ${NAME} as a docker secret .."
-  if ! echo ${VALUE} | docker secret create ${NAME} - ; then
+  if ! echo -n "${VALUE}" | docker secret create "${NAME}" - ; then
     err "Docker secret creation failed for ${NAME}"
     return 1
   else
