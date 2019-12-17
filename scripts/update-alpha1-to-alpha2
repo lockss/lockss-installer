@@ -71,11 +71,13 @@ msg "${PROGNAME}: Checking system..."
 Check_Runnable
 
 msg "${PROGNAME}: stopping all LOCKSS alpha stacks..."
-"${_D0}/shutdown-lockss"
+"${_D0}/shutdown-lockss" && msg "alpha1 stacks successfully shutdown."
 
 msg "${PROGNAME}: checking for postgres changes, based on current config..."
-"${_D0}/deploy-lockss"
+"${_D0}/deploy-lockss" && msg "restarted in single stack mode."
 
+echo "  ---------------------------  "
+msg "${PROGNAME}: Updating postgres tables..."
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
   SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename-after.sql"
   POSTGRES="$(docker stack services lockss-stack | grep 'lockss-postgres' | awk '{print $1}')"
@@ -83,11 +85,10 @@ else
   SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
   POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '{print $1}')"
 fi
-msg "${PROGNAME}: Updating postgres tables..."
 docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
 docker container start ${POSTGRES}
 docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < "${SQL_FILE}"
-
+msg "Postgres update completed."
 echo "  ---------------------------  "
 msg "${PROGNAME}: Cleaning up old stacks"
 docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
