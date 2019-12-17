@@ -11,3 +11,5 @@
 /config/configs/*
 /config/useropts/*
 /config/useropts/templates/*
+/scripts/lib/*.jar
+/logs/

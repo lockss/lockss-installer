@@ -117,8 +117,8 @@ get_next_daemon_uid() {
 ensure_lockss_user() {
   case ${OS_TYPE} in
   Linux)
-    if [ ! $(id "lockss" >/dev/null 2>&1) ]; then
-      echo "${_0}: The is no 'lockss' user account."
+    if [ $(id "lockss" >/dev/null 2>&1) ]; then
+      echo "${_0}: There is no 'lockss' user account."
       ask_for_input "OK to create account for 'lockss' user?" Y
       if is_yes "${ANS}"; then
         if useradd -s /bin/false lockss; then
