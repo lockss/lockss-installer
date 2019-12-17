@@ -82,7 +82,7 @@ if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
   msg "${PROGNAME}: Solr home has already been patched."
 else
   msg "${PROGNAME}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
-  tar -xzf ${SOLR_HOME_PATCH} "${SOLR_HOME_PATH}"
+  tar -xzf ${SOLR_HOME_PATCH} -C "${SOLR_HOME_PATH}"
   # create the directory and move the lockss core repo.
   msg "${PROGNAME}: Creating default subdir ${CORE_PATH}"
   mkdir "${CORE_PATH}"
