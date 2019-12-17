@@ -339,7 +339,7 @@ services:
         target: {{SOLR_DEFAULT_PORT}}
     command: {{SOLR_CMD}}
     volumes:
-      - lockss-solr-data:/opt/solr/server/solr`
+      - lockss-solr-data:/opt/solr/server/solr
       - lockss-solr-logs:/opt/solr/server/logs
     networks:
       - host-network
