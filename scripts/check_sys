@@ -50,6 +50,7 @@ _D0=$(dirname "${0}")
 
 OS_TYPE=$(uname -s)
 LOCKSS_USER=lockss
+SOLR_USER=solr
 LOCAL_HOSTNAME=$(uname -n)
 
 clean_up() { # Perform pre-exit housekeeping
@@ -273,7 +274,6 @@ Darwin)
 esac
 
 
-# todo: add 'curl' check and install
 echo "${_0}: Checking for Docker..."
 ensure_docker
 echo "${_0}: Checking for Docker local-persist plugin..."

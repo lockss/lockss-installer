@@ -284,11 +284,7 @@ set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
 
-# Sanity checks
-Check_Installed 'docker'
-Check_Docker
-Check_Swarm
-Check_LocalPersistPlugin
+Check_Runnable
 
 init_service_arrays
 

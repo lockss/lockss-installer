@@ -115,7 +115,7 @@ while [[ -n $1 ]]; do
       help_message; graceful_exit ;;
     [1-9])
        STACK_NUM=$1;;
-    -* | --*)
+    -*)
       usage
       error_exit "Unknown option $1" ;;
     *)
@@ -125,9 +125,8 @@ while [[ -n $1 ]]; do
 done
 
 # Sanity checks
-Check_Installed 'docker'
-Check_Docker
-Check_Swarm
+Check_Runnable
+
 if which "gxargs" &> /dev/null; then
   alias xargs='gxargs -r'
 else
@@ -144,14 +143,14 @@ if [[ ${STACK_NUM} -eq 0 ]]; then
     echo "The stack 'lockss-stack' is not running. Run deploy-lockss to run again."
   fi
 else
-  if docker stack ps 'lockss-stack${STACK_NUM}' &> /dev/null; then
+  if docker stack ps "lockss-stack${STACK_NUM}" &> /dev/null; then
     echo "Shutting down lockss-stack${STACK_NUM}"
-    docker stack ls | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker stack rm
-    docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep 'lockss-stack${STACK_NUM}' | awk '{print $1}' | xargs docker container rm
+    docker stack ls | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker stack rm
+    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container stop
+    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container rm
     echo "Stopped all containers and removed containers for lockss-stack${STACK_NUM}. Run deploy-lockss ${STACK_NUM} to run again."
   else
-    echo "The stack 'lockss-stack${STACK_NUM}' is not running. Run deploy-lockss ${STACK_NUM} to run again."
+    echo "The stack lockss-stack${STACK_NUM} is not running. Run deploy-lockss ${STACK_NUM} to run again."
   fi
 fi
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#---------------------------------------------------------------------------
-# updateAndRestart.sh - calls generate, assemble, deploy lockss
+# ---------------------------------------------------------------------------
+# restart-lockss - "Restart the running LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -29,11 +29,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: updateAndRestart [-h|--help] [-a|--args ARGS_ADDITIONAL]
-#
+# Usage: restart [-h|--help] [-a|--args ARGS_ADDITIONAL]
 # Revision history:
 # ---------------------------------------------------------------------------
-
 PROGNAME=${0##*/}
 VERSION="1.0"
 
@@ -51,43 +49,40 @@ COMPOSE_DIR="${_D0}/.."
 . "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
-  return
+	return
 }
 
 error_exit() {
-  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-  clean_up
-  exit 1
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
 }
 
 graceful_exit() {
-  clean_up
-  exit
+	clean_up
+	exit
 }
 
 signal_exit() { # Handle trapped signals
-  case $1 in
-  INT)
-    error_exit "Program interrupted by user"
-    ;;
-  TERM)
-    echo -e "\n$PROGNAME: Program terminated" >&2
-    graceful_exit
-    ;;
-  *)
-    error_exit "$PROGNAME: Terminating on unknown signal"
-    ;;
-  esac
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
-  cat <<-_EOF_
+  cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  "Restart the running LOCKSS stack."
+  "Generate, Assemble and Restart a running LOCKSS stack."
 
   $(usage)
 
@@ -102,71 +97,40 @@ _EOF_
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT" INT
+trap "signal_exit INT"  INT
+
 
 ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-  -h | --help)
-    help_message
-    graceful_exit
+    -h | --help)
+      help_message; graceful_exit ;;
+    -a | --args)
+      shift
+      export ARGS_ADDITIONAL="$1"
+      echo "Adding addtional runtime args $ARGS_ADDITIONAL";
+      shift
     ;;
-  -a | --args)
-    shift
-    export ARGS_ADDITIONAL="$1"
-    echo "Adding addtional runtime args $ARGS_ADDITIONAL"
-    shift
-    ;;
-  -* | --*)
-    usage
-    error_exit "Unknown option $1"
-    ;;
-  *)
-    echo "Argument $1 to process..."
-    ;;
+    -*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
   esac
   shift
 done
 
 # Main logic
+Check_Runnable
+
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-ask_for_input "Do you want to update current branch from remote?" Y
-if is_yes "${ANS}"; then
-  cd "${COMPOSE_DIR}"
-  git pull
-  cd -
-fi
-for svc_name in "${deploy_service_names[@]}"; do
-  echo "pulling image for ${svc_name}..."
-  docker-compose pull ${svc_name} &>/dev/null
-done
 
-#call shutdown and wait for it to complete
-echo "$(date) Shutting down lockss stack..."
-"${_D0}"/shutdown-lockss &
-wait $!
-sleep 10
-
-#call generate-lockss
-echo "$(date) Regenerating docker files for ${CONFIG_COUNT} stacks on ${OS_TYPE}..."
-if ! "${_D0}/generate-lockss"; then
-  err_exit "Configuration template generation failed."
-fi
-sleep 2
-echo "$(date) Reassembling docker stack elements..."
-if ! "${_D0}/assemble-lockss"; then
-  err_exit "Assemblage of docker components failed."
-fi
-echo ""
-ask_for_input "OK to deploy lockss-stack?" "Y"
-if is_yes "${ANS}"; then
-  "${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-else
-  echo "Run deploy-lockss script when ready to deploy."
-fi
+"${_D0}"/shutdown-lockss && "${_D0}"/generate-lockss && "${_D0}"/assemble-lockss &&
+"${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 
 graceful_exit
+

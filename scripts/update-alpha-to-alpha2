@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# update-alpha-lockss - Undeploy all stacks and remove all installed stack info..
+# update-alpha-to-alpha2 - Undeploy all stacks and remove all installed stack info..
 #
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -31,7 +31,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: update-alpha-lockss [-h|--help]
+# Usage: update-alpha-to-alpha2 [-h|--help]
 #
 # Revision history:
 # 2019-04-18 version 1
@@ -49,8 +49,8 @@ _D0=$(dirname "${0}")
 ##
 ## Load _util
 ##
-
 . "${_D0}/_util"
+. "${_D0}/_util_solr"
 
 ##
 ## Definitions
@@ -59,71 +59,81 @@ _D0=$(dirname "${0}")
 # Directories
 COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${COMPOSE_DIR}/config"
+UPDATES_PATH="${_D0}/updates"
+LIB_PATH="${_D0}/lib"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
 
 # Sanity checks
-echo "Checking docker..."
-Check_Installed 'docker'
-Check_Docker
-Check_Swarm
+msg "${PROGNAME}: Checking system..."
+Check_Runnable
 
-echo "removing all LOCKSS alpha stacks..."
+msg "${PROGNAME}: removing all LOCKSS alpha stacks..."
 if docker stack ps 'lockss-stack' &> /dev/null; then
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
 fi
 
-echo "restart single stack based on current config..."
+msg "${PROGNAME}: checking for postgres changes, based on current config..."
 "${_D0}/deploy-lockss"
 
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-  SQL_FILE="alpha-to-beta-db-rename-after.sql"
-  POSTGRES="$(docker stack services lockss_stack | grep 'lockss-postgres' | awk '(print $1)')"
+  SQL_FILE="${UPDATES_PATH}/alpha-to-alpha2-db-rename-after.sql"
+  POSTGRES="$(docker stack services lockss-stack | grep 'lockss-postgres' | awk '(print $1)')"
 else
-  SQL_FILE="alpha-to-beta-db-rename.sql"
+  SQL_FILE="${UPDATES_PATH}/alpha-to-alpha2-db-rename.sql"
   POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '(print $1)')"
 fi
-echo "Updating Database..."
+msg "${PROGNAME}: Updating Database..."
 docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
 docker container start ${POSTGRES}
-docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < ${SQL_FILE}
-echo "Cleaning up stacks"
+docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < "${SQL_FILE}"
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: Cleaning up old stacks"
 docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
-echo "Stopping lockss containers..."
+msg "${PROGNAME}: Stopping all lockss containers..."
 docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
-echo "Removing lockss containers..."
+msg "${PROGNAME}: Removing all lockss containers..."
 docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
-echo "Clearing lockss image cache..."
+msg "${PROGNAME}: Clearing lockss image cache..."
 docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
 
-echo "Removing all installed lockss config..."
+echo "  ---------------------------  "
+msg "${PROGNAME}: Removing all installed lockss config..."
 docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
-echo "Removing all docker mount points for lockss volumes..."
+msg "${PROGNAME}: Removing all docker mount points for lockss volumes..."
 docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
-echo "Removing all docker networks for lockss stacks..."
+msg "${PROGNAME}: Removing all docker networks for lockss stacks..."
 docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
 
-echo "Converting old config file..."
+echo "  ---------------------------  "
+msg "${PROGNAME}: Checking config file for updates"
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-    echo "$(date) Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
-    echo "You appear to be running beta1 already.  No conf file conversion will take place"
+    msg "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+    msg "${PROGNAME}: You appear to be running beta1 already.  Checking for missing configuration values..."
+    set -a
+    . "${SYSTEM_CONF_FILE}"
+    set +aa
 elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
-    echo "$(date) Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
+    msg "${PROGNAME}: Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
     set -a
     . "${OLD_SYSTEM_CONF_FILE}"
     set +a
     LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
-    LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
+    USE_LOCKSS_POSTGRES=true
+    LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
     LOCKSS_POSTGRES_PORT=5432
     LOCKSS_POSTGRES_USER="LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
     LOCKSS_DBNAME_PREFIX="Lockss"
-    LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+    LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
     LOCKSS_SOLR_PORT='8983'
-    LOCKSS_SOLR_CORE_REPO=${LOCKSS_HOSTNAME}
-    cat >${SYSTEM_CONF_FILE} <<EOF
+    LOCKSS_SOLR_CORE_REPO="lockss-repo"
+fi
+msg "${PROGNAME}: writing system cfg..."
+cat >${SYSTEM_CONF_FILE} <<EOF
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER}"
 LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
@@ -153,7 +163,7 @@ LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA:=$LOCKSS_POSTGRES_USER}"
 LOCKSS_DBNAME_PREFIX="${LOCKSS_DBNAME_PREFIX:=Lockss}"
 LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT:=8983}
-LOCKSS_SOLR_CORE_REPO=${LOCKSS_SOLR_CORE_REPO}
+LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO:=lockss-repo}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
@@ -166,11 +176,10 @@ USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
 EOF
-fi
 
-echo "$(date) Looking for old directories..."
+msg "Looking for old data directories..."
 if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
-    echo "$(date) Renaming data volumes..."
+    msg "${PROGNAME}: Renaming data volumes..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
         new_dir="${dir/stack1/stack}"
         if [ ! -d "${new_dir}" ]; then
@@ -178,8 +187,10 @@ if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
         fi
     done
 fi
+msg "Looking for old log directories..."
 if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
-    echo "$(date) Renaming log volumes..."
+    msg "Renaming log volumes..."
+
     for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
         new_dir="${dir/stack1/stack}"
         if [ ! -d "${new_dir}" ] ; then
@@ -188,13 +199,32 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     done
 fi
 
-if ! "${_D0}/generate-lockss" ; then
-  err_exit "Configuration template generation failed."
-fi
-echo "$(date) Assembling docker stack elements..."
-if ! "${_D0}/assemble-lockss" ; then
-  err_exit "Assemblage of docker components failed."
+echo "  ---------------------------  "
+msg "${PROGNAME}: Checking solr installation..."
+echo "  ---------------------------  "
+msg "${PROGNAME}: Checking solr home directory..."
+SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
+CORE_PATH="${SOLR_HOME_PATH}/mycores"
+
+if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
+  msg "${PROGNAME} solr home has already been patched."
+else
+  msg "${PROGNAME} Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
+  tar -xzf ${SOLR_HOME_PATCH} "${SOLR_HOME_PATH}"
+  # create the directory and move the lockss core repo.
+  msg "${PROGNAME}: Creating default subdir ${CORE_PATH}"
+  mkdir "${CORE_PATH}"
+
+  msg "${PROGNAME}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
+  mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ${CORE_PATH}
 fi
 
-echo ""
-echo "$(date) Call deploy-lockss to run converted stack."
+msg "${PROGNAME}: Downlaoding lockss-artifact-tools.."
+
+
+msg "${PROGNAME}: Verifying and updating lockss solr core..."
+verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: Update complete."
+msg "${PROGNAME}: Call install-lockss to prepare stack for deploy."

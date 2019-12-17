@@ -137,6 +137,7 @@ Check_Physical_Volumes() {
     exit 1
   fi
 }
+
 #initialize the service arrays based on system.cfg info.
 init_service_arrays() {
   if ${USE_LOCKSS_CFG}; then
@@ -287,10 +288,7 @@ set -a
 set +a
 
 # Sanity checks
-Check_Installed 'docker'
-Check_Docker
-Check_Swarm
-Check_LocalPersistPlugin
+Check_Runnable
 Check_Physical_Volumes
 
 init_service_arrays
