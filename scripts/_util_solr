@@ -46,7 +46,7 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
-JAR_FILE_PATH="${_D0}/lib/"
+JAR_FILE_PATH="${_D0}/lib"
 SOLR_TOOLS_JAR="laaws-repository-tools.jar"
 SOLR_TOOLS_GROUPID="org.lockss.laaws"
 SOLR_TOOLS_ARTIFACTID="laaws-repository-tools"
@@ -55,11 +55,11 @@ SOLR_USER_ID=8983
 
 # Download the repository tools jar if it is missing
 # This is equivalent to the command line command
-# nxfetch.sh -q -i "org.lockss.laaws:laaws-repository-tools:2.0.7.0-SNAPSHOT" -c "with-deps" -e "jar" -o "test.jar"
+# nxfetch.sh -q -i "org.lockss.laaws:laaws-repository-tools:2.0.7.0-SNAPSHOT" -c "with-deps" -e "jar" -o "scripts/lib/laaws-repository-tools.jar"
 ensure_repository_tools() {
- if [ ! -f /tmp/foo.txt ]; then
+  if [ ! -f /tmp/foo.txt ]; then
     echo "Downloading repository tools jar..."
-    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${SOLR_TOOLS_JAR}
+    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${JAR_FILE_PATH}/${SOLR_TOOLS_JAR}
   fi
 }
 
