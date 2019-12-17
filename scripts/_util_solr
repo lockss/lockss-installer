@@ -95,7 +95,7 @@ verify_and_update_lockss_core() {
   local path=${2}
 
   ensure_repository_tools
-  
+
   verify_core --core "${name}" --local "${path}"
   result=$?
 

@@ -148,7 +148,7 @@ LOCKSS_EMAIL="${LOCKSS_EMAIL}"
 LOCKSS_PROPS_URL="${LOCKSS_PROPS_URL}"
 LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
-LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP:=$LOCKSS_TEST_GROUP}"
+LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP}"
 LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
 LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
 LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
@@ -199,31 +199,7 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     done
 fi
 
-echo "  ---------------------------  "
-msg "${PROGNAME}: Checking solr installation..."
-echo "  ---------------------------  "
-msg "${PROGNAME}: Checking solr home directory..."
-SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
-CORE_PATH="${SOLR_HOME_PATH}/mycores"
-
-if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
-  msg "${PROGNAME} solr home has already been patched."
-else
-  msg "${PROGNAME} Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
-  tar -xzf ${SOLR_HOME_PATCH} "${SOLR_HOME_PATH}"
-  # create the directory and move the lockss core repo.
-  msg "${PROGNAME}: Creating default subdir ${CORE_PATH}"
-  mkdir "${CORE_PATH}"
-
-  msg "${PROGNAME}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
-  mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ${CORE_PATH}
-fi
-
-msg "${PROGNAME}: Downlaoding lockss-artifact-tools.."
-
-
-msg "${PROGNAME}: Verifying and updating lockss solr core..."
-verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
+. "${_D0}"/update-alpha-solr
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."

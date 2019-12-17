@@ -491,6 +491,13 @@ build_config_file() {
 ###
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
+LOCKSS_TEAM=lockssdiag@lockss.org
+LOCKSS_USER=lockss
+LOCAL_HOSTNAME=$(uname -n)
+
+
+. check_sys
+
 case ${OS_TYPE} in
 Linux)
     LOCKSS_HOME=
@@ -507,9 +514,6 @@ Darwin)
     exit 1
     ;;
 esac
-LOCKSS_TEAM=lockssdiag@lockss.org
-LOCKSS_USER=lockss
-LOCAL_HOSTNAME=$(uname -n)
 
 declare -i CONFIG_COUNT
 
