@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# update-alpha-solr - Update the solr files to latest lockss format.
+# update-alpha1-solr - Update the solr files to latest lockss format.
 #
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.

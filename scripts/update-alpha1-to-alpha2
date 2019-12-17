@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# update-alpha-to-alpha2 - Undeploy all stacks and remove all installed stack info..
+# update-alpha1-to-alpha2 - Undeploy all stacks and remove all installed stack info..
 #
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -31,7 +31,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: update-alpha-to-alpha2 [-h|--help]
+# Usage: update-alpha1-to-alpha2 [-h|--help]
 #
 # Revision history:
 # 2019-04-18 version 1
@@ -77,10 +77,10 @@ msg "${PROGNAME}: checking for postgres changes, based on current config..."
 "${_D0}/deploy-lockss"
 
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-  SQL_FILE="${UPDATES_PATH}/alpha-to-alpha2-db-rename-after.sql"
+  SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename-after.sql"
   POSTGRES="$(docker stack services lockss-stack | grep 'lockss-postgres' | awk '{print $1}')"
 else
-  SQL_FILE="${UPDATES_PATH}/alpha-to-alpha2-db-rename.sql"
+  SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
   POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '{print $1}')"
 fi
 msg "${PROGNAME}: Updating postgres tables..."
@@ -197,7 +197,7 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     done
 fi
 
-. "${_D0}"/update-alpha-solr
+. "${_D0}"/update-alpha1-solr
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
