@@ -60,11 +60,14 @@ _D0=$(dirname "${0}")
 COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${COMPOSE_DIR}/config"
 UPDATES_PATH="${_D0}/updates"
-LIB_PATH="${_D0}/lib"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
+
+if ! am_i_root ; then
+  error_exit "this script must be run as root."
+fi
 
 # Sanity checks
 msg "${PROGNAME}: Checking system..."
@@ -176,7 +179,7 @@ USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
 EOF
 
-msg "Looking for old data directories..."
+msg "${PROGNAME}: Looking for old data directories..."
 if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
     msg "${PROGNAME}: Renaming data volumes..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
@@ -186,7 +189,7 @@ if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
         fi
     done
 fi
-msg "Looking for old log directories..."
+msg "${PROGNAME}: Looking for old log directories..."
 if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     msg "Renaming log volumes..."
 
@@ -198,7 +201,7 @@ if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
     done
 fi
 
-. "${_D0}"/update-alpha1-solr
+"${_D0}"/update-alpha1-solr
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
