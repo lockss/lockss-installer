@@ -1,0 +1,135 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# _utils_solr: utility functions to access the java SolrArtifactIndexAdmin tool.
+#  These routines should not be called while solr is running.
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+# Revision history:
+# ---------------------------------------------------------------------------
+
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+LIB_DIR="${_D0}/lib"
+SOLR_TOOLS_JAR="laaws-repository-tools.jar"
+SOLR_TOOLS_GROUPID="org.lockss.laaws"
+SOLR_TOOLS_ARTIFACTID="laaws-repository-tools"
+SOLR_TOOLS_VERSION="2.0.7.0-SNAPSHOT"
+
+JAR_FILE_PATH=${LIB_DIR}/${SOLR_TOOLS_JAR}
+
+# Download the repository tools jar if it is missing
+# This is equivalent to the command line command
+# nxfetch.sh -q -i "org.lockss.laaws:laaws-repository-tools:2.0.7.0-SNAPSHOT" -c "with-deps" -e "jar" -o "scripts/lib/laaws-repository-tools.jar"
+ensure_repository_tools() {
+  if [ ! -f "${JAR_FILE_PATH}" ]; then
+    echo "Downloading repository tools jar..."
+    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${JAR_FILE_PATH}
+    chown ${LOCKSS_USER} "${JAR_FILE_PATH}"
+  fi
+}
+
+# Exit codes from the create...:
+# 0 = Solr core creation succeeded
+# 1 = Solr core creation failed
+create_new_core() {
+  java -jar "${JAR_FILE_PATH}" --action create "$@"
+  return $?
+}
+
+# Exit codes from the update...:
+# 0 = Solr core update succeeded
+# 1 = Solr core update failed
+update_core() {
+  java -jar "${JAR_FILE_PATH}" --action update "$@"
+  return $?
+}
+
+# Exit codes from the verify...:
+# 0 = Solr core is up-to-date.
+# 1 = Solr core is missing, needs to be created.
+# 2 = Solr core needs an update (Lucene index or LOCKSS configuration set).
+# 4 = Solr core reindex is in-progress.
+# 8 = Solr core is in an inconsistent state.
+verify_core() {
+  java -jar "${JAR_FILE_PATH}" --action verify "$@"
+  return $?
+}
+
+verify_and_update_lockss_core() {
+  local name=${1}
+  local path=${2}
+
+  ensure_repository_tools
+
+  verify_core --core "${name}" --local "${path}"
+  result=$?
+
+  #switch based on the return value
+  case ${result} in
+  0)
+    msg "${_0}: Solr core is up-to-date."
+    return 0
+    ;;
+  1)
+    msg "${_0}: Creating a new Solr core."
+    create_new_core --core "${name}" --local "${path}"
+    return $?
+    ;;
+  2)
+    msg "${_0} Solr core ${name} needs to be updated, this may take some time..."
+    update_core --core "${name}" --local "${path}"
+    return $?
+    ;;
+  4)
+    msg "${_0} Solr core ${name} is already reindexing, please wait..."
+    return 0
+    ;;
+  8)
+    msg "${_0} Solr core ${name} is in inconsistant state."
+    err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+    return 1
+    ;;
+  *)
+    err "${_0} Attempt to verify solr core ${name} returned unknown result: ${result}."
+    err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+    return ${result}
+    ;;
+  esac
+}

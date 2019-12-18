@@ -46,24 +46,32 @@ _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
 ##
+## Load _util
+##
+. "${_D0}/_util"
+. "${_D0}/lib/mo"
+##
 ## Definitions
 ##
 
 # Directories
 COMPOSE_DIR="${_D0}/.."
-CONFIG_DIR="${_D0}/../config"
+CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 PORT_BASE=245
 
 # Files
-ENV_FILE="${CONFIG_DIR}/env.mustache"
-USER_CONF_FILE="${CONFIG_DIR}/config.info"
+ENV_TMPL="${CONFIG_DIR}/env.mustache"
+COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+
+STACK_PREFIX="lockss-stack"
 
 # Variables
 declare -i STACK_COUNT=1
-STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -110,6 +118,7 @@ help_message() {
 _EOF_
   return
 }
+
 ##
 ## MAIN
 ##
@@ -134,40 +143,56 @@ while [[ -n $1 ]]; do
   shift
 done
 
-# Source user-config
+# Source system config file
 set -a
-. "${CONFIG_DIR}/config.info"
+. "${SYSTEM_CONF_FILE}"
 set +a
 
-
-echo "$(date) Removing old config files..."
+echo "COMPOSE_DIR"
+msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
-echo "$(date) Generating config files for $STACK_COUNT stacks..."
-for (( num=1 ; num<=$STACK_COUNT ; num++)); do
-  stack_port_base=$((${PORT_BASE} + $num))
-  stack_name="${STACK_PREFIX}$num"
-  stack_config_dir="${DOCKER_CONFIGS_DIR}/${stack_name}"
-  stack_env_file="${stack_config_dir}/env.sh"
-  stack_lcap_port=$((${LOCKSS_V3_PORT} + $num -1))
 
-  echo "Stack ${num} named ${stack_name} is using port base of ${stack_port_base}."
-  mkdir -p ${stack_config_dir}
-  #generate the env files.
-  pystache "${ENV_FILE}" "{\"STACK_PORT_BASE\":\"$stack_port_base\", \"STACK_NAME\":\"$stack_name\", \"STACK_LCAP_PORT\":\"$stack_lcap_port\"}" > "${stack_env_file}"
+msg "${PROGNAME}:  Generating config files for $STACK_COUNT stacks..."
+for (( num=1 ; num<=$STACK_COUNT ; num++)); do
+  export STACK_PORT_BASE=$((${PORT_BASE} + $num))
+  if [ ${STACK_COUNT} = 1 ]; then
+    STACK_NAME="${STACK_PREFIX}"
+  else
+    STACK_NAME="${STACK_PREFIX}$num"
+  fi
+  export STACK_NAME
+  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num -1))
+  stack_config_dir="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
+  stack_env_file="${stack_config_dir}/env.sh"
+  stack_compose_file="${stack_config_dir}/docker-compose.yml"
+
+  echo "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
+  mkdir -p "${stack_config_dir}"
+
+  echo "generate the stack env.sh file..."
+  mo "${ENV_TMPL}" > "${stack_env_file}"
+  set -a
+  . "${stack_env_file}"
+  set +a
+  export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
+
+  msg "${PROGNAME}:  Generating stack docker-compose file..."
+  mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
+
   #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do
     src="${f}"
     dst="${stack_config_dir}/$(basename "${f}" .mustache)"
-    echo "$(date) Rendering ${src} to ${dst}..."
-    pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}"
+    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    mo "${src}" > "${dst}"
   done
   #add the user config file templates
   for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${stack_config_dir}/$(basename "${f}" .mustache)"
-      echo "$(date) Rendering ${src} to ${dst}..."
-      pystache "${src}" "$("${_D0}/env2json" "${USER_CONF_FILE}" "${stack_env_file}")" > "${dst}" 
+      msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+      mo "${src}" > "${dst}"
     fi
   done
   #add any remaining user opt files
@@ -175,12 +200,12 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${stack_config_dir}/$(basename "$f")"
-      echo "$(date) Copying ${src} to ${dst}..."
+      msg "${PROGNAME}:  Copying ${src} to ${dst}..."
       cp "${src}" "${dst}"
     fi
   done
 done
 
-echo "$(date) Done updating configs."
+msg "${PROGNAME}:  Done updating configs."
 
 graceful_exit

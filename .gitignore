@@ -6,7 +6,10 @@
 /download/
 /.env
 /config/config.info
+/config/system.cfg
 /config/*.sec
 /config/configs/*
 /config/useropts/*
 /config/useropts/templates/*
+/scripts/lib/*.jar
+/logs/
