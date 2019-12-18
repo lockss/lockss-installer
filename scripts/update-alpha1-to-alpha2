@@ -114,7 +114,7 @@ echo "  ---------------------------  "
 msg "${PROGNAME}: Checking config file for updates"
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
     msg "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
-    msg "${PROGNAME}: You appear to be running beta1 already.  Checking for missing configuration values..."
+    msg "${PROGNAME}: You appear to be running alpha2 already.  Checking for missing configuration values..."
     set -a
     . "${SYSTEM_CONF_FILE}"
     set +aa
