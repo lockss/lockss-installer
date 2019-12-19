@@ -88,9 +88,11 @@ else
   SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
   POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '{print $1}')"
 fi
-docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
-docker container start ${POSTGRES}
-docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < "${SQL_FILE}"
+docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null &
+wait ${!}
+
+docker container start ${POSTGRES} &&
+  docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < "${SQL_FILE}"
 msg "Postgres update completed."
 echo "  ---------------------------  "
 msg "${PROGNAME}: Cleaning up old stacks"
@@ -205,4 +207,4 @@ fi
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
-msg "${PROGNAME}: Call start-lockss to deploy stack."
+msg "${PROGNAME}: Call configure-lockss to check for new configuration values."
