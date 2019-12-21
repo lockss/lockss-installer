@@ -45,7 +45,6 @@ VERSION="1.0"
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
-
 ##
 ## Load _util
 ##
@@ -57,87 +56,57 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR="$(cd "$(dirname "${_D0}")" pwd -P)"
 CONFIG_DIR="${COMPOSE_DIR}/config"
-UPDATES_PATH="${_D0}/updates"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+UPDATES_PATH="${SCRIPTS_DIR}/updates"
+POSTGRES_VOL="lockss-stack-postgres-data"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
+SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
+SQL_PASS_FILE="/run/secrets/lockss-postgres-pass"
 
-if ! am_i_root ; then
-  error_exit "this script must be run as root."
-fi
+rename_dirs() {
+  msg "${PROGNAME}: Looking for old data directories..."
+  if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
+    msg "${PROGNAME}: Renaming data volumes..."
+    for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
+      new_dir="${dir/stack1/stack}"
+      if [ ! -d "${new_dir}" ]; then
+        mv "$dir" "${new_dir}"
+      fi
+    done
+  fi
+  msg "${PROGNAME}: Looking for old log directories..."
+  if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
+    msg "Renaming log volumes..."
+    for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
+      new_dir="${dir/stack1/stack}"
+      if [ ! -d "${new_dir}" ]; then
+        mv "$dir" "${new_dir}"
+      fi
+    done
+  fi
+}
 
-# Sanity checks
-msg "${PROGNAME}: Checking system..."
-Check_Runnable
+update_sql() {
+  if ! docker volume inspect ${POSTGRES_VOL} &>/dev/null; then
+    msg "${PROGNAME}: creating mountpoint for temporary sql container..."
+    docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/${POSTGRES_VOL} --name=${POSTGRES_VOL}
+  fi
+  msg "${PROGNAME}: bringing up temporary postgres instance..."
+  docker run --rm --name postgres-temp -v ${POSTGRES_VOL}:/data -e POSTGRES_PASSWORD_FILE=${SQL_PASS_FILE} -e POSTGRES_USER=LOCKSS -e PGDATA=/data -d postgres:9.6.12-alpine
+  sleep 10
+  docker exec -it postgres-temp psql -U LOCKSS -d postgres <"${SQL_FILE}"
+  docker container stop postgres-temp
+  docker volume rm ${POSTGRES_VOL}
+  msg "${PROGNAME}: Finished postgres update..."
+}
 
-msg "${PROGNAME}: stopping all LOCKSS alpha stacks..."
-"${_D0}/shutdown-lockss" && msg "alpha1 stacks successfully shutdown."
-
-msg "${PROGNAME}: checking for postgres changes, based on current config..."
-"${_D0}/deploy-lockss" && msg "restarted in single stack mode."
-
-echo "  ---------------------------  "
-msg "${PROGNAME}: Updating postgres tables..."
-if [ -r "${SYSTEM_CONF_FILE}" ]; then
-  SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename-after.sql"
-  POSTGRES="$(docker stack services lockss-stack | grep 'lockss-postgres' | awk '{print $1}')"
-else
-  SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
-  POSTGRES="$(docker stack services lockss_stack1 | grep 'lockss-postgres' | awk '{print $1}')"
-fi
-docker ps  | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null &
-wait ${!}
-
-docker container start ${POSTGRES} &&
-  docker exec -i ${POSTGRES} psql -U LOCKSS -d postgres < "${SQL_FILE}"
-msg "Postgres update completed."
-echo "  ---------------------------  "
-msg "${PROGNAME}: Cleaning up old stacks"
-docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
-msg "${PROGNAME}: Stopping all lockss containers..."
-docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop &> /dev/null
-msg "${PROGNAME}: Removing all lockss containers..."
-docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
-msg "${PROGNAME}: Clearing lockss image cache..."
-docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
-
-echo "  ---------------------------  "
-msg "${PROGNAME}: Removing all installed lockss config..."
-docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
-msg "${PROGNAME}: Removing all docker mount points for lockss volumes..."
-docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
-msg "${PROGNAME}: Removing all docker networks for lockss stacks..."
-docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
-
-echo "  ---------------------------  "
-msg "${PROGNAME}: Checking config file for updates"
-if [ -r "${SYSTEM_CONF_FILE}" ]; then
-    msg "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
-    msg "${PROGNAME}: You appear to be running alpha2 already.  Checking for missing configuration values..."
-    set -a
-    . "${SYSTEM_CONF_FILE}"
-    set +aa
-elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
-    msg "${PROGNAME}: Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
-    set -a
-    . "${OLD_SYSTEM_CONF_FILE}"
-    set +a
-    LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
-    USE_LOCKSS_POSTGRES=true
-    LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
-    LOCKSS_POSTGRES_PORT=5432
-    LOCKSS_POSTGRES_USER="LOCKSS"
-    LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
-    LOCKSS_DBNAME_PREFIX="Lockss"
-    LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
-    LOCKSS_SOLR_PORT='8983'
-    LOCKSS_SOLR_CORE_REPO="lockss-repo"
-fi
-msg "${PROGNAME}: writing system cfg..."
-cat >${SYSTEM_CONF_FILE} <<EOF
+write_sysconf() {
+  cat >${SYSTEM_CONF_FILE} <<EOF
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER}"
 LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
@@ -160,12 +129,12 @@ LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
 LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
 LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
 LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
-LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST}"
+LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST:=$LOCKSS_HOSTNAME}"
 LOCKSS_POSTGRES_PORT="${LOCKSS_POSTGRES_PORT:=5432}"
 LOCKSS_POSTGRES_USER="${LOCKSS_POSTGRES_USER:=LOCKSS}"
-LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA:=$LOCKSS_POSTGRES_USER}"
+LOCKSS_POSTGRES_SCHEMA="${LOCKSS_POSTGRES_SCHEMA:=LOCKSS}"
 LOCKSS_DBNAME_PREFIX="${LOCKSS_DBNAME_PREFIX:=Lockss}"
-LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
+LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST:=$LOCKSS_HOSTNAME}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT:=8983}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO:=lockss-repo}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
@@ -180,31 +149,61 @@ USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
 EOF
+}
 
-msg "${PROGNAME}: Looking for old data directories..."
-if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
-    msg "${PROGNAME}: Renaming data volumes..."
-    for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
-        new_dir="${dir/stack1/stack}"
-        if [ ! -d "${new_dir}" ]; then
-            mv "$dir" "${new_dir}"
-        fi
-    done
+# MAIN ENTRY POINT
+# Sanity checks
+msg "${PROGNAME}: Checking system..."
+am_i_root || err_exit "This script must be run as root."
+
+Check_Runnable
+
+msg "${PROGNAME}: loading existing system config info..."
+if [ -r "${SYSTEM_CONF_FILE}" ]; then
+  msg "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+  msg "${PROGNAME}: You appear to be have run this script already.  Checking for missing configuration values..."
+  read_config ${SYSTEM_CONF_FILE}
+elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
+  msg "${PROGNAME}: Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
+  read_config "${OLD_SYSTEM_CONF_FILE}"
+  LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
+  LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
+  LOCKSS_POSTGRES_PORT=5432
+  LOCKSS_POSTGRES_USER="LOCKSS"
+  LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
+  LOCKSS_DBNAME_PREFIX="Lockss"
+  LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+  LOCKSS_SOLR_PORT='8983'
+  LOCKSS_SOLR_CORE_REPO="lockss-repo"
 fi
-msg "${PROGNAME}: Looking for old log directories..."
-if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
-    msg "Renaming log volumes..."
 
-    for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
-        new_dir="${dir/stack1/stack}"
-        if [ ! -d "${new_dir}" ] ; then
-            mv "$dir" "${new_dir}"
-        fi
-    done
-fi
+echo "  ---------------------------  "
+msg "${PROGNAME}: writing updated system cfg..."
+write_sysconf
 
-"${_D0}"/update-alpha1-solr
+echo "  ---------------------------  "
+msg "${PROGNAME}: shutting down alpha stacks..."
+"${SCRIPTS_DIR}/shutdown-lockss" && msg "alpha1 stacks successfully shutdown."
+sleep 10
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: Checking persistent storage directories..."
+rename_dirs
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: checking for postgres changes..."
+update_sql || err_msg "Attempt to update sql failed."
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: Uninstalling all lockss docker elements"
+"${SCRIPTS_DIR}/uninstall-lockss  && msg "${PROGNAME}: Done uninstalling LOCKSS docker elements""
+sleep 10
+
+echo "  ---------------------------  "
+msg "${PROGNAME}: Checking solr indices for update..."
+"${SCRIPTS_DIR}/update-alpha1-solr" || err_msg "Your solr instance needs to be checked."
+sleep 10
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
-msg "${PROGNAME}: Call configure-lockss to check for new configuration values."
+msg "${PROGNAME}: Call configure-lockss to check configuration settings."
