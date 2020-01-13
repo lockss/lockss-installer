@@ -51,8 +51,13 @@ SOLR_TOOLS_JAR="laaws-repository-tools.jar"
 SOLR_TOOLS_GROUPID="org.lockss.laaws"
 SOLR_TOOLS_ARTIFACTID="laaws-repository-tools"
 SOLR_TOOLS_VERSION="2.0.7.0-SNAPSHOT"
+SOLR_HOME=${LOCKSS_VOL}/lockss-stack-solr-data
+SOLR_CORE_NAME=lockss-repo
+SOLR_ENDPOINT=http://localhost:8983/solr/${SOLR_CORE_NAME}
 
-JAR_FILE_PATH=${LIB_DIR}/${SOLR_TOOLS_JAR}
+REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
+false=0
+true=1
 
 # Download the repository tools jar if it is missing
 # This is equivalent to the command line command
@@ -61,15 +66,25 @@ ensure_repository_tools() {
   if [ ! -f "${JAR_FILE_PATH}" ]; then
     echo "Downloading repository tools jar..."
     ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${JAR_FILE_PATH}
-    chown ${LOCKSS_USER} "${JAR_FILE_PATH}"
+    chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
   fi
+}
+
+start_standalone_solr() {
+  docker run -d -v "${SOLR_HOME}" -p 8983:8983 --name lockss_solr_update ${SOLR_IMG}:${SOLR_VERSION}
+  sleep 10
+}
+
+stop_standalone_solr() {
+  docker stop lockss_solr_update
+  sleep 10
 }
 
 # Exit codes from the create...:
 # 0 = Solr core creation succeeded
 # 1 = Solr core creation failed
 create_new_core() {
-  java -jar "${JAR_FILE_PATH}" --action create "$@"
+  java -jar "${REPO_TOOLS_JAR}" --action create "$@"
   return $?
 }
 
@@ -77,8 +92,39 @@ create_new_core() {
 # 0 = Solr core update succeeded
 # 1 = Solr core update failed
 update_core() {
-  java -jar "${JAR_FILE_PATH}" --action update "$@"
-  return $?
+  needs_update=${true}
+
+  # Perform Lucene index upgrade (no-op if already up-to-date)
+  java -jar ${REPO_TOOLS_JAR} --local ${SOLR_HOME} --action upgrade-lucene-index --core ${SOLR_CORE_NAME}
+
+  # Install new LOCKSS config sets and apply post-installation changes
+  while [ ${needs_update} == ${true} ]
+  do
+    java -jar ${REPO_TOOLS_JAR} --local ${SOLR_HOME} --action update-lockss-configset --core ${SOLR_CORE_NAME}
+    result=$?
+    case ${result} in
+    0)
+      msg "${_0}: A new lockss configset has been installed. Attempting to apply changes..."
+      start_standalone_solr
+      java -jar ${REPO_TOOLS_JAR} --endpoint ${SOLR_ENDPOINT} --action apply-lockss-configset-changes
+      stop_standalone_solr
+      ;;
+    1)
+      msg "${_0}: No configset installed to ${name}, already up to date."
+      ${needs_update}=${false}
+      ;;
+    2)
+      err "${_0} Attempt to install new configset to ${name} failed."
+      return 1
+     ;;
+    *)
+      err "${_0} Attempt to update solr core ${name} returned unknown result: ${result}."
+      err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+      return 1
+      ;;
+    esac
+  done
+  return 0
 }
 
 # Exit codes from the verify...:
@@ -88,7 +134,7 @@ update_core() {
 # 4 = Solr core reindex is in-progress.
 # 8 = Solr core is in an inconsistent state.
 verify_core() {
-  java -jar "${JAR_FILE_PATH}" --action verify "$@"
+  java -jar "${REPO_TOOLS_JAR}" --action verify "$@"
   return $?
 }
 
