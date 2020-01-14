@@ -54,6 +54,8 @@ SOLR_TOOLS_VERSION="2.0.7.0-SNAPSHOT"
 SOLR_HOME=${LOCKSS_VOL}/lockss-stack-solr-data
 SOLR_CORE_NAME=lockss-repo
 SOLR_ENDPOINT=http://localhost:8983/solr/${SOLR_CORE_NAME}
+SOLR_IMG="solr"
+SOLR_VERSION="7.2.1-alpine"
 
 REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
 false=0
@@ -63,11 +65,17 @@ true=1
 # This is equivalent to the command line command
 # nxfetch.sh -q -i "org.lockss.laaws:laaws-repository-tools:2.0.7.0-SNAPSHOT" -c "with-deps" -e "jar" -o "scripts/lib/laaws-repository-tools.jar"
 ensure_repository_tools() {
-  if [ ! -f "${JAR_FILE_PATH}" ]; then
+  if [ ! -f "${REPO_TOOLS_JAR}" ]; then
     echo "Downloading repository tools jar..."
-    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${JAR_FILE_PATH}
+    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR}
     chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
   fi
+}
+
+ensure_lockss_stopped() {
+  echo "stopping all lockss stacks and containers..."
+  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
+  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop
 }
 
 start_standalone_solr() {
@@ -95,25 +103,33 @@ update_core() {
   needs_update=${true}
 
   # Perform Lucene index upgrade (no-op if already up-to-date)
-  java -jar ${REPO_TOOLS_JAR} --local ${SOLR_HOME} --action upgrade-lucene-index --core ${SOLR_CORE_NAME}
-
+  echo "  ---------------------------  "
+  msg "${_0}: Upgrading lucene index."
+  java -jar ${REPO_TOOLS_JAR} --action upgrade-lucene-index "$@"
+  msg "${_0}: Lucene index upgrade complete."
+  echo "  ---------------------------  "
   # Install new LOCKSS config sets and apply post-installation changes
   while [ ${needs_update} == ${true} ]
   do
-    java -jar ${REPO_TOOLS_JAR} --local ${SOLR_HOME} --action update-lockss-configset --core ${SOLR_CORE_NAME}
+    echo "  ---------------------------  "
+    msg "${_0}: Updating LOCKSS config set..."
+    java -jar ${REPO_TOOLS_JAR}  --action update-lockss-configset "$@"
     result=$?
     case ${result} in
     0)
+      echo "  ---------------------------  "
       msg "${_0}: A new lockss configset has been installed. Attempting to apply changes..."
       start_standalone_solr
-      java -jar ${REPO_TOOLS_JAR} --endpoint ${SOLR_ENDPOINT} --action apply-lockss-configset-changes
+      java -jar ${REPO_TOOLS_JAR} --action apply-lockss-configset-changes --endpoint ${SOLR_ENDPOINT}
       stop_standalone_solr
       ;;
     1)
+      echo "  ---------------------------  "
       msg "${_0}: No configset installed to ${name}, already up to date."
       ${needs_update}=${false}
       ;;
     2)
+      echo "  ---------------------------  "
       err "${_0} Attempt to install new configset to ${name} failed."
       return 1
      ;;
@@ -143,33 +159,39 @@ verify_and_update_lockss_core() {
   local path=${2}
 
   ensure_repository_tools
-
+  ensure_lockss_stopped
   verify_core --core "${name}" --local "${path}"
   result=$?
 
   #switch based on the return value
   case ${result} in
   0)
+    echo "  ---------------------------  "
     msg "${_0}: Solr core is up-to-date."
     return 0
     ;;
   1)
+    echo "  ---------------------------  "
     msg "${_0}: Creating a new Solr core."
     create_new_core --core "${name}" --local "${path}"
     return $?
     ;;
   2)
+    echo "  ---------------------------  "
     msg "${_0} Solr core ${name} needs to be updated, this may take some time..."
     update_core --core "${name}" --local "${path}"
     return $?
     ;;
   4)
+    echo "  ---------------------------  "
     msg "${_0} Solr core ${name} is already reindexing, please wait..."
     return 0
     ;;
   8)
+    echo "  ---------------------------  "
     msg "${_0} Solr core ${name} is in inconsistant state."
     err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+    echo "  ---------------------------  "
     return 1
     ;;
   *)

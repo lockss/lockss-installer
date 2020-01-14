@@ -61,6 +61,7 @@ _D0=$(dirname "${0}")
 COMPOSE_DIR="${_D0}/.."
 CONFIG_DIR="${COMPOSE_DIR}/config"
 UPDATES_PATH="${_D0}/updates"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
@@ -74,7 +75,7 @@ set -a
 set +a
 
 if ! am_i_root ; then
-  error_exit "this script must be run as root."
+  err_exit "this script must be run as root."
 fi
 
 echo "  ---------------------------  "
@@ -100,5 +101,5 @@ echo "  ---------------------------  "
 msg "${PROGNAME}: Verifying and updating lockss solr core..."
 verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
 
-msg "${PROGNAME}: Fixing file permissions..."
-chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
+#msg "${PROGNAME}: Fixing file permissions..."
+#chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
