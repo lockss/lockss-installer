@@ -51,96 +51,93 @@ SOLR_TOOLS_JAR="laaws-repository-tools.jar"
 SOLR_TOOLS_GROUPID="org.lockss.laaws"
 SOLR_TOOLS_ARTIFACTID="laaws-repository-tools"
 SOLR_TOOLS_VERSION="2.0.7.0-SNAPSHOT"
-SOLR_HOME=${LOCKSS_VOL}/lockss-stack-solr-data
+SOLR_HOME="lockss-stack-solr-data"
 SOLR_CORE_NAME=lockss-repo
 SOLR_ENDPOINT=http://localhost:8983/solr/${SOLR_CORE_NAME}
 SOLR_IMG="solr"
 SOLR_VERSION="7.2.1-alpine"
+SOLR_UPDATE_NAME="lockss_solr_update"
 
 REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
-false=0
-true=1
 
 # Download the repository tools jar if it is missing
 # This is equivalent to the command line command
 # nxfetch.sh -q -i "org.lockss.laaws:laaws-repository-tools:2.0.7.0-SNAPSHOT" -c "with-deps" -e "jar" -o "scripts/lib/laaws-repository-tools.jar"
 ensure_repository_tools() {
   if [ ! -f "${REPO_TOOLS_JAR}" ]; then
-    echo "Downloading repository tools jar..."
-    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR}
-    chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
+    echo "  ---------------------------  "
+    msg "Downloading repository tools jar..."
+    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR} &&
+      chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
+    echo "  ---------------------------  "
   fi
 }
 
 ensure_lockss_stopped() {
-  echo "stopping all lockss stacks and containers..."
+  echo "  ---------------------------  "
+  msg "stopping all lockss stacks and containers..."
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
-  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop
+  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop &&
+    msg "All lockss stacks and containers stopped."
+  echo "  ---------------------------  "
+}
+
+create_standalone_solr() {
+    msg "Creating standalone solr instance ${SOLR_UPDATE_NAME}."
+    if ! docker volume inspect ${SOLR_HOME} &> /dev/null; then
+      msg "Creating docker volume for ${1} as $SOLR_HOME..."
+      if ! docker volume create -d local-persist -o mountpoint=${1} --name=$SOLR_HOME ; then
+        err_msg "${_0}: error creating docker volume $SOLR_HOME"
+      fi
+    fi
+    if ! docker container inspect ${SOLR_UPDATE_NAME} &> /dev/null; then
+      docker run -d -v "${SOLR_HOME}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION} &&
+      msg "Standalone solr instance ${SOLR_UPDATE_NAME} started." && sleep 10
+    else
+      start_standalone_solr
+    fi
+    echo "  ---------------------------  "
+}
+
+remove_standalone_solr() {
+  echo "  ---------------------------  "
+  msg "Removing standalone solr instance ${SOLR_UPDATE_NAME}."
+  docker container stop ${SOLR_UPDATE_NAME} &> /dev/null
+  docker container rm ${SOLR_UPDATE_NAME} &> /dev/null &&
+    msg "Standalone solr instance ${SOLR_UPDATE_NAME} removed."
+  sleep 10
+  echo "  ---------------------------  "
 }
 
 start_standalone_solr() {
-  docker run -d -v "${SOLR_HOME}" -p 8983:8983 --name lockss_solr_update ${SOLR_IMG}:${SOLR_VERSION}
+  echo "  ---------------------------  "
+  msg "Starting standalone solr instance ${SOLR_UPDATE_NAME}."
+  docker container start ${SOLR_UPDATE_NAME} &&
+    msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
   sleep 10
+  echo "  ---------------------------  "
 }
 
 stop_standalone_solr() {
-  docker stop lockss_solr_update
+  echo "  ---------------------------  "
+  msg "Stopping standalone solr instance ${SOLR_UPDATE_NAME}."
+  docker container stop ${SOLR_UPDATE_NAME} &&
+    msg "Standalone solr instance ${SOLR_UPDATE_NAME} stopped."
   sleep 10
+  echo "  ---------------------------  "
 }
 
 # Exit codes from the create...:
 # 0 = Solr core creation succeeded
 # 1 = Solr core creation failed
 create_new_core() {
+  echo "  ---------------------------  "
+  msg "Creating new core..."
   java -jar "${REPO_TOOLS_JAR}" --action create "$@"
-  return $?
-}
-
-# Exit codes from the update...:
-# 0 = Solr core update succeeded
-# 1 = Solr core update failed
-update_core() {
-  needs_update=${true}
-
-  # Perform Lucene index upgrade (no-op if already up-to-date)
+  res=$?
+  msg "Create core finished with $res."
   echo "  ---------------------------  "
-  msg "${_0}: Upgrading lucene index."
-  java -jar ${REPO_TOOLS_JAR} --action upgrade-lucene-index "$@"
-  msg "${_0}: Lucene index upgrade complete."
-  echo "  ---------------------------  "
-  # Install new LOCKSS config sets and apply post-installation changes
-  while [ ${needs_update} == ${true} ]
-  do
-    echo "  ---------------------------  "
-    msg "${_0}: Updating LOCKSS config set..."
-    java -jar ${REPO_TOOLS_JAR}  --action update-lockss-configset "$@"
-    result=$?
-    case ${result} in
-    0)
-      echo "  ---------------------------  "
-      msg "${_0}: A new lockss configset has been installed. Attempting to apply changes..."
-      start_standalone_solr
-      java -jar ${REPO_TOOLS_JAR} --action apply-lockss-configset-changes --endpoint ${SOLR_ENDPOINT}
-      stop_standalone_solr
-      ;;
-    1)
-      echo "  ---------------------------  "
-      msg "${_0}: No configset installed to ${name}, already up to date."
-      ${needs_update}=${false}
-      ;;
-    2)
-      echo "  ---------------------------  "
-      err "${_0} Attempt to install new configset to ${name} failed."
-      return 1
-     ;;
-    *)
-      err "${_0} Attempt to update solr core ${name} returned unknown result: ${result}."
-      err "${_0} Contact lockss-support@lockss.org to resolve this issue."
-      return 1
-      ;;
-    esac
-  done
-  return 0
+  return $res
 }
 
 # Exit codes from the verify...:
@@ -150,9 +147,72 @@ update_core() {
 # 4 = Solr core reindex is in-progress.
 # 8 = Solr core is in an inconsistent state.
 verify_core() {
+  echo "  ---------------------------  "
+  msg "Verifing solr core..."
   java -jar "${REPO_TOOLS_JAR}" --action verify "$@"
-  return $?
+  res=$?
+  sleep 10
+  msg "Completed verify with result $res."
+  echo "  ---------------------------  "
+  return $res
 }
+
+# Exit codes from the update...:
+# 0 = Solr core update succeeded
+# 1 = Solr core update failed
+update_core() {
+  echo "  ---------------------------  "
+  echo "Updating solr core..."
+  update_needed="true"
+  # Perform Lucene index upgrade (no-op if already up-to-date)
+  echo "  ---------------------------  "
+  msg " Upgrading lucene index."
+  java -jar ${REPO_TOOLS_JAR} --action upgrade-lucene-index "$@" &&
+    msg "Lucene index upgrade complete."
+  echo "  ---------------------------  "
+  # Install new LOCKSS config sets and apply post-installation changes
+  while [ $update_needed == "true" ]
+  do
+    echo "  ---------------------------  "
+    msg "Updating lockss configset..."
+    java -jar ${REPO_TOOLS_JAR}  --action update-lockss-configset "$@"
+    result=$?
+    sleep 10
+    case ${result} in
+    0)
+      echo "  ---------------------------  "
+      msg "A new lockss configset has been installed. Attempting to apply changes..."
+      java -jar ${REPO_TOOLS_JAR} --action apply-lockss-configset-changes --endpoint ${SOLR_ENDPOINT}
+      res=$?
+      msg "Apply lockss configset changes completed with $res"
+      echo "  ---------------------------  "
+      if [ $res != 0 ]; then
+        err "${_0} Attempt to update configset failed."
+        return 1
+      fi
+      ;;
+    1)
+      echo "  ---------------------------  "
+      msg "${_0}: No configset installed to ${name}, already up to date."
+      return 0
+      ;;
+    2)
+      echo "  ---------------------------  "
+      err "${_0} Attempt to install new configset to ${name} failed."
+      return 1
+     ;;
+    *)
+      echo "  ---------------------------  "
+      err "${_0} Attempt to update solr core ${name} returned unknown result: ${result}."
+      err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+      echo "  ---------------------------  "
+      return 1
+      ;;
+    esac
+  done
+  return 0
+}
+
 
 verify_and_update_lockss_core() {
   local name=${1}
@@ -172,15 +232,19 @@ verify_and_update_lockss_core() {
     ;;
   1)
     echo "  ---------------------------  "
-    msg "${_0}: Creating a new Solr core."
+    msg "${_0}: Creating a new Solr core named ${name} in ${path}."
     create_new_core --core "${name}" --local "${path}"
     return $?
     ;;
   2)
     echo "  ---------------------------  "
     msg "${_0} Solr core ${name} needs to be updated, this may take some time..."
+    create_standalone_solr "${path}"
+    stop_standalone_solr
     update_core --core "${name}" --local "${path}"
-    return $?
+    ret=$?
+    remove_standalone_solr
+    return $ret
     ;;
   4)
     echo "  ---------------------------  "
@@ -195,9 +259,12 @@ verify_and_update_lockss_core() {
     return 1
     ;;
   *)
+    echo "  ---------------------------  "
     err "${_0} Attempt to verify solr core ${name} returned unknown result: ${result}."
     err "${_0} Contact lockss-support@lockss.org to resolve this issue."
+    echo "  ---------------------------  "
     return ${result}
     ;;
   esac
+
 }

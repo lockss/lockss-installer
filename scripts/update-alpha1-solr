@@ -37,7 +37,7 @@
 # 2019-04-18 version 1
 # ---------------------------------------------------------------------------
 
-PROGNAME=${0##*/}
+_0=${0##*/}
 VERSION="1.0"
 
 ##
@@ -79,27 +79,27 @@ if ! am_i_root ; then
 fi
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Checking solr home directory..."
+msg "${_0}: Checking solr home directory..."
 
 SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
 CORE_PATH="${SOLR_HOME_PATH}/mycores"
 
 if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
-  msg "${PROGNAME}: Solr home has already been patched."
+  msg "${_0}: Solr home has already been patched."
 else
-  msg "${PROGNAME}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
+  msg "${_0}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
   tar -xzf "${SOLR_HOME_PATCH}" -C "${SOLR_HOME_PATH}"
   # create the directory and move the lockss core repo.
-  msg "${PROGNAME}: Creating default subdir ${CORE_PATH}"
+  msg "${_0}: Creating default subdir ${CORE_PATH}"
   mkdir "${CORE_PATH}"
 
-  msg "${PROGNAME}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
+  msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
   mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ${CORE_PATH}
 fi
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Verifying and updating lockss solr core..."
+msg "${_0}: Verifying and updating lockss solr core..."
 verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
 
-#msg "${PROGNAME}: Fixing file permissions..."
-#chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
+msg "${_0}: Fixing file permissions..."
+chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
