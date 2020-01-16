@@ -91,8 +91,10 @@ create_standalone_solr() {
       fi
     fi
     if ! docker container inspect ${SOLR_UPDATE_NAME} &> /dev/null; then
-      docker run -d -v "${SOLR_HOME}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION} &&
-      msg "Standalone solr instance ${SOLR_UPDATE_NAME} started." && sleep 10
+      docker run -d -v "${SOLR_HOME}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
+      docker container exec -it ${SOLR_UPDATE_NAME} wait-for-solr.sh
+      sleep 10
+      msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
     else
       start_standalone_solr
     fi
@@ -102,28 +104,30 @@ create_standalone_solr() {
 remove_standalone_solr() {
   echo "  ---------------------------  "
   msg "Removing standalone solr instance ${SOLR_UPDATE_NAME}."
-  docker container stop ${SOLR_UPDATE_NAME} &> /dev/null
-  docker container rm ${SOLR_UPDATE_NAME} &> /dev/null &&
-    msg "Standalone solr instance ${SOLR_UPDATE_NAME} removed."
+  stop_standalone_solr
+  docker container rm ${SOLR_UPDATE_NAME} &> /dev/null
   sleep 10
+  msg "Standalone solr instance ${SOLR_UPDATE_NAME} removed."
   echo "  ---------------------------  "
 }
 
 start_standalone_solr() {
   echo "  ---------------------------  "
   msg "Starting standalone solr instance ${SOLR_UPDATE_NAME}."
-  docker container start ${SOLR_UPDATE_NAME} &&
-    msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
+  docker container start ${SOLR_UPDATE_NAME}
+  docker container exec -it ${SOLR_UPDATE_NAME} wait-for-solr.sh
   sleep 10
+  msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
   echo "  ---------------------------  "
 }
 
 stop_standalone_solr() {
   echo "  ---------------------------  "
   msg "Stopping standalone solr instance ${SOLR_UPDATE_NAME}."
-  docker container stop ${SOLR_UPDATE_NAME} &&
-    msg "Standalone solr instance ${SOLR_UPDATE_NAME} stopped."
+  docker container exec -it ${SOLR_UPDATE_NAME} stop-local-solr
+  docker container stop ${SOLR_UPDATE_NAME}
   sleep 10
+  msg "Standalone solr instance ${SOLR_UPDATE_NAME} stopped."
   echo "  ---------------------------  "
 }
 
@@ -174,25 +178,25 @@ update_core() {
   while [ $update_needed == "true" ]
   do
     echo "  ---------------------------  "
-    msg "Updating lockss configset..."
+    msg "Checking lockss confset for changes..."
     java -jar ${REPO_TOOLS_JAR}  --action update-lockss-configset "$@"
     result=$?
     sleep 10
     case ${result} in
     0)
       echo "  ---------------------------  "
-      msg "A new lockss configset has been installed. Attempting to apply changes..."
-      start_standalone_solr
+      msg "A new lockss configset has been installed. Applying configset changes..."
+      create_standalone_solr
       java -jar ${REPO_TOOLS_JAR} --action apply-lockss-configset-changes --endpoint ${SOLR_ENDPOINT}
       res=$?
-      msg "Apply lockss configset changes completed with $res"
+      sleep 10
       echo "  ---------------------------  "
       if [ $res != 0 ]; then
-        err "${_0} Attempt to update configset failed."
+        err "${_0} Attempt to update configset failed with err: $res"
         return 1
       fi
       msg "Stopping solr and checking for additional changes...."
-      stop_standalone_solr && sleep 10
+      stop_standalone_solr
       ;;
     1)
       echo "  ---------------------------  "
@@ -242,8 +246,6 @@ verify_and_update_lockss_core() {
   2)
     echo "  ---------------------------  "
     msg "${_0} Solr core ${name} needs to be updated, this may take some time..."
-    create_standalone_solr "${path}"
-    stop_standalone_solr
     update_core --core "${name}" --local "${path}"
     ret=$?
     remove_standalone_solr
