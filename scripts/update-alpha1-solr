@@ -70,13 +70,14 @@ SOLR_HOME_PATCH="${UPDATES_PATH}/solr-home.tar.gz"
 SOLR_USER_ID=8983
 SOLR_GROUP_ID=${SOLR_USER_ID}
 
+msg "Loading system configuration from ${SYSTEM_CONF_FILE}"
 set -a
     . "${SYSTEM_CONF_FILE}"
 set +a
 
-if ! am_i_root ; then
-  err_exit "this script must be run as root."
-fi
+# if ! am_i_root ; then
+  # err_exit "this script must be run as root."
+# fi
 
 echo "  ---------------------------  "
 msg "${_0}: Checking solr home directory..."
@@ -99,7 +100,11 @@ fi
 
 echo "  ---------------------------  "
 msg "${_0}: Verifying and updating lockss solr core..."
+
+msg "${_0}: LOCKSS_SOLR_CORE_REPO = ${LOCKSS_SOLR_CORE_REPO}"
+msg "${_0}: SOLR_HOME_PATH = ${SOLR_HOME_PATH}"
+
 verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
 
 msg "${_0}: Fixing file permissions..."
-chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
+# chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*

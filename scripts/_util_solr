@@ -66,7 +66,7 @@ REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
 ensure_repository_tools() {
   if [ ! -f "${REPO_TOOLS_JAR}" ]; then
     echo "  ---------------------------  "
-    msg "Downloading repository tools jar..."
+    msg "Did not locate repository tools jar at ${REPO_TOOLS_JAR}; downloading from Maven..."
     ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR} &&
       chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
     echo "  ---------------------------  "
@@ -84,20 +84,31 @@ ensure_lockss_stopped() {
 
 create_standalone_solr() {
     msg "Creating standalone solr instance ${SOLR_UPDATE_NAME}."
-    if ! docker volume inspect ${SOLR_HOME} &> /dev/null; then
-      msg "Creating docker volume for ${1} as $SOLR_HOME..."
-      if ! docker volume create -d local-persist -o mountpoint=${1} --name=$SOLR_HOME ; then
-        err_msg "${_0}: error creating docker volume $SOLR_HOME"
-      fi
+
+    msg "\$1 = ${1}"
+    msg "SOLR_HOME_VOLUME = ${SOLR_HOME}"
+    msg "SOLR_HOME_PATH = ${SOLR_HOME_PATH}"
+
+    if [ "${1}x" == "x" ]; then
+      msg "WARNING! A Solr home path was not passed to create_standalone_solr()!"
     fi
+
+    # if ! docker volume inspect ${SOLR_HOME} &> /dev/null; then
+      # msg "Creating docker volume for ${1} as $SOLR_HOME..."
+      # if ! docker volume create -d local-persist -o mountpoint=${1} --name=$SOLR_HOME ; then
+        # err "${_0}: error creating docker volume $SOLR_HOME"
+      # fi
+    # fi
+
     if ! docker container inspect ${SOLR_UPDATE_NAME} &> /dev/null; then
-      docker run -d -v "${SOLR_HOME}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
+      docker run -d -v ${SOLR_HOME_PATH}:/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
       docker container exec -it ${SOLR_UPDATE_NAME} wait-for-solr.sh
       sleep 10
       msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
     else
       start_standalone_solr
     fi
+
     echo "  ---------------------------  "
 }
 
@@ -224,6 +235,9 @@ update_core() {
 verify_and_update_lockss_core() {
   local name=${1}
   local path=${2}
+
+  msg "\$name = ${name}"
+  msg "\$path = ${path}"
 
   ensure_repository_tools
   ensure_lockss_stopped
