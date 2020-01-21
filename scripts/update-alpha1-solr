@@ -70,6 +70,7 @@ SOLR_HOME_PATCH="${UPDATES_PATH}/solr-home.tar.gz"
 SOLR_USER_ID=8983
 SOLR_GROUP_ID=${SOLR_USER_ID}
 
+msg "Loading system configuration from ${SYSTEM_CONF_FILE}"
 set -a
     . "${SYSTEM_CONF_FILE}"
 set +a

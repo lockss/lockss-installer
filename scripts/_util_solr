@@ -66,8 +66,8 @@ REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
 ensure_repository_tools() {
   if [ ! -f "${REPO_TOOLS_JAR}" ]; then
     echo "  ---------------------------  "
-    msg "Downloading repository tools jar..."
-    ${_D0}/lib/nxfetch.sh -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR} &&
+    msg "Did not locate repository tools jar at ${REPO_TOOLS_JAR}; downloading from Maven..."
+    ${_D0}/lib/nxfetch.sh -s -q -i "${SOLR_TOOLS_GROUPID}:${SOLR_TOOLS_ARTIFACTID}:${SOLR_TOOLS_VERSION}" -c "with-deps" -e "jar" -o ${REPO_TOOLS_JAR} &&
       chown ${LOCKSS_USER} "${REPO_TOOLS_JAR}"
     echo "  ---------------------------  "
   fi
@@ -83,15 +83,9 @@ ensure_lockss_stopped() {
 }
 
 create_standalone_solr() {
-    msg "Creating standalone solr instance ${SOLR_UPDATE_NAME}."
-    if ! docker volume inspect ${SOLR_HOME} &> /dev/null; then
-      msg "Creating docker volume for ${1} as $SOLR_HOME..."
-      if ! docker volume create -d local-persist -o mountpoint=${1} --name=$SOLR_HOME ; then
-        err_msg "${_0}: error creating docker volume $SOLR_HOME"
-      fi
-    fi
-    if ! docker container inspect ${SOLR_UPDATE_NAME} &> /dev/null; then
-      docker run -d -v "${SOLR_HOME}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
+    msg "Creating standalone solr instance ${SOLR_UPDATE_NAME} on volume ${REPO_PATH}"
+    if ! docker container ps -a | grep ${SOLR_UPDATE_NAME} &> /dev/null; then
+      docker run -d -v ${REPO_PATH}:/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
       docker container exec -it ${SOLR_UPDATE_NAME} wait-for-solr.sh
       sleep 10
       msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."
@@ -152,7 +146,7 @@ create_new_core() {
 # 8 = Solr core is in an inconsistent state.
 verify_core() {
   echo "  ---------------------------  "
-  msg "Verifing solr core..."
+  msg "Verifing solr core ..."
   java -jar "${REPO_TOOLS_JAR}" --action verify "$@"
   res=$?
   sleep 10
@@ -200,17 +194,17 @@ update_core() {
       ;;
     1)
       echo "  ---------------------------  "
-      msg "${_0}: No configset installed to ${name}, already up to date."
+      msg "${_0}: No configset installed to ${REPO_NAME}, already up to date."
       return 0
       ;;
     2)
       echo "  ---------------------------  "
-      err "${_0} Attempt to install new configset to ${name} failed."
+      err "${_0} Attempt to install new configset to ${REPO_NAME} failed."
       return 1
      ;;
     *)
       echo "  ---------------------------  "
-      err "${_0} Attempt to update solr core ${name} returned unknown result: ${result}."
+      err "${_0} Attempt to update solr core ${REPO_NAME} returned unknown result: ${result}."
       err "${_0} Contact lockss-support@lockss.org to resolve this issue."
       echo "  ---------------------------  "
       return 1
@@ -222,12 +216,14 @@ update_core() {
 
 
 verify_and_update_lockss_core() {
-  local name=${1}
-  local path=${2}
+
+  REPO_NAME=${1}
+  REPO_PATH=${2}
 
   ensure_repository_tools
   ensure_lockss_stopped
-  verify_core --core "${name}" --local "${path}"
+
+  verify_core --core "${REPO_NAME}" --local "${REPO_PATH}"
   result=$?
 
   #switch based on the return value
@@ -239,33 +235,33 @@ verify_and_update_lockss_core() {
     ;;
   1)
     echo "  ---------------------------  "
-    msg "${_0}: Creating a new Solr core named ${name} in ${path}."
-    create_new_core --core "${name}" --local "${path}"
+    msg "${_0}: Creating a new Solr core repo for ${REPO_NAME} in ${REPO_PATH}."
+    create_new_core --core "${REPO_NAME}" --local "${REPO_PATH}"
     return $?
     ;;
   2)
     echo "  ---------------------------  "
-    msg "${_0} Solr core ${name} needs to be updated, this may take some time..."
-    update_core --core "${name}" --local "${path}"
+    msg "${_0} Solr core ${REPO_NAME} needs to be updated, this may take some time..."
+    update_core --core "${REPO_NAME}" --local "${REPO_PATH}"
     ret=$?
     remove_standalone_solr
     return $ret
     ;;
   4)
     echo "  ---------------------------  "
-    msg "${_0} Solr core ${name} is already reindexing, please wait..."
+    msg "${_0} Solr core ${REPO_NAME} is already reindexing, please wait..."
     return 0
     ;;
   8)
     echo "  ---------------------------  "
-    msg "${_0} Solr core ${name} is in inconsistant state."
+    msg "${_0} Solr core ${REPO_NAME} is in inconsistant state."
     err "${_0} Contact lockss-support@lockss.org to resolve this issue."
     echo "  ---------------------------  "
     return 1
     ;;
   *)
     echo "  ---------------------------  "
-    err "${_0} Attempt to verify solr core ${name} returned unknown result: ${result}."
+    err "${_0} Attempt to verify solr core ${REPO_NAME} returned unknown result: ${result}."
     err "${_0} Contact lockss-support@lockss.org to resolve this issue."
     echo "  ---------------------------  "
     return ${result}

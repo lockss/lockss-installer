@@ -202,7 +202,6 @@ sleep 10
 echo "  ---------------------------  "
 msg "${PROGNAME}: Checking solr indices for update..."
 "${SCRIPTS_DIR}/update-alpha1-solr" || err_msg "Your solr instance needs to be checked."
-sleep 10
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
