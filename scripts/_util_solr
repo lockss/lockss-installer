@@ -75,7 +75,7 @@ ensure_repository_tools() {
 
 ensure_lockss_stopped() {
   echo "  ---------------------------  "
-  msg "stopping all lockss stacks and containers..."
+  msg "Stopping all lockss stacks and containers..."
   docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
   docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop &&
     msg "All lockss stacks and containers stopped."
