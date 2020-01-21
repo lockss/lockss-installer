@@ -40,7 +40,13 @@ VERSION="1.0"
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
-COMPOSE_DIR="${_D0}/.."
+
+COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+
+UPDATE_IMAGES=0
+
 
 ##
 ## Load _util
@@ -129,17 +135,20 @@ if $(am_i_root); then
 fi
 
 if $(is_lockss_running); then
-  error_exit "There is already a running lockss stack, run restart-lockss instead."
+  msg "There is already a running lockss stack."
+  ask_for_input "Okay to stop the lockss-stack now?" "Y"
+  if is_yes "${ANS}"; then
+    "${_D0}"/shutdown-lockss && msg "Preparing to start stack..."
+    sleep 5
+  else
+    error_exit "Call shutdown-lockss and then run start-lockss again."
+  fi
 fi
 
-"${_D0}"/generate-lockss && "${_D0}"/assemble-lockss
+echo "Scripts dir ${SCRIPTS_DIR}"
 
-ask_for_input "Okay to deploy the lockss-stack now?" "Y"
-if is_yes "${ANS}"; then
-  "${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-else
-  echo "Run deploy-lockss script when ready to deploy."
-fi
+"${SCRIPTS_DIR}"/generate-lockss && "${SCRIPTS_DIR}"/assemble-lockss && "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+
 
 graceful_exit
 

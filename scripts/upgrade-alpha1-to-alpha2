@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# update-alpha1-to-alpha2 - Undeploy all stacks and remove all installed stack info..
+# upgrade-alpha1-to-alpha2 - Undeploy all stacks and remove all installed stack info..
 #
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -31,7 +31,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: update-alpha1-to-alpha2 [-h|--help]
+# Usage: upgrade-alpha1-to-alpha2 [-h|--help]
 #
 # Revision history:
 # 2019-04-18 version 1
@@ -59,7 +59,7 @@ _D0=$(dirname "${0}")
 COMPOSE_DIR="$(cd "$(dirname "${_D0}")" pwd -P)"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-UPDATES_PATH="${SCRIPTS_DIR}/updates"
+UPDATES_PATH="${SCRIPTS_DIR}/upgrades"
 POSTGRES_VOL="lockss-stack-postgres-data"
 
 # Files
@@ -67,6 +67,52 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 OLD_SYSTEM_CONF_FILE="${CONFIG_DIR}/config.info"
 SQL_FILE="${UPDATES_PATH}/alpha1-to-alpha2-db-rename.sql"
 SQL_PASS_FILE="/run/secrets/lockss-postgres-pass"
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help] [-a|--args ARGS_ADDITIONAL]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  "Update an alpha1 version to an alpha2 version."
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
+
 
 rename_dirs() {
   msg "${PROGNAME}: Looking for old data directories..."
@@ -151,6 +197,13 @@ USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
 EOF
 }
 
+###
+# Start
+###
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
 # MAIN ENTRY POINT
 # Sanity checks
 msg "${PROGNAME}: Checking system..."
@@ -202,8 +255,9 @@ sleep 10
 echo "  ---------------------------  "
 msg "${PROGNAME}: Checking solr indices for update..."
 "${SCRIPTS_DIR}/update-alpha1-solr" || err_msg "Your solr instance needs to be checked."
-sleep 10
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
 msg "${PROGNAME}: Call configure-lockss to check configuration settings."
+
+graceful_exit

@@ -54,24 +54,20 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Files
-COMPOSE_DIR="${_D0}/.."
+# Directories
+COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
+echo "Setting LOCKSS dir to ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+
+# Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
     echo ""
     echo "configuring installed service..."
     echo ""
- #   if [ "X${USE_LOCKSS_CFG}" = X ]; then
-         USE_LOCKSS_CFG=true
- #   fi
-#    ask_for_input "Use LOCKSS Config Service?" $(to_yes_no ${USE_LOCKSS_CFG})
-#    if is_yes "${ANS}"; then
-#        USE_LOCKSS_CFG=true
-#    else
-#        USE_LOCKSS_CFG=false
-#    fi
+    USE_LOCKSS_CFG=true
     #check metadata service
     if [ "X${USE_LOCKSS_MDQ}" = X ]; then
          USE_LOCKSS_MDQ=true
@@ -93,6 +89,8 @@ configure_services() {
         USE_LOCKSS_MDX=false
     fi
     #check repository service
+    # right now we require a lockss repository and do minimal configuration
+    # this will change when we support multiple repositories
 #    if [ "X${USE_LOCKSS_REPO}" = X ]; then
          USE_LOCKSS_REPO=true
 #    fi

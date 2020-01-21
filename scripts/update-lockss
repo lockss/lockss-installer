@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# restart-lockss - "Restart the running LOCKSS stack."
+# update-lockss - "Update the LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: restart [-h|--help] [-a|--args ARGS_ADDITIONAL]
+# Usage: update-lockss [-h|--help] [-a|--args ARGS_ADDITIONAL]
 # Revision history:
 # ---------------------------------------------------------------------------
 PROGNAME=${0##*/}
@@ -41,13 +41,17 @@ VERSION="1.0"
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
+CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+
+UPDATE_IMAGES=0
+
 
 ##
 ## Load _util
 ##
 
-. "${SCRIPTS_DIR}/_util"
+. "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -83,7 +87,7 @@ usage() {
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  "Generate, Assemble and Restart a running LOCKSS stack."
+  "Generate, Assemble and Start a running LOCKSS stack."
 
   $(usage)
 
@@ -113,7 +117,7 @@ while [[ -n $1 ]]; do
       echo "Adding addtional runtime args $ARGS_ADDITIONAL";
       shift
     ;;
-    -*)
+    -* | --*)
       usage
       error_exit "Unknown option $1" ;;
     *)
@@ -129,11 +133,13 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
+if $(is_lockss_running); then
+  "${_D0}"/shutdown-lockss && sleep 10 && msg "Preparing to update stack..."
+fi
 
-"${SCRIPTS_DIR}"/shutdown-lockss &&
-#"${SCRIPTS_DIR}"/generate-lockss &&
-#"${SCRIPTS_DIR}"/assemble-lockss &&
-"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+"${SCRIPTS_DIR}"/generate-lockss &&
+"${SCRIPTS_DIR}"/assemble-lockss -u &&
+"${_D0}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 
 graceful_exit
 

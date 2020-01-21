@@ -57,7 +57,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
@@ -234,11 +234,7 @@ deploy_stack() {
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
-  for svc_name in "${deploy_service_names[@]}"; do
-    echo "pulling image for ${svc_name}..."
-    docker-compose pull ${svc_name} &>/dev/null
-  done
-  docker stack deploy --prune --compose-file ${DOCKER_COMPOSE_FILE} $stack
+  docker stack deploy --prune --resolve-image never --compose-file  ${DOCKER_COMPOSE_FILE} $stack
   popd &>/dev/null
 }
 
@@ -263,7 +259,7 @@ while [[ -n $1 ]]; do
   -a | --args)
     shift
     export ARGS_ADDITIONAL="$1"
-    echo "Adding addtional runtime args $ARGS_ADDITIONAL"
+    msg "Adding addtional runtime args $ARGS_ADDITIONAL"
     shift
     ;;
   [1-9])

@@ -55,12 +55,11 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
-PORT_BASE=245
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
@@ -69,6 +68,7 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
 STACK_PREFIX="lockss-stack"
+PORT_BASE=245
 
 # Variables
 declare -i STACK_COUNT=1

@@ -216,7 +216,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(docker stack ls | grep 'lockss-stack')" -eq 0 ]
+  [ "$(docker stack ls | grep 'lockss-stack')" ]
 }
 
 #

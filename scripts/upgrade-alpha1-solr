@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# update-alpha1-solr - Update the solr files to latest lockss format.
+# upgrade-alpha1-solr - Update the solr files to latest lockss format.
 #
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -37,7 +37,7 @@
 # 2019-04-18 version 1
 # ---------------------------------------------------------------------------
 
-PROGNAME=${0##*/}
+_0=${0##*/}
 VERSION="1.0"
 
 ##
@@ -58,9 +58,10 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR="$(cd "$(dirname "${_D0}")" pwd -P)"
 CONFIG_DIR="${COMPOSE_DIR}/config"
-UPDATES_PATH="${_D0}/updates"
+UPDATES_PATH="${_D0}/upgrades"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
@@ -69,36 +70,37 @@ SOLR_HOME_PATCH="${UPDATES_PATH}/solr-home.tar.gz"
 SOLR_USER_ID=8983
 SOLR_GROUP_ID=${SOLR_USER_ID}
 
+msg "Loading system configuration from ${SYSTEM_CONF_FILE}"
 set -a
     . "${SYSTEM_CONF_FILE}"
 set +a
 
 if ! am_i_root ; then
-  error_exit "this script must be run as root."
+  err_exit "this script must be run as root."
 fi
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Checking solr home directory..."
+msg "${_0}: Checking solr home directory..."
 
 SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
 CORE_PATH="${SOLR_HOME_PATH}/mycores"
 
 if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
-  msg "${PROGNAME}: Solr home has already been patched."
+  msg "${_0}: Solr home has already been patched."
 else
-  msg "${PROGNAME}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
+  msg "${_0}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
   tar -xzf "${SOLR_HOME_PATCH}" -C "${SOLR_HOME_PATH}"
   # create the directory and move the lockss core repo.
-  msg "${PROGNAME}: Creating default subdir ${CORE_PATH}"
+  msg "${_0}: Creating default subdir ${CORE_PATH}"
   mkdir "${CORE_PATH}"
 
-  msg "${PROGNAME}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
+  msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
   mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ${CORE_PATH}
 fi
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Verifying and updating lockss solr core..."
+msg "${_0}: Verifying and updating lockss solr core..."
 verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
 
-msg "${PROGNAME}: Fixing file permissions..."
+msg "${_0}: Fixing file permissions..."
 chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*

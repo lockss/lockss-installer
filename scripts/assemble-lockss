@@ -31,7 +31,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: assemble-lockss [-h|--help]
+# Usage: assemble [-h|--help] [-u|--update]
 #
 # Revision history:
 # 2019-04-18 version 1
@@ -57,7 +57,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="${_D0}/.."
+COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
@@ -75,6 +75,10 @@ declare -a arr svcs_confs
 
 
 STACK_PREFIX="lockss-stack"
+STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+NUM_STACKS=${#STACK_DIRS[@]}
+STACK_NUM=0
+UPDATE_IMAGES=0
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -104,18 +108,19 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update]"
 }
 
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Assemble lockss stack by installing generated configs files, volumes and networks.
+  This script will take the generated stack and add necessary elements to docker.
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
+  -u, --update  force update of LOCKSS docker images
 
 _EOF_
   return
@@ -147,33 +152,33 @@ init_service_arrays() {
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
     svcs_confs+=("mdq")
-  fi  
+  fi
   if ${USE_LOCKSS_MDX}; then
     svcs+=("mdx")
     svcs_confs+=("mdx")
-  fi  
+  fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")
     svcs_confs+=("pol")
-  fi  
+  fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     svcs_confs+=("repo")
-  fi  
+  fi
   if ${USE_LOCKSS_POSTGRES}; then
      svcs+=("postgres")
-  fi  
+  fi
   if ${USE_LOCKSS_SOLR}; then
-      svcs+=("solr")
-  fi  
+    svcs+=("solr")
+  fi
   if ${USE_LOCKSS_HDFS}; then
-      svcs+=("hdfs")
-  fi  
+    svcs+=("hdfs")
+  fi
   if ${USE_LOCKSS_PYWB}; then
-      svcs+=("pywb")
-  fi  
+    svcs+=("pywb")
+  fi
   if ${USE_LOCKSS_OPENWB}; then
-      svcs+=("openwayback")
+    svcs+=("openwb")
   fi
 }
 
@@ -189,12 +194,10 @@ add_stack_configs()
     docker config rm $stack-${gconf} $stack-${gconf}_opt &> /dev/null
     echo "adding docker config $stack-${gconf}..."
     if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") ; then
-      echo "${_0}: error creating config $stack-${gconf}"
-      exit 1
+      error_exit "${_0}: error creating config $stack-${gconf}"
     fi
     if ! docker config create --template-driver golang $stack-${gconf}_opt $(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") ; then
-      echo "${_0}: error creating config $stack-${gconf}_opt"
-      exit 1
+      error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
   # Create the configs for each lockss service
@@ -239,6 +242,24 @@ add_stack_network() {
   fi
 }
 
+check_stack_images() {
+  for svc in "${svcs[@]}"
+  do
+    base=$(echo $svc | tr [a-z] [A-Z])
+    img="${base}_IMG"
+    vers="${base}_VERSION"
+    docker_image=${!img}
+    docker_version=${!vers}
+    echo "ensuring image for $docker_image:$docker_version..."
+    if [ ! $(docker images "$docker_image:$docker_version" &>/dev/null | grep ${docker_image}) ]; then
+      msg "downloading image: $docker_image:$docker_version..."
+      docker pull "${docker_image}:${docker_version}"
+    elif [ ${UPDATE_IMAGES} -eq 1 ]; then
+      docker pull "${docker_image}:${docker_version}"
+    fi
+  done
+}
+
 assemble_stack() {
   local stack=${STACK_PREFIX}$1
   echo "Processing stack $stack"
@@ -246,7 +267,7 @@ assemble_stack() {
   set -a
     . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  
+  check_stack_images
   add_stack_configs $stack
   add_stack_network $stack
   add_stack_volumes $stack
@@ -259,18 +280,14 @@ assemble_stack() {
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
-##
-## MAIN
-##
-STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
-NUM_STACKS=${#STACK_DIRS[@]}
-STACK_NUM=0
-
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
+    -u | --update)
+      UPDATE_IMAGES=1
+      msg "Forcing update of LOCKSS docker images" ;;
     [1-9])
        STACK_NUM=$1;;
     -* | --*)
@@ -281,6 +298,9 @@ while [[ -n $1 ]]; do
   esac
   shift
 done
+
+# Main logic
+
 
 # Source system config file
 set -a
@@ -307,9 +327,9 @@ else
   error_exit "Unable to find generated stack ${STACK_NUM}"
 fi
 
-echo ""
-echo "Successfully installed into docker all configs and volumes and networks."
-echo ""
-echo "Run deploy-lockss to deploy the assembled stack(s)."
+msg ""
+msg "Successfully installed into docker all configs and volumes and networks."
+msg ""
+msg "Run deploy-lockss to deploy the assembled stack(s)."
 
 graceful_exit

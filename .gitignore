@@ -14,3 +14,4 @@
 /scripts/lib/*.jar
 /logs/
 /scripts/logs/
+/scripts/upgrades/*.tar.gz
