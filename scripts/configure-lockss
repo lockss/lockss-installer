@@ -142,9 +142,8 @@ configure_services() {
         if [ "X${LOCKSS_DBNAME_PREFIX}" = X ]; then
             LOCKSS_DBNAME_PREFIX="Lockss"
         fi
-        ask_for_input "Login name for Postgres service" "${LOCKSS_DBNAME_PREFIX}"
+        ask_for_input "Database name prefix for Postgres service" "${LOCKSS_DBNAME_PREFIX}"
         LOCKSS_DBNAME_PREFIX=${ANS}
-
     fi
         LOCKSS_DB_PASSWD=""
         POSTGRES_PASS=""
@@ -201,12 +200,12 @@ configure_services() {
     if [ "X${USE_LOCKSS_HDFS}" = X ]; then
          USE_LOCKSS_HDFS=false
     fi
-    ask_for_input "Use LOCKSS HDFS Service?" $(to_yes_no ${USE_LOCKSS_HDFS})
-    if is_yes "${ANS}"; then
-        USE_LOCKSS_HDFS=true
-    else
-        USE_LOCKSS_HDFS=false
-    fi
+#    ask_for_input "Use LOCKSS HDFS Service?" $(to_yes_no ${USE_LOCKSS_HDFS})
+#    if is_yes "${ANS}"; then
+#        USE_LOCKSS_HDFS=true
+#    else
+#        USE_LOCKSS_HDFS=false
+#    fi
     echo "You can use either Pywb or OpenWayback for content replay..."
     ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
@@ -519,7 +518,7 @@ declare -i CONFIG_COUNT
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-    echo "$(date) Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+    msg "$(_DO) Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
     read_config ${SYSTEM_CONF_FILE}
 fi
 
@@ -535,5 +534,5 @@ esac
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
-echo "$(date) Call start-lockss to launch the LOCKSS stack lockss-stack..."
+echo "$(date) Call start-lockss to launch the LOCKSS stack 'lockss-stack'..."
 

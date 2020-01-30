@@ -116,38 +116,27 @@ _EOF_
 
 rename_dirs() {
   msg "${PROGNAME}: Looking for old data directories..."
-  if [ -d "${LOCKSS_DATA_DIR}/lockss-stack1-cfg-data" ]; then
-    msg "${PROGNAME}: Renaming data volumes..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
       new_dir="${dir/stack1/stack}"
       if [ ! -d "${new_dir}" ]; then
         mv "$dir" "${new_dir}"
       fi
     done
-  fi
   msg "${PROGNAME}: Looking for old log directories..."
-  if [ -d "${LOCKSS_LOG_DIR}/lockss-stack1-cfg-logs" ]; then
-    msg "Renaming log volumes..."
     for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
       new_dir="${dir/stack1/stack}"
       if [ ! -d "${new_dir}" ]; then
         mv "$dir" "${new_dir}"
       fi
     done
-  fi
 }
 
 update_sql() {
-  if ! docker volume inspect ${POSTGRES_VOL} &>/dev/null; then
-    msg "${PROGNAME}: creating mountpoint for temporary sql container..."
-    docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/${POSTGRES_VOL} --name=${POSTGRES_VOL}
-  fi
   msg "${PROGNAME}: bringing up temporary postgres instance..."
-  docker run --rm --name postgres-temp -v ${POSTGRES_VOL}:/data -e POSTGRES_PASSWORD_FILE=${SQL_PASS_FILE} -e POSTGRES_USER=LOCKSS -e PGDATA=/data -d postgres:9.6.12-alpine
+  docker run --rm --name postgres-temp -v "${LOCKSS_DATA_DIR}/${POSTGRES_VOL}":/data -e POSTGRES_PASSWORD_FILE=${SQL_PASS_FILE} -e POSTGRES_USER=LOCKSS -e PGDATA=/data -d postgres:9.6.12-alpine
   sleep 10
   docker exec -it postgres-temp psql -U LOCKSS -d postgres <"${SQL_FILE}"
   docker container stop postgres-temp
-  docker volume rm ${POSTGRES_VOL}
   msg "${PROGNAME}: Finished postgres update..."
 }
 
@@ -236,8 +225,7 @@ write_sysconf
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: shutting down alpha stacks..."
-"${SCRIPTS_DIR}/shutdown-lockss" && msg "alpha1 stacks successfully shutdown."
-sleep 10
+"${SCRIPTS_DIR}/shutdown-lockss" && sleep 10 && msg "alpha1 stacks successfully shutdown."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Checking persistent storage directories..."

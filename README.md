@@ -61,7 +61,8 @@ To run the most recent release of LOCKSS 2.0-alpha2 cluster:
 
 ### Support Scripts:
 *   `check_sys`: used to determine and if possible install elements missing from the host system..
-*   `upgrade-alpha1-to-alpha2`: called once to upgrade from an older alpha system.
+*   `upgrade-alpha1-to-alpha2`: called once to upgrade from an older alpha1 system.
+*   `upgrade-alpha1-solr`: called once to upgrade from an older alpha1 solr.
 
 Please contact LOCKSS Support by writing to `lockss-support (at) lockss (dot) org`
 for questions and help.

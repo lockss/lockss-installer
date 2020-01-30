@@ -249,12 +249,12 @@ verify_and_update_lockss_core() {
     ;;
   4)
     echo "  ---------------------------  "
-    msg "${_0} Solr core ${REPO_NAME} is already reindexing, please wait..."
+    msg "${_0} Solr core ${REPO_NAME} is already reindexing..."
     return 0
     ;;
   8)
     echo "  ---------------------------  "
-    msg "${_0} Solr core ${REPO_NAME} is in inconsistant state."
+    msg "${_0} Solr core ${REPO_NAME} is in inconsistent state."
     err "${_0} Contact lockss-support@lockss.org to resolve this issue."
     echo "  ---------------------------  "
     return 1
