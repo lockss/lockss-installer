@@ -206,19 +206,19 @@ configure_services() {
 #    else
 #        USE_LOCKSS_HDFS=false
 #    fi
-    echo "You can use either Pywb or OpenWayback for content replay..."
+    echo "You can use Pywb for content replay..."
     ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
     if is_yes "${ANS}"; then
         USE_LOCKSS_PYWB=true
         USE_LOCKSS_OPENWB=false
     else
         USE_LOCKSS_PYWB=false
-        ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
-        if is_yes "${ANS}"; then
-          USE_LOCKSS_OPENWB=true
-        else
-          USE_LOCKSS_OPENWB=false
-        fi
+#        ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+#        if is_yes "${ANS}"; then
+#          USE_LOCKSS_OPENWB=true
+#        else
+#          USE_LOCKSS_OPENWB=false
+#        fi
     fi
 }
 
