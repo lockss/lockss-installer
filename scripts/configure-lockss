@@ -72,7 +72,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_MDQ}" = X ]; then
          USE_LOCKSS_MDQ=true
     fi
-    ask_for_input "Use LOCKSS Metadata Service?" $(to_yes_no ${USE_LOCKSS_MDQ})
+    ask_for_input "Use LOCKSS Metadata Query Service?" $(to_yes_no ${USE_LOCKSS_MDQ})
     if is_yes "${ANS}"; then
         USE_LOCKSS_MDQ=true
     else
@@ -104,7 +104,7 @@ configure_services() {
     if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
          USE_LOCKSS_POSTGRES=true
     fi
-    ask_for_input "Use LOCKSS Postgres DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
+    ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
     if is_yes "${ANS}"; then
         USE_LOCKSS_POSTGRES=true
         LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
@@ -118,31 +118,31 @@ configure_services() {
         if [ "X${LOCKSS_POSTGRES_HOST}" = X ]; then
             LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
         fi
-        ask_for_input "Fully qualified hostname (FQDN) of Postgres host" "${LOCKSS_POSTGRES_HOST}"
+        ask_for_input "Fully qualified hostname (FQDN) of PostgresSQL host" "${LOCKSS_POSTGRES_HOST}"
         LOCKSS_POSTGRES_HOST=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_PORT}" = X ]; then
             LOCKSS_POSTGRES_PORT=5432
         fi
-        ask_for_input "Port used by Postgres host" "${LOCKSS_POSTGRES_PORT}"
+        ask_for_input "Port used by PostgresSQL host" "${LOCKSS_POSTGRES_PORT}"
         LOCKSS_POSTGRES_PORT=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
             LOCKSS_POSTGRES_USER="LOCKSS"
         fi
-        ask_for_input "Login name for Postgres service" "${LOCKSS_POSTGRES_USER}"
+        ask_for_input "Login name for PostgresSQL service" "${LOCKSS_POSTGRES_USER}"
         LOCKSS_POSTGRES_USER=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_SCHEMA}" = X ]; then
             LOCKSS_POSTGRES_SCHEMA="$LOCKSS_POSTGRES_USER"
         fi
-        ask_for_input "Schema for Postgres service" "${LOCKSS_POSTGRES_SCHEMA}"
+        ask_for_input "Schema for PostgresSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
         LOCKSS_POSTGRES_SCHEMA=${ANS}
 
         if [ "X${LOCKSS_DBNAME_PREFIX}" = X ]; then
             LOCKSS_DBNAME_PREFIX="Lockss"
         fi
-        ask_for_input "Database name prefix for Postgres service" "${LOCKSS_DBNAME_PREFIX}"
+        ask_for_input "Database name prefix for PostgresSQL service" "${LOCKSS_DBNAME_PREFIX}"
         LOCKSS_DBNAME_PREFIX=${ANS}
     fi
         LOCKSS_DB_PASSWD=""
@@ -163,14 +163,14 @@ configure_services() {
             fi
         done
 
-    #check SOLR service
+    #check Solr service
     if [ "X${USE_LOCKSS_SOLR}" = X ]; then
         USE_LOCKSS_SOLR=true
         LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
         LOCKSS_SOLR_PORT='8983'
         LOCKSS_SOLR_CORE_REPO="lockss-repo"
    fi
-     ask_for_input "Use LOCKSS SOLR Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
+     ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
      if is_yes "${ANS}"; then
          USE_LOCKSS_SOLR=true
          LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
@@ -181,25 +181,25 @@ configure_services() {
          if [ "X${LOCKSS_SOLR_HOST}" = X ]; then
              LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
          fi
-         ask_for_input "Fully qualified hostname (FQDN) of SOLR host" "${LOCKSS_SOLR_HOST}"
+         ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}"
          LOCKSS_SOLR_HOST=${ANS}
 
          if [ "X${LOCKSS_SOLR_PORT}" = X ]; then
              LOCKSS_SOLR_PORT='8983'
          fi
-         ask_for_input "Port used by SOLR host" "${LOCKSS_SOLR_PORT}"
+         ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}"
          LOCKSS_SOLR_PORT=${ANS}
 
          if [ "X${LOCKSS_SOLR_CORE_REPO}" = X ]; then
              LOCKSS_SOLR_CORE_REPO='lockss-repo'
          fi
-         ask_for_input "SOLR core repo name" "${LOCKSS_SOLR_CORE_REPO}"
+         ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}"
          LOCKSS_SOLR_CORE_REPO=${ANS}
      fi
     #check HDFS service
-    if [ "X${USE_LOCKSS_HDFS}" = X ]; then
+#    if [ "X${USE_LOCKSS_HDFS}" = X ]; then
          USE_LOCKSS_HDFS=false
-    fi
+#    fi
 #    ask_for_input "Use LOCKSS HDFS Service?" $(to_yes_no ${USE_LOCKSS_HDFS})
 #    if is_yes "${ANS}"; then
 #        USE_LOCKSS_HDFS=true

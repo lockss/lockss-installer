@@ -85,7 +85,7 @@ ensure_lockss_stopped() {
 create_standalone_solr() {
     msg "Creating standalone solr instance ${SOLR_UPDATE_NAME} on volume ${REPO_PATH}"
     if ! docker container ps -a | grep ${SOLR_UPDATE_NAME} &> /dev/null; then
-      docker run -d -v ${REPO_PATH}:/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
+      docker run -d -v "${REPO_PATH}":/opt/solr/server/solr -p 8983:8983 --name ${SOLR_UPDATE_NAME} ${SOLR_IMG}:${SOLR_VERSION}
       docker container exec -it ${SOLR_UPDATE_NAME} wait-for-solr.sh
       sleep 10
       msg "Standalone solr instance ${SOLR_UPDATE_NAME} started."

@@ -136,10 +136,9 @@ fi
 
 if $(is_lockss_running); then
   msg "There is already a running lockss stack."
-  ask_for_input "Okay to stop the lockss-stack now?" "Y"
+  ask_for_input "Okay to stop the lockss-stack and restart?" "Y"
   if is_yes "${ANS}"; then
-    "${_D0}"/shutdown-lockss && msg "Preparing to start stack..."
-    sleep 5
+    "${_D0}"/shutdown-lockss && sleep 5 && msg "Preparing to start stack..."
   else
     error_exit "Call shutdown-lockss and then run start-lockss again."
   fi
