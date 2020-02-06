@@ -56,7 +56,8 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
 UPDATES_PATH="${SCRIPTS_DIR}/upgrades"
