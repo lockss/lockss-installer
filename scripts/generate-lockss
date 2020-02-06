@@ -55,7 +55,8 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="$( cd "$( dirname "${_D0}" )" >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
@@ -65,7 +66,6 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
 STACK_PREFIX="lockss-stack"
 PORT_BASE=245
@@ -148,7 +148,6 @@ set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
 
-echo "COMPOSE_DIR"
 msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
