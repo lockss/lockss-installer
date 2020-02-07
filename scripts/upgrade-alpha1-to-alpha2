@@ -238,12 +238,12 @@ update_sql || err_msg "Attempt to update sql failed."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Uninstalling all lockss docker elements"
-"${SCRIPTS_DIR}/uninstall-lockss  && msg "${PROGNAME}: Done uninstalling LOCKSS docker elements""
-sleep 10
+"${SCRIPTS_DIR}/uninstall-lockss" && sleep 5 && msg "${PROGNAME}: Done uninstalling LOCKSS docker elements"
+
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Checking solr indices for update..."
-"${SCRIPTS_DIR}/update-alpha1-solr" || err_msg "Your solr instance needs to be checked."
+"${SCRIPTS_DIR}/upgrade-alpha1-solr" || err_msg "Your solr instance needs to be checked."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."
