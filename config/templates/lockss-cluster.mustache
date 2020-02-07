@@ -1,4 +1,3 @@
-{{={{{{ }}}}=}}
 # Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
@@ -32,14 +31,20 @@
 # Edit the corresponding file with the "opt" suffix instead.
 
 # Use a REST repository
-org.lockss.repository.v2Repository=rest:lockss:http://{{{{{REPO_HOST}}}}}:{{{{{REPO_DEFAULT_REST_PORT}}}}}
+org.lockss.repository.v2Repository=rest:lockss:http://{{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
 
 # JMS connection
 org.lockss.plugin.jms.enable=true
-#org.lockss.jms.connect.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_DEFAULT_PORT}}}}}
-org.lockss.jms.broker.uri=tcp://{{{{{JMS_HOST}}}}}:{{{{{JMS_DEFAULT_PORT}}}}}
+#org.lockss.jms.connect.uri=tcp://{{JMS_HOST}}:{{JMS_DEFAULT_PORT}}
+org.lockss.jms.broker.uri=tcp://{{JMS_HOST}}:{{JMS_DEFAULT_PORT}}
+
+org.lockss.db.databaseNamePrefix={{LOCKSS_DBNAME_PREFIX}}
 
 # UI and service bindings
 org.lockss.ui.start=yes
 org.lockss.ui.authType=Form
-org.lockss.app.serviceBindings=cfg={{{{{LOCKSS_IPADDR}}}}}:{{{{{CFG_UI_PORT}}}}};poller={{{{{LOCKSS_IPADDR}}}}}:{{{{{POL_UI_PORT}}}}};crawler={{{{{LOCKSS_IPADDR}}}}}:{{{{{POL_UI_PORT}}}}};mdx={{{{{LOCKSS_IPADDR}}}}}:{{{{{MDX_UI_PORT}}}}};mdq={{{{{LOCKSS_IPADDR}}}}}:{{{{{MDQ_UI_PORT}}}}}
+org.lockss.app.serviceBindings=cfg={{CFG_HOST}}:{{CFG_REST_PORT}}:{{CFG_UI_PORT}};poller={{POL_HOST}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};crawler={{POL_HOST}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};mdx={{MDX_HOST}}:{{MDX_REST_PORT}}:{{MDX_UI_PORT}};mdq={{MDQ_HOST}}:{{MDQ_REST_PORT}}:{{MDQ_UI_PORT}};repo={{REPO_HOST}}:{{REPO_REST_PORT}}
+# determines which component crawls plugin registries
+org.lockss.daemon.pluginsCrawler=cfg
+# default no crawls
+org.lockss.daemon.crawlMode=None
