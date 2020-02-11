@@ -308,6 +308,10 @@ set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
 
+if $(am_i_root); then
+  error_exit "This script should not be run as root. Run as the lockss user."
+fi
+
 # Sanity checks
 Check_Runnable
 Check_Physical_Volumes
