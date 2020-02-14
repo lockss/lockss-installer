@@ -51,6 +51,8 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+. "${_D0}/_util_solr"
+
 
 ##
 ## Definitions
@@ -261,6 +263,25 @@ check_stack_images() {
   done
 }
 
+check_stack_solr() {
+  local stack=$1
+  UPDATES_PATH="${_D0}/upgrades"
+  SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${stack}-solr-data"
+  CORE_PATH="${SOLR_HOME_PATH}/mycores"
+  SOLR_REPO_DIR="${SOLR_HOME_PATH}/mycores/${LOCKSS_SOLR_CORE_REPO}"
+
+  if [ ! -e CORE_PATH ]; then
+    tar -xzf "${UPDATES_PATH}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}"
+    verify_and_update_lockss_core "${LOCKSS_SOLR_CORE_REPO}" "${SOLR_HOME_PATH}"
+    # Cleanup the mess made by create call
+    if [ -e "${SOLR_HOME_PATH}/lockss/cores/${LOCKSS_SOLR_CORE_REPO}" ]; then
+      msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
+      mv "${SOLR_HOME_PATH}/lockss/cores/${LOCKSS_SOLR_CORE_REPO}" "${CORE_PATH}"
+      rm -rf "${SOLR_HOME_PATH}/lockss"
+    fi
+  fi
+}
+
 assemble_stack() {
   local stack=${STACK_PREFIX}$1
   echo "Processing stack $stack"
@@ -272,6 +293,7 @@ assemble_stack() {
   add_stack_configs $stack
   add_stack_network $stack
   add_stack_volumes $stack
+  check_stack_solr $stack
 }
 
 ###
