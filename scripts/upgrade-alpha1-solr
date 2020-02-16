@@ -84,13 +84,14 @@ echo "  ---------------------------  "
 msg "${_0}: Checking solr home directory..."
 
 SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
-  SOLR_USER_ID=$(ls -l "${SOLR_HOME_PATH}/solr.xml" | awk '{print $3}')
-  SOLR_GROUP_ID=$(ls -l "${SOLR_HOME_PATH}/solr.xml" | awk '{print $4}')
+SOLR_LOG_PATH="${LOCKSS_LOGS_DIR}/lockss-stack-solr-logs"
+CORE_PATH="${SOLR_HOME_PATH}/myrepos"
 
-if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d ${CORE_PATH}  ]; then
+if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}"  ]; then
   msg "${_0}: Solr home has already been patched."
-  SOLR_USER_ID=$(ls -l "${SOLR_HOME_PATH}/solr.xml" | awk '{print $3}')
-  SOLR_GROUP_ID=$(ls -l "${SOLR_HOME_PATH}/solr.xml" | awk '{print $4}')
+  # use the ownership of the prexisting lockss-solr directory to be restored at the end
+  SOLR_USER_ID=$(ls -l "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $3}')
+  SOLR_GROUP_ID=$(ls -l "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $4}')
 else
   msg "${_0}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
   tar -xzf "${SOLR_HOME_PATCH}" -C "${SOLR_HOME_PATH}"
@@ -98,15 +99,18 @@ else
   msg "${_0}: Creating default subdir ${CORE_PATH}"
   mkdir -p "${CORE_PATH}"
   if [ -e "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ]; then
+    # use the ownership of the prexisting lockss-solr directory to be restored at the end
     SOLR_USER_ID=$(ls -l "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $3}')
     SOLR_GROUP_ID=$(ls -l "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $4}')
     msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
-    mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" "${CORE_PATH}"
+    mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" "${CORE_PATH}" ||
+      err_exit "unable to move previously old repo from ${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO} to ${CORE_PATH}"
   fi
   echo "  ---------------------------  "
 fi
 
 msg "${_0}: Verifying and updating lockss solr core..."
-verify_and_update_lockss_core ${LOCKSS_SOLR_CORE_REPO} ${SOLR_HOME_PATH}
+verify_and_update_lockss_core "${LOCKSS_SOLR_CORE_REPO}" "${SOLR_HOME_PATH}" ||
+  err_exit "Attemp to verify and update the LOCKSS Solr core failed!"
 msg "${_0}: Fixing file permissions..."
-chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH}/*
+chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH} ${SOLR_LOG_PATH}
