@@ -233,6 +233,22 @@ ensure_docker_swarm() {
   fi
 }
 
+ensure_java() {
+    if ! which java &> /dev/null; then
+      err "${_0}: Java not found on the PATH (${PATH})"
+      err "${_0}: LOCKSS requires java versions greater than 8 to be installed."
+      error_exit "See instructions: https://openjdk.java.net/install/"
+    else
+      jver=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+      if [ ${jver} -ge 8 ]; then
+        echo "Found java version ${jver}."
+      else
+        err "Java version is too old. LOCKSS requires versions greater than 8, your version is java ${jver}."
+        error_exit "See instructions: https://openjdk.java.net/install/"
+      fi
+    fi
+}
+
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
@@ -277,7 +293,7 @@ if [ "X${LOCKSS_IPADDR}" = X ]; then
 fi
 IP_OK=N
 until is_yes ${IP_OK}; do
-  ask_for_input "IP address of this machine" ${LOCKSS_IPADDR}
+  ask_for_input "IP address of this machine?" ${LOCKSS_IPADDR}
   if valid_ip_address "${ANS}"; then
     LOCKSS_IPADDR="${ANS}"
     IP_OK=Y
@@ -292,5 +308,7 @@ echo "${_0}: Checking docker swarm is running..."
 ensure_docker_swarm
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
+echo "${_0}: Checking for java install..."
+ensure_java
 echo "${_0}: Essential compoments have been sucessfully installed."
 graceful_exit
