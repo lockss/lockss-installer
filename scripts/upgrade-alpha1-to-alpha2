@@ -136,7 +136,7 @@ update_sql() {
   msg "${PROGNAME}: bringing up temporary postgres instance..."
   docker run --rm --name postgres-temp -v "${LOCKSS_DATA_DIR}/${POSTGRES_VOL}":/data -e POSTGRES_PASSWORD_FILE=${SQL_PASS_FILE} -e POSTGRES_USER=LOCKSS -e PGDATA=/data -d postgres:9.6.12-alpine
   sleep 10
-  docker exec -it postgres-temp psql -U LOCKSS -d postgres <"${SQL_FILE}"
+  docker exec -i postgres-temp psql -U LOCKSS -d postgres <"${SQL_FILE}"
   docker container stop postgres-temp
   msg "${PROGNAME}: Finished postgres update..."
 }
@@ -234,7 +234,7 @@ rename_dirs
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: checking for postgres changes..."
-update_sql || err_msg "Attempt to update sql failed."
+update_sql || err "Attempt to update sql failed."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Uninstalling all lockss docker elements"
@@ -243,7 +243,7 @@ msg "${PROGNAME}: Uninstalling all lockss docker elements"
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Checking solr indices for update..."
-"${SCRIPTS_DIR}/upgrade-alpha1-solr" || err_msg "Your solr instance needs to be checked."
+"${SCRIPTS_DIR}/upgrade-alpha1-solr" || err_exit "Your solr instance needs to be checked."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: Update complete."

@@ -68,8 +68,7 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 SOLR_HOME_PATCH="${UPDATES_PATH}/solr-home.tar.gz"
 
-SOLR_USER_ID=8983
-SOLR_GROUP_ID=${SOLR_USER_ID}
+SOLR_USER="8983:8983"
 
 msg "Loading system configuration from ${SYSTEM_CONF_FILE}"
 set -a
@@ -82,35 +81,29 @@ fi
 
 echo "  ---------------------------  "
 msg "${_0}: Checking solr home directory..."
-
 SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/lockss-stack-solr-data"
-SOLR_LOG_PATH="${LOCKSS_LOGS_DIR}/lockss-stack-solr-logs"
-CORE_PATH="${SOLR_HOME_PATH}/myrepos"
+CORE_PATH="${SOLR_HOME_PATH}/mycores"
 
 if [ -f "${SOLR_HOME_PATH}/solr.xml" -a -d "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}"  ]; then
   msg "${_0}: Solr home has already been patched."
-  # use the ownership of the prexisting lockss-solr directory to be restored at the end
-  SOLR_USER_ID=$(ls -l "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $3}')
-  SOLR_GROUP_ID=$(ls -l "${CORE_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $4}')
 else
   msg "${_0}: Unpacking Solr home patch files to ${SOLR_HOME_PATH}."
   tar -xzf "${SOLR_HOME_PATCH}" -C "${SOLR_HOME_PATH}"
   # create the directory and move the lockss core repo.
   msg "${_0}: Creating default subdir ${CORE_PATH}"
-  mkdir -p "${CORE_PATH}"
-  if [ -e "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ]; then
-    # use the ownership of the prexisting lockss-solr directory to be restored at the end
-    SOLR_USER_ID=$(ls -l "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $3}')
-    SOLR_GROUP_ID=$(ls -l "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" | awk '{print $4}')
+  mkdir -p "${CORE_PATH}" ||
+    err_exit "Unable to create directory ${CORE_PATH}"
+  if [ -d "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ]; then
     msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
     mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" "${CORE_PATH}" ||
-      err_exit "unable to move previously old repo from ${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO} to ${CORE_PATH}"
+      err_exit "Unable to move old repo from ${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO} to ${CORE_PATH}"
   fi
   echo "  ---------------------------  "
 fi
 
 msg "${_0}: Verifying and updating lockss solr core..."
 verify_and_update_lockss_core "${LOCKSS_SOLR_CORE_REPO}" "${SOLR_HOME_PATH}" ||
-  err_exit "Attemp to verify and update the LOCKSS Solr core failed!"
+  err_exit "Attempt to verify and update the LOCKSS Solr core failed!"
 msg "${_0}: Fixing file permissions..."
-chown -R ${SOLR_USER_ID}:${SOLR_GROUP_ID} ${SOLR_HOME_PATH} ${SOLR_LOG_PATH}
+chown -R "${SOLR_USER}" "${SOLR_HOME_PATH}" ||
+  err_exit "Attempt to change ownership to ${SOLR_USER} on ${SOLR_HOME_PATH} failed."

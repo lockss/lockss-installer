@@ -107,7 +107,7 @@ configure_services() {
     ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
     if is_yes "${ANS}"; then
         USE_LOCKSS_POSTGRES=true
-        LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
+        LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
         LOCKSS_POSTGRES_PORT=5432
         LOCKSS_POSTGRES_USER="LOCKSS"
         LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
@@ -116,7 +116,7 @@ configure_services() {
         USE_LOCKSS_POSTGRES=false
 
         if [ "X${LOCKSS_POSTGRES_HOST}" = X ]; then
-            LOCKSS_POSTGRES_HOST=${LOCAL_HOSTNAME}
+            LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
         fi
         ask_for_input "Fully qualified hostname (FQDN) of PostgresSQL host" "${LOCKSS_POSTGRES_HOST}"
         LOCKSS_POSTGRES_HOST=${ANS}
@@ -166,20 +166,20 @@ configure_services() {
     #check Solr service
     if [ "X${USE_LOCKSS_SOLR}" = X ]; then
         USE_LOCKSS_SOLR=true
-        LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
+        LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
         LOCKSS_SOLR_PORT='8983'
         LOCKSS_SOLR_CORE_REPO="lockss-repo"
    fi
      ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
      if is_yes "${ANS}"; then
          USE_LOCKSS_SOLR=true
-         LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
+         LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
          LOCKSS_SOLR_PORT='8983'
          LOCKSS_SOLR_CORE_REPO="lockss-repo"
      else
          USE_LOCKSS_SOLR=false
          if [ "X${LOCKSS_SOLR_HOST}" = X ]; then
-             LOCKSS_SOLR_HOST=${LOCAL_HOSTNAME}
+             LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
          fi
          ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}"
          LOCKSS_SOLR_HOST=${ANS}
@@ -289,9 +289,6 @@ build_config_file() {
                 IP_OK=Y
             fi
         done
-        if [ "X${LOCKSS_ACCESS_SUBNET}" = X ]; then
-            LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-        fi
         NAT=N
         if [ "${LOCKSS_EXTERNAL_IPADDR}X" != X ]; then
             NAT=Y
@@ -309,6 +306,7 @@ build_config_file() {
         else
             unset LOCKSS_EXTERNAL_IPADDR
         fi
+        LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
         SUBNET_OK=N
         until is_yes ${SUBNET_OK}; do
             ask_for_input "Initial subnet for admin UI access" ${LOCKSS_ACCESS_SUBNET}
@@ -535,4 +533,3 @@ echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
 
 echo "$(date) Call start-lockss to launch the LOCKSS stack 'lockss-stack'..."
-
