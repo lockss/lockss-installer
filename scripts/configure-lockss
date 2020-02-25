@@ -307,9 +307,8 @@ build_config_file() {
             unset LOCKSS_EXTERNAL_IPADDR
         fi
         if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
-
+            LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
         fi
-        LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
         SUBNET_OK=N
         until is_yes ${SUBNET_OK}; do
             ask_for_input "Initial subnet for admin UI access" ${LOCKSS_ACCESS_SUBNET}
