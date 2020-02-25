@@ -57,7 +57,7 @@ SOLR_ENDPOINT=http://localhost:8983/solr/${SOLR_CORE_NAME}
 SOLR_IMG="solr"
 SOLR_VERSION="7.2.1-alpine"
 SOLR_UPDATE_NAME="lockss_solr_update"
-
+SOLR_USER="8983:8983"
 REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
 
 # Download the repository tools jar if it is missing
@@ -155,6 +155,12 @@ verify_core() {
   return $res
 }
 
+ensure_solr_owner() {
+  msg "Restoring directory permissions to ${SOLR_USER}..."
+  chown -R "${SOLR_USER}" "${REPO_PATH}" ||
+    err_exit "Attempt to change ownership to ${SOLR_USER} on ${REPO_PATH} failed."
+}
+
 # Exit codes from the update...:
 # 0 = Solr core update succeeded
 # 1 = Solr core update failed
@@ -181,6 +187,7 @@ update_core() {
       echo "  ---------------------------  "
       msg "A new lockss configset has been installed. Applying configset changes..."
       create_standalone_solr
+      ensure_solr_owner
       java -jar ${REPO_TOOLS_JAR} --action apply-lockss-configset-changes --endpoint ${SOLR_ENDPOINT}
       res=$?
       sleep 10
@@ -222,6 +229,7 @@ verify_and_update_lockss_core() {
 
   ensure_repository_tools
   ensure_lockss_stopped
+  ensure_solr_owner
 
   verify_core --core "${REPO_NAME}" --local "${REPO_PATH}"
   result=$?
