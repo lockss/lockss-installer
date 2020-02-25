@@ -93,7 +93,7 @@ else
   msg "${_0}: Creating default subdir ${CORE_PATH}"
   mkdir -p "${CORE_PATH}" ||
     err_exit "Unable to create directory ${CORE_PATH}"
-  if [ -e "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ]; then
+  if [ -d "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" ]; then
     msg "${_0}: Moving ${LOCKSS_SOLR_CORE_REPO} to default dir ${CORE_PATH}"
     mv "${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO}" "${CORE_PATH}" ||
       err_exit "Unable to move old repo from ${SOLR_HOME_PATH}/${LOCKSS_SOLR_CORE_REPO} to ${CORE_PATH}"
