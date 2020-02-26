@@ -223,6 +223,8 @@ fi
 echo "  ---------------------------  "
 msg "${PROGNAME}: writing updated system cfg..."
 write_sysconf
+chown "lockss:lockss" "${SYSTEM_CONF_FILE}" ||
+  err_exit "Attempt to change ownership of ${SYSTEM_CONF_FILE} failed! This file must be owned by the lockss user for lockss to run."
 
 echo "  ---------------------------  "
 msg "${PROGNAME}: shutting down alpha stacks..."
