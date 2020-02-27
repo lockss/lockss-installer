@@ -276,11 +276,11 @@ check_stack_solr() {
   SOLR_OWNER="8983:8983"
 
   msg "Checking solr installation at ${SOLR_HOME_PATH}..."
-  
+
   if [ -d "${OLD_REPO}" ]; then
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
- if [ ! -f "${SOLR_FILE}" -a ! -d "${CORE_PATH}" ]; then
+ if [ ! -f "${SOLR_FILE}" ] && [ ! -d "${CORE_PATH}" ]; then
     msg "Preparing solr for new install..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" > /dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
