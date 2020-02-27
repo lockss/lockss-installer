@@ -275,6 +275,8 @@ check_stack_solr() {
   SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
   SOLR_OWNER="8983:8983"
 
+  msg "Checking solr installation at ${SOLR_HOME_PATH}..."
+  
   if [ -d "${OLD_REPO}" ]; then
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
