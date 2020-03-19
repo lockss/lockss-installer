@@ -118,8 +118,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -a, --args ARGS_ADDITIONAL  Add addtional runtime options."
-    Where 'ARGS_ADDITIONAL' is the addtional arguments.
+  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
+    Where 'ARGS_ADDITIONAL' is the additional arguments.
 
 _EOF_
   return
@@ -260,7 +260,7 @@ while [[ -n $1 ]]; do
   -a | --args)
     shift
     export ARGS_ADDITIONAL="$1"
-    msg "Adding addtional runtime args $ARGS_ADDITIONAL"
+    msg "Adding additional runtime args $ARGS_ADDITIONAL"
     shift
     ;;
   [1-9])
