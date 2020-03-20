@@ -46,7 +46,7 @@ echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
 
-UPDATE_IMAGES=0
+UPDATE_ARG=""
 
 
 ##
@@ -95,6 +95,7 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
+  -u, --update  force update of LOCKSS docker images
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -113,6 +114,9 @@ while [[ -n $1 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
+    -u | --update)
+      UPDATE_ARG="-u"
+      msg "Forcing update of LOCKSS docker images" ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
@@ -147,7 +151,9 @@ fi
 
 echo "Scripts dir ${SCRIPTS_DIR}"
 
-"${SCRIPTS_DIR}"/generate-lockss && "${SCRIPTS_DIR}"/assemble-lockss && "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+"${SCRIPTS_DIR}"/generate-lockss &&
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 
 
 graceful_exit
