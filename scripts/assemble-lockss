@@ -183,6 +183,9 @@ init_service_arrays() {
   if ${USE_LOCKSS_OPENWB}; then
     svcs+=("openwb")
   fi
+  if ${USE_TRAEFIK}; then
+    svcs+=("traefik")
+  fi
 }
 
 # Create configs for each stack

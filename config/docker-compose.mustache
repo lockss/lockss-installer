@@ -32,10 +32,10 @@ version: '3.7'
 #
 # MERGE lockss-service-common
 #
-x-lockss-service-common: &lockss-service-common
+x-lockss-deploy-common: &lockss-deploy-common
   deploy:
-#    replicas: 1
-    mode: global
+    replicas: 1
+#    mode: global
     restart_policy:
       condition: on-failure
       delay: 10s
@@ -44,6 +44,10 @@ x-lockss-service-common: &lockss-service-common
     update_config:
       parallelism: 2
       delay: 10s
+    labels:
+      ""
+
+x-lockss-service-common: &lockss-service-common
   stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
   logging:
     driver: json-file
@@ -56,12 +60,45 @@ x-lockss-service-common: &lockss-service-common
 # SERVICES
 #
 services:
+{{#USE_TRAEFIK}}
+  traefik:
+    image: {{TRAEFIK_IMG}}:{{TRAEFIK_VERSION}}
+    command:
+      --api.insecure=true
+      --providers.docker
+      --providers.docker.swarmMode=true
+      --providers.docker.exposedByDefault=false
+      --providers.docker.network=lockss-network
+      --log.filepath="/logs/std.out"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - lockss-traefik-data:/data
+      - lockss-traefik-logs:/logs
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+{{/USE_TRAEFIK}}
 {{#USE_LOCKSS_CFG}}
   #
   # SERVICE lockss-configuration-service
   #
   lockss-configuration-service:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-configuration-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-configuration-service-rest.loadbalancer.server.port={{CFG_REST_PORT}}"
+        - "traefik.http.routers.lockss-configuration-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-configuration-service-ui.loadbalancer.server.port={{CFG_UI_PORT}}"
     image: {{CFG_IMG}}:{{CFG_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -81,19 +118,19 @@ services:
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{CFG_REST_PORT}}
         target: {{CFG_DEFAULT_REST_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{CFG_UI_PORT}}
         target: {{CFG_DEFAULT_UI_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{JMS_PORT}}
         target: {{JMS_DEFAULT_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{LOCKSS_UI_PORT}}
         target: {{CFG_DEFAULT_UI_PORT}}
@@ -105,7 +142,7 @@ services:
       - lockss_ui_pass
       - lockss-auth
     networks:
-      - host-network
+      - lockss-network
 {{/USE_LOCKSS_CFG}}
 
  {{#USE_LOCKSS_MDQ}}
@@ -113,7 +150,14 @@ services:
   # SERVICE lockss-metadata-service
   #
   lockss-metadata-service:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-metadata-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-metadata-service-rest.loadbalancer.server.port={{MDQ_REST_PORT}}"
+        - "traefik.http.routers.lockss-metadata-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-metadata-service-ui.loadbalancer.server.port={{MDQ_UI_PORT}}"
     image: {{MDQ_IMG}}:{{MDQ_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -123,11 +167,11 @@ services:
       - source: mdq_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{MDQ_REST_PORT}}
         target: {{MDQ_DEFAULT_REST_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{MDQ_UI_PORT}}
         target: {{MDQ_DEFAULT_UI_PORT}}
@@ -146,14 +190,21 @@ services:
       - lockss_ui_pass
       - lockss-auth
     networks:
-      - host-network
+      - lockss-network
 {{/USE_LOCKSS_MDQ}}
  {{#USE_LOCKSS_MDX}}
   #
   # SERVICE lockss-metadata-extraction-service
   #
   lockss-metadata-extraction-service:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-metadata-extraction-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-metadata-extraction-service-rest.loadbalancer.server.port={{MDX_REST_PORT}}"
+        - "traefik.http.routers.lockss-metadata-extraction-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-metadata-extraction-service-ui.loadbalancer.server.port={{MDX_UI_PORT}}"
     image: {{MDX_IMG}}:{{MDX_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -163,11 +214,11 @@ services:
       - source: mdx_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{MDX_REST_PORT}}
         target: {{MDX_DEFAULT_REST_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{MDX_UI_PORT}}
         target: {{MDX_DEFAULT_UI_PORT}}
@@ -186,7 +237,7 @@ services:
       - lockss_ui_pass
       - lockss-auth
     networks:
-      - host-network
+      - lockss-network
 {{/USE_LOCKSS_MDX}}
 
  {{#USE_LOCKSS_POL}}
@@ -194,7 +245,16 @@ services:
   # SERVICE lockss-poller
   #
   lockss-poller:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-poller-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-poller-service-rest.loadbalancer.server.port={{POL_REST_PORT}}"
+        - "traefik.http.routers.lockss-poller-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-poller-service-ui.loadbalancer.server.port={{POL_UI_PORT}}"
+        - "traefik.tcp.routers.lockss-poller-service-lcap.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.tcp.services.lockss-poller-service--lcap.loadbalancer.server.port={{LOCKSS_LCAP_PORT}}"
     image: {{POL_IMG}}:{{POL_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -204,31 +264,31 @@ services:
       - source: pol_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{POL_REST_PORT}}
         target: {{POL_DEFAULT_REST_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{POL_UI_PORT}}
         target: {{POL_DEFAULT_UI_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{LOCKSS_LCAP_PORT}}
         target: {{LOCKSS_LCAP_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{SERV_PORT}}
         target: {{SERV_DEFAULT_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{LOCKSS_PROXY_PORT}}
         target: {{LOCKSS_DEFAULT_PROXY_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{LOCKSS_AUDIT_PORT}}
         target: {{LOCKSS_DEFAULT_AUDIT_PORT}}
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{LOCKSS_ICP_PORT}}
         target: {{LOCKSS_DEFAULT_ICP_PORT}}
@@ -246,7 +306,7 @@ services:
       - lockss_ui_pass
       - lockss-auth
     networks:
-      - host-network
+      - lockss-network
 {{/USE_LOCKSS_POL}}
 
 {{#USE_LOCKSS_REPO}}
@@ -254,7 +314,12 @@ services:
   # SERVICE lockss-repository-service
   #
   lockss-repository-service:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-repository.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-repository.loadbalancer.server.port={{REPO_REST_PORT}}"
     image: {{REPO_IMG}}:{{REPO_VERSION}}
     configs:
       - source: repo_properties
@@ -266,7 +331,7 @@ services:
       - source: repo_service_opt
         target: /run/configs/lockss_service_opt
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{REPO_REST_PORT}}
         target: {{REPO_DEFAULT_REST_PORT}}
@@ -288,7 +353,7 @@ services:
       - lockss-repo-data:/data
       - lockss-repo-logs:/var/log/lockss
     networks:
-      - host-network
+      - lockss-network
     secrets:
       - lockss_ui_pass
       - lockss-auth
@@ -299,10 +364,15 @@ services:
   # SERVICE lockss-postgres
   #
   lockss-postgres:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-postgres.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-postgres.loadbalancer.server.port={{POSTGRES_PORT}}"
     image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{POSTGRES_PORT}}
         target: {{POSTGRES_DEFAULT_PORT}}
@@ -322,7 +392,7 @@ services:
     secrets:
       - lockss-postgres-pass
     networks:
-      - host-network
+      - lockss-network
 {{/USE_LOCKSS_POSTGRES}}
 
 {{#USE_LOCKSS_SOLR}}
@@ -330,10 +400,15 @@ services:
   # SERVICE lockss-solr
   #
   lockss-solr:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-solr.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-solr.loadbalancer.server.port={{SOLR_PORT}}"
     image: {{SOLR_IMG}}:{{SOLR_VERSION}}
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{SOLR_PORT}}
         target: {{SOLR_DEFAULT_PORT}}
@@ -342,7 +417,7 @@ services:
       - lockss-solr-data:/opt/solr/server/solr
       - lockss-solr-logs:/opt/solr/server/logs
     networks:
-      - host-network
+      - lockss-network
     secrets:
       - lockss-auth
 {{/USE_LOCKSS_SOLR}}
@@ -352,10 +427,15 @@ services:
   # SERVICE lockss-hdfs
   #
   lockss-hdfs:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-pywb.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-pywb.loadbalancer.server.port={{HDFS_FS_PORT}}"
     image: {{HDFS_IMG}}:{{HDFS_VERSION}}
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{HDFS_FS_PORT}}
         target: {{HDFS_DEFAULT_FS_PORT}}
@@ -363,7 +443,7 @@ services:
       - lockss-hdfs-data:/hadoop
       - lockss-hdfs-logs:/var/log/hadoop
     networks:
-      - host-network
+      - lockss-network
     secrets:
       - lockss-auth
 {{/USE_LOCKSS_HDFS}}
@@ -373,11 +453,15 @@ services:
   # SERVICE lockss-pywb
   #
   lockss-pywb:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-pywb.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-pywb.loadbalancer.server.port={{PYWB_PORT}}"
     image: {{PYWB_IMG}}:{{PYWB_VERSION}}
     ports:
-      - mode: host
-        protocol: tcp
+      - protocol: tcp
         published: {{PYWB_PORT}}
         target: {{PYWB_DEFAULT_PORT}}
     volumes:
@@ -389,7 +473,7 @@ services:
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
-      - host-network
+      - lockss-network
     secrets:
       - lockss-auth
 {{/USE_LOCKSS_PYWB}}
@@ -399,10 +483,15 @@ services:
   # SERVICE lockss-openwayback
   #
   lockss-openwayback:
-    <<: *lockss-service-common
+    << : [*lockss-service-common, *lockss-deploy-common]
+    deploy:
+      labels:
+        - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-openwayback.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-openwayback.loadbalancer.server.port={{OPENWB_PORT}}"
     image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
     ports:
-      - mode: host
+      - mode: ingress
         protocol: tcp
         published: {{OPENWB_PORT}}
         target: {{OPENWB_DEFAULT_PORT}}
@@ -418,7 +507,7 @@ services:
       - "WAYBACK_BASEDIR=/data"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     networks:
-      - host-network
+      - lockss-network
     secrets:
       - lockss-auth
 {{/USE_LOCKSS_OPENWB}}
@@ -428,7 +517,6 @@ services:
 #
 configs:
   lockss_bootstrap:
-    external: true
     external: true
     name: {{STACK}}-lockss-bootstrap
   lockss_cluster:
@@ -575,13 +663,21 @@ volumes:
     external: true
     name: {{STACK}}-openwayback-logs
 {{/USE_LOCKSS_OPENWB}}
+{{#USE_TRAEFIK}}
+  lockss-traefik-data:
+    external: true
+    name: {{STACK}}-traefik-data
+  lockss-traefik-logs:
+    external: true
+    name: {{STACK}}-traefik-logs
+{{/USE_TRAEFIK}}
+
 #
 # NETWORKS
 #
 networks:
-#  lockss-network:
-#    external: true
-#    name: {{STACK}}-network
-  host-network:
+  lockss-network:
     external: true
-    name: host
+    name: {{STACK}}-network
+  traefik-public:
+    external: true

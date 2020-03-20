@@ -107,7 +107,7 @@ configure_services() {
     ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
     if is_yes "${ANS}"; then
         USE_LOCKSS_POSTGRES=true
-        LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
+        LOCKSS_POSTGRES_HOST='lockss-postgres'
         LOCKSS_POSTGRES_PORT=5432
         LOCKSS_POSTGRES_USER="LOCKSS"
         LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
@@ -118,31 +118,31 @@ configure_services() {
         if [ "X${LOCKSS_POSTGRES_HOST}" = X ]; then
             LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
         fi
-        ask_for_input "Fully qualified hostname (FQDN) of PostgresSQL host" "${LOCKSS_POSTGRES_HOST}"
+        ask_for_input "Fully qualified hostname (FQDN) of PostgreSQL host" "${LOCKSS_POSTGRES_HOST}"
         LOCKSS_POSTGRES_HOST=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_PORT}" = X ]; then
             LOCKSS_POSTGRES_PORT=5432
         fi
-        ask_for_input "Port used by PostgresSQL host" "${LOCKSS_POSTGRES_PORT}"
+        ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}"
         LOCKSS_POSTGRES_PORT=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
             LOCKSS_POSTGRES_USER="LOCKSS"
         fi
-        ask_for_input "Login name for PostgresSQL service" "${LOCKSS_POSTGRES_USER}"
+        ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}"
         LOCKSS_POSTGRES_USER=${ANS}
 
         if [ "X${LOCKSS_POSTGRES_SCHEMA}" = X ]; then
             LOCKSS_POSTGRES_SCHEMA="$LOCKSS_POSTGRES_USER"
         fi
-        ask_for_input "Schema for PostgresSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
+        ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
         LOCKSS_POSTGRES_SCHEMA=${ANS}
 
         if [ "X${LOCKSS_DBNAME_PREFIX}" = X ]; then
             LOCKSS_DBNAME_PREFIX="Lockss"
         fi
-        ask_for_input "Database name prefix for PostgresSQL service" "${LOCKSS_DBNAME_PREFIX}"
+        ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}"
         LOCKSS_DBNAME_PREFIX=${ANS}
     fi
         LOCKSS_DB_PASSWD=""
@@ -166,14 +166,14 @@ configure_services() {
     #check Solr service
     if [ "X${USE_LOCKSS_SOLR}" = X ]; then
         USE_LOCKSS_SOLR=true
-        LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+        LOCKSS_SOLR_HOST='lockss-solr'
         LOCKSS_SOLR_PORT='8983'
         LOCKSS_SOLR_CORE_REPO="lockss-repo"
    fi
      ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
      if is_yes "${ANS}"; then
          USE_LOCKSS_SOLR=true
-         LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+         LOCKSS_SOLR_HOST='lockss-solr'
          LOCKSS_SOLR_PORT='8983'
          LOCKSS_SOLR_CORE_REPO="lockss-repo"
      else
