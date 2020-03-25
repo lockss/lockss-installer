@@ -10,8 +10,8 @@
 # Global configuration
 ################################################################
 [global]
-  checkNewVersion = true
-  sendAnonymousUsage = true
+  checkNewVersion = false
+  sendAnonymousUsage = false
 
 ################################################################
 # Entrypoints configuration

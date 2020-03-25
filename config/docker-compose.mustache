@@ -54,6 +54,9 @@ x-lockss-service-common: &lockss-service-common
     options:
       max-size: 10m
       max-file: 3
+  volumes:
+    - "/etc/localtime:/etc/localtime:ro"
+    - "/etc/timezone:/etc/timezone:ro"
 #  user: "${LOCKSS_UID}"
 
 #
@@ -74,10 +77,10 @@ services:
       - "80:80"
       - "8080:8080"
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - lockss-traefik-data:/data
-      - lockss-traefik-logs:/logs
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "lockss-traefik-data:/data"
+      - "lockss-traefik-logs:/logs"
     deploy:
       replicas: 1
       placement:
