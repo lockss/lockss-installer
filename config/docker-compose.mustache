@@ -32,7 +32,8 @@ version: '3.7'
 #
 # MERGE lockss-service-common
 #
-x-lockss-deploy-common: &lockss-deploy-common
+
+x-lockss-service-common: &lockss-service-common
   deploy:
     replicas: 1
 #    mode: global
@@ -45,9 +46,6 @@ x-lockss-deploy-common: &lockss-deploy-common
       parallelism: 2
       delay: 10s
     labels:
-      ""
-
-x-lockss-service-common: &lockss-service-common
   stop_grace_period: "${LOCKSS_STOP_GRACE_PERIOD:-60s}"
   logging:
     driver: json-file
@@ -55,8 +53,10 @@ x-lockss-service-common: &lockss-service-common
       max-size: 10m
       max-file: 3
   volumes:
-    - "/etc/localtime:/etc/localtime:ro"
-    - "/etc/timezone:/etc/timezone:ro"
+#    - "/etc/localtime:/etc/localtime:ro"
+#    - "/etc/timezone:/etc/timezone:ro"
+  environment:
+    - "TZ=${TZ}
 #  user: "${LOCKSS_UID}"
 
 #
@@ -94,7 +94,7 @@ services:
   # SERVICE lockss-configuration-service
   #
   lockss-configuration-service:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -153,7 +153,7 @@ services:
   # SERVICE lockss-metadata-service
   #
   lockss-metadata-service:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -200,7 +200,7 @@ services:
   # SERVICE lockss-metadata-extraction-service
   #
   lockss-metadata-extraction-service:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -248,7 +248,7 @@ services:
   # SERVICE lockss-poller
   #
   lockss-poller:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -317,7 +317,7 @@ services:
   # SERVICE lockss-repository-service
   #
   lockss-repository-service:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -367,7 +367,7 @@ services:
   # SERVICE lockss-postgres
   #
   lockss-postgres:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -403,7 +403,7 @@ services:
   # SERVICE lockss-solr
   #
   lockss-solr:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -430,7 +430,7 @@ services:
   # SERVICE lockss-hdfs
   #
   lockss-hdfs:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -456,7 +456,7 @@ services:
   # SERVICE lockss-pywb
   #
   lockss-pywb:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -486,7 +486,7 @@ services:
   # SERVICE lockss-openwayback
   #
   lockss-openwayback:
-    << : [*lockss-service-common, *lockss-deploy-common]
+    << : [*lockss-service-common]
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
@@ -682,5 +682,8 @@ networks:
   lockss-network:
     external: true
     name: {{STACK}}-network
+{{#USE_TRAEFIK}}
   traefik-public:
     external: true
+    name: {{TRAEFIK_NETWORK}}
+{{/USE_TRAEFIK}}
