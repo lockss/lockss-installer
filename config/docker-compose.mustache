@@ -53,8 +53,8 @@ x-lockss-service-common: &lockss-service-common
       max-size: 10m
       max-file: 3
   volumes:
-#    - "/etc/localtime:/etc/localtime:ro"
-#    - "/etc/timezone:/etc/timezone:ro"
+    - "/etc/localtime:/etc/localtime:ro"
+    - "/etc/timezone:/etc/timezone:ro"
   environment:
     - "TZ=${TZ}"
 #  user: "${LOCKSS_UID}"

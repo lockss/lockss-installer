@@ -256,6 +256,7 @@ LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
+TIMEZONE="${TIMEZONE}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -266,6 +267,7 @@ USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
+USE_TRAEFIK="${USE_TRAEFIK:-false}"
 EOF
 }
 # build_config_file file user
@@ -501,11 +503,13 @@ Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
-    ;;
+    TIMEZONE=$(readlink -f /etc/localtime | sed 's#/var/db/timezone/zoneinfo/##')
+   ;;
 Darwin)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
+    TIMEZONE=$(readlink /etc/localtime | sed 's#/var/db/timezone/zoneinfo/##')
     ;;
 *)
     echo "${OS_TYPE} not supported"
