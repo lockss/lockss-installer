@@ -503,13 +503,13 @@ Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
-    TIMEZONE=$(readlink -f /etc/localtime | sed 's#/var/db/timezone/zoneinfo/##')
+    TIMEZONE=$(`readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///'`)
    ;;
 Darwin)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
-    TIMEZONE=$(readlink /etc/localtime | sed 's#/var/db/timezone/zoneinfo/##')
+    TIMEZONE=$(`readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///'`)
     ;;
 *)
     echo "${OS_TYPE} not supported"
