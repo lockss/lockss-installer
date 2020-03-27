@@ -65,6 +65,8 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
+TRAEFIK_TMPL="${CONFIG_DIR}/traefik.mustache"
+
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 STACK_PREFIX="lockss-stack"
@@ -168,7 +170,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   stack_config_dir="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
   stack_env_file="${stack_config_dir}/env.sh"
   stack_compose_file="${stack_config_dir}/docker-compose.yml"
-
+  stack_traefik_file="${stack_config_dir}/traefik.yml"
   echo "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
   mkdir -p "${stack_config_dir}"
 
@@ -177,10 +179,14 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   set -a
   . "${stack_env_file}"
   set +a
+
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
   msg "${PROGNAME}:  Generating stack docker-compose file..."
   mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
+
+  msg "${PROGNAME}:  Generating stack docker-compose file..."
+  mo -e -s="${stack_env_file}" "${TRAEFIK_TMPL}" > "${stack_traefik_file}"
 
   #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do

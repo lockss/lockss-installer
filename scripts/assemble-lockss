@@ -65,6 +65,7 @@ SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
+
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
@@ -82,6 +83,7 @@ STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 UPDATE_IMAGES=0
+TRAEFIK_NETWORK="lockss-traefik"
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -249,6 +251,15 @@ add_stack_network() {
   fi
 }
 
+# Check traefik network
+check_traefik_network() {
+  # Create a single traefik network
+  echo "Checking traefik network"
+  docker network ls | grep ${TRAEFIK_NETWORK} &> /dev/null ||
+    docker network create --driver=overlay ${TRAEFIK_NETWORK} &> /dev/null ||
+    error_exit "Error creating ${TRAEFIK_NETWORK}."
+}
+
 check_stack_images() {
   for svc in "${svcs[@]}"
   do
@@ -354,6 +365,7 @@ Check_Runnable
 Check_Physical_Volumes
 
 init_service_arrays
+check_traefik_network
 
 if [ ${NUM_STACKS} -eq 0 ]; then
   error_exit "No configuration files have been generated, run generate-lockss first."

@@ -1,0 +1,39 @@
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: true
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  cfg-rest:
+    address: ":{{CFG_REST_PORT}}"
+  cfg-ui:
+    address: ":{{CFG_UI_PORT}}"
+  mdq-rest:
+    address: ":{{MDQ_REST_PORT}}"
+  mdq-ui:
+    address: ":{{MDQ_UI_PORT}}"
+  mdx-rest:
+    address: ":{{MDX_REST_PORT}}"
+  mdx-ui:
+    address: ":{{MDX_UI_PORT}}"
+  pol-rest:
+    address: ":{{POL_REST_PORT}}"
+  pol-ui:
+    address: ":{{POL_UI_PORT}}"
+  pol-lcap:
+    address: ":{{POL_LCAP_PORT}}"
+  repo-rest:
+    address: ":{{REPO_REST_PORT}}"
+  srvcontent:
+    address: ":{{SERV_PORT}}"
+  proxy:
+    address: ":{{LOCKSS_PROXY_PORT}}"
+  audit:
+    address: ":{{LOCKSS_AUDIT_PORT}}"
+providers:
+  docker:
+    useBindPortIP: true
+    swarmMode: true
+    swarmModeRefreshSeconds: 42
