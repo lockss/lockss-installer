@@ -256,7 +256,7 @@ LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
-LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}:-${TIMEZONE}"
+LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -503,13 +503,13 @@ Linux)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
-    TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
+    LOCKSS_TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
    ;;
 Darwin)
     LOCKSS_HOME=
     SHA256SUM=sha256sum
     LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
-    TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
+    LOCKSS_TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
     ;;
 *)
     echo "${OS_TYPE} not supported"
