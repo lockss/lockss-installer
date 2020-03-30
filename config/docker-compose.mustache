@@ -98,8 +98,10 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-configuration-service-rest.entrypoints=cfg-rest"
         - "traefik.http.routers.lockss-configuration-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-configuration-service-rest.loadbalancer.server.port={{CFG_REST_PORT}}"
+        - "traefik.http.routers.lockss-configuration-service-ui.entrypoints=cfg-ui"
         - "traefik.http.routers.lockss-configuration-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-configuration-service-ui.loadbalancer.server.port={{CFG_UI_PORT}}"
     image: {{CFG_IMG}}:{{CFG_VERSION}}
@@ -157,8 +159,10 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-metadata-service-rest.entrypoints=mdq-rest"
         - "traefik.http.routers.lockss-metadata-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-metadata-service-rest.loadbalancer.server.port={{MDQ_REST_PORT}}"
+        - "traefik.http.routers.lockss-metadata-service-ui.entrypoints=mdq-ui"
         - "traefik.http.routers.lockss-metadata-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-metadata-service-ui.loadbalancer.server.port={{MDQ_UI_PORT}}"
     image: {{MDQ_IMG}}:{{MDQ_VERSION}}
@@ -204,8 +208,10 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-metadata-extraction-service-rest.entrypoints=mdx-rest"
         - "traefik.http.routers.lockss-metadata-extraction-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-metadata-extraction-service-rest.loadbalancer.server.port={{MDX_REST_PORT}}"
+        - "traefik.http.routers.lockss-metadata-extraction-service-ui.entrypoints=mdx-ui"
         - "traefik.http.routers.lockss-metadata-extraction-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-metadata-extraction-service-ui.loadbalancer.server.port={{MDX_UI_PORT}}"
     image: {{MDX_IMG}}:{{MDX_VERSION}}
@@ -252,10 +258,13 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
+        - "traefik.http.routers.lockss-poller-service-rest.entrypoints=pol-rest"
         - "traefik.http.routers.lockss-poller-service-rest.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-poller-service-rest.loadbalancer.server.port={{POL_REST_PORT}}"
+        - "traefik.http.routers.lockss-poller-service-rest.entrypoints=pol-ui"
         - "traefik.http.routers.lockss-poller-service-ui.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.http.services.lockss-poller-service-ui.loadbalancer.server.port={{POL_UI_PORT}}"
+        - "traefik.http.routers.lockss-poller-service-lcap.entrypoints=lcap"
         - "traefik.tcp.routers.lockss-poller-service-lcap.rule=Host({{LOCKSS_HOSTNAME}})"
         - "traefik.tcp.services.lockss-poller-service--lcap.loadbalancer.server.port={{LOCKSS_LCAP_PORT}}"
     image: {{POL_IMG}}:{{POL_VERSION}}
@@ -321,8 +330,9 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-repository.rule=Host({{LOCKSS_HOSTNAME}})"
-        - "traefik.http.services.lockss-repository.loadbalancer.server.port={{REPO_REST_PORT}}"
+        - "traefik.http.routers.lockss-repository-service-rest.entrypoints=repo-rest"
+        - "traefik.http.routers.lockss-repository-rest.rule=Host({{LOCKSS_HOSTNAME}})"
+        - "traefik.http.services.lockss-repository-rest.loadbalancer.server.port={{REPO_REST_PORT}}"
     image: {{REPO_IMG}}:{{REPO_VERSION}}
     configs:
       - source: repo_properties
@@ -370,9 +380,9 @@ services:
     << : [*lockss-service-common]
     deploy:
       labels:
-        - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-postgres.rule=Host({{LOCKSS_HOSTNAME}})"
-        - "traefik.http.services.lockss-postgres.loadbalancer.server.port={{POSTGRES_PORT}}"
+#        - "traefik.enable={{USE_TRAEFIK}}"
+#        - "traefik.http.routers.lockss-postgres.rule=Host({{LOCKSS_HOSTNAME}})"
+#        - "traefik.http.services.lockss-postgres.loadbalancer.server.port={{POSTGRES_PORT}}"
     image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
     ports:
       - mode: ingress
@@ -406,9 +416,9 @@ services:
     << : [*lockss-service-common]
     deploy:
       labels:
-        - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-solr.rule=Host({{LOCKSS_HOSTNAME}})"
-        - "traefik.http.services.lockss-solr.loadbalancer.server.port={{SOLR_PORT}}"
+ #       - "traefik.enable={{USE_TRAEFIK}}"
+ #       - "traefik.http.routers.lockss-solr.rule=Host({{LOCKSS_HOSTNAME}})"
+ #       - "traefik.http.services.lockss-solr.loadbalancer.server.port={{SOLR_PORT}}"
     image: {{SOLR_IMG}}:{{SOLR_VERSION}}
     ports:
       - mode: ingress
@@ -459,9 +469,9 @@ services:
     << : [*lockss-service-common]
     deploy:
       labels:
-        - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-pywb.rule=Host({{LOCKSS_HOSTNAME}})"
-        - "traefik.http.services.lockss-pywb.loadbalancer.server.port={{PYWB_PORT}}"
+ #       - "traefik.enable={{USE_TRAEFIK}}"
+ #       - "traefik.http.routers.lockss-pywb.rule=Host({{LOCKSS_HOSTNAME}})"
+ #       - "traefik.http.services.lockss-pywb.loadbalancer.server.port={{PYWB_PORT}}"
     image: {{PYWB_IMG}}:{{PYWB_VERSION}}
     ports:
       - protocol: tcp
@@ -489,9 +499,9 @@ services:
     << : [*lockss-service-common]
     deploy:
       labels:
-        - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-openwayback.rule=Host({{LOCKSS_HOSTNAME}})"
-        - "traefik.http.services.lockss-openwayback.loadbalancer.server.port={{OPENWB_PORT}}"
+ #       - "traefik.enable={{USE_TRAEFIK}}"
+ #       - "traefik.http.routers.lockss-openwayback.rule=Host({{LOCKSS_HOSTNAME}})"
+ #       - "traefik.http.services.lockss-openwayback.loadbalancer.server.port={{OPENWB_PORT}}"
     image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
     ports:
       - mode: ingress
