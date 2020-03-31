@@ -238,6 +238,7 @@ add_stack_volumes()
       error_exit "${_0}: error creating volume $stack-${svc}-logs"
     fi
   done
+  cp "${DOCKER_CONFIGS_DIR}/$stack/traefik.yml" "${LOCKSS_DATA_DIR}/$stack-traefik-data"
 }
 
 # Create stack network
@@ -320,6 +321,7 @@ assemble_stack() {
   add_stack_network $stack
   add_stack_volumes $stack
   check_stack_solr $stack
+  cp "${DOCKER_CONFIGS_DIR}/$stack/traefik.yml" "${LOCKSS_DATA_DIR}/$stack-traefik-data"
 }
 
 ###

@@ -442,9 +442,11 @@ build_config_file() {
                 SHA256=$(echo -n "${P1}" | ${SHA256SUM})
                 SHA256=$(echo ${SHA256} | sed 's/ .*$//')
                 LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
+                TRAEFIK_PASS=$(echo $(htpasswd -nb ${LOCKSS_ADMIN_USER} ${LOCKSS_ADMIN_PASSWD}) | sed -e s/\\$/\\$\\$/g)
                 UI_PASS=${P1}
                 Add_Secret "lockss_ui_pass" "${UI_PASS}"
                 Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
+                Add_Secret "traefik-pass" "${TRAEFIK_PASS}"
             fi
         done
         configure_services
