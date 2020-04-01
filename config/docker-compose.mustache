@@ -104,10 +104,12 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-configuration-service-rest.entrypoints=cfg-rest"
-        - "traefik.http.services.lockss-configuration-service-rest.loadbalancer.server.port={{CFG_REST_PORT}}"
-        - "traefik.http.routers.lockss-configuration-service-ui.entrypoints=cfg-ui"
-        - "traefik.http.services.lockss-configuration-service-ui.loadbalancer.server.port={{CFG_UI_PORT}}"
+        - "traefik.http.routers.lockss-cfg-rest-router.entrypoints=cfg-rest"
+        - "traefik.http.routers.lockss-cfg-rest-router.service=lockss-cfg-rest-service"
+        - "traefik.http.services.lockss-cfg-rest-service.loadbalancer.server.port={{CFG_REST_PORT}}"
+        - "traefik.http.routers.lockss-cfg-ui-router.entrypoints=cfg-ui"
+        - "traefik.http.routers.lockss-cfg-ui-router.service=lockss-cfg-ui-service"
+        - "traefik.http.services.lockss-cfg-ui-service.loadbalancer.server.port={{CFG_UI_PORT}}"
     image: {{CFG_IMG}}:{{CFG_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -163,10 +165,12 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-metadata-service-rest.entrypoints=mdq-rest"
-        - "traefik.http.services.lockss-metadata-service-rest.loadbalancer.server.port={{MDQ_REST_PORT}}"
-        - "traefik.http.routers.lockss-metadata-service-ui.entrypoints=mdq-ui"
-        - "traefik.http.services.lockss-metadata-service-ui.loadbalancer.server.port={{MDQ_UI_PORT}}"
+        - "traefik.http.routers.lockss-mdq-rest-router.entrypoints=mdq-rest"
+        - "traefik.http.routers.lockss-mdq-rest-router.service=lockss-mdq-rest-service"
+        - "traefik.http.services.lockss-mdq-rest-service.loadbalancer.server.port={{MDQ_REST_PORT}}"
+        - "traefik.http.routers.lockss-mdq-ui-router.entrypoints=mdq-ui"
+        - "traefik.http.routers.lockss-mdq-ui-router.service=lockss-mdq-ui-service"
+        - "traefik.http.services.lockss-mdq-ui-service.loadbalancer.server.port={{MDQ_UI_PORT}}"
     image: {{MDQ_IMG}}:{{MDQ_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -210,10 +214,12 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-metadata-extraction-service-rest.entrypoints=mdx-rest"
-        - "traefik.http.services.lockss-metadata-extraction-service-rest.loadbalancer.server.port={{MDX_REST_PORT}}"
-        - "traefik.http.routers.lockss-metadata-extraction-service-ui.entrypoints=mdx-ui"
-        - "traefik.http.services.lockss-metadata-extraction-service-ui.loadbalancer.server.port={{MDX_UI_PORT}}"
+        - "traefik.http.routers.lockss-mdx-rest-router.entrypoints=mdx-rest"
+        - "traefik.http.routers.lockss-mdx-rest-router.service=lockss-mdx-rest-service"
+        - "traefik.http.services.lockss-mdx-rest-service.loadbalancer.server.port={{MDX_REST_PORT}}"
+        - "traefik.http.routers.lockss-mdx-ui-router.entrypoints=mdx-ui"
+        - "traefik.http.routers.lockss-mdx-ui-router.service=lockss-mdx-ui-service"
+        - "traefik.http.services.lockss-mdx-ui-service.loadbalancer.server.port={{MDX_UI_PORT}}"
     image: {{MDX_IMG}}:{{MDX_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -258,12 +264,15 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-poller-service-rest.entrypoints=pol-rest"
-        - "traefik.http.services.lockss-poller-service-rest.loadbalancer.server.port={{POL_REST_PORT}}"
-        - "traefik.http.routers.lockss-poller-service-rest.entrypoints=pol-ui"
-        - "traefik.http.services.lockss-poller-service-ui.loadbalancer.server.port={{POL_UI_PORT}}"
-        - "traefik.http.routers.lockss-poller-service-lcap.entrypoints=lcap"
-        - "traefik.tcp.services.lockss-poller-service--lcap.loadbalancer.server.port={{LOCKSS_LCAP_PORT}}"
+        - "traefik.http.routers.lockss-pol-rest-router.entrypoints=pol-rest"
+        - "traefik.http.routers.lockss-pol-rest-router.service=lockss-pol-rest-service"
+        - "traefik.http.services.lockss-pol-rest-service.loadbalancer.server.port={{POL_REST_PORT}}"
+        - "traefik.http.routers.lockss-pol-ui-router.entrypoints=pol-ui"
+        - "traefik.http.routers.lockss-pol-ui-router.service=lockss-pol-ui-service"
+        - "traefik.http.services.lockss-pol-ui-service.loadbalancer.server.port={{POL_UI_PORT}}"
+        - "traefik.tcp.routers.lockss-lcap-rest-router.entrypoints=lcap"
+        - "traefik.tcp.routers.lockss-lcap-rest-router.service=lockss-lcap-rest-service"
+        - "traefik.tcp.services.lockss-lcap-rest-service.loadbalancer.server.port={{LOCKSS_LCAP_PORT}}"
     image: {{POL_IMG}}:{{POL_VERSION}}
     configs:
       - source: lockss_bootstrap
@@ -327,8 +336,9 @@ services:
     deploy:
       labels:
         - "traefik.enable={{USE_TRAEFIK}}"
-        - "traefik.http.routers.lockss-repository-service-rest.entrypoints=repo-rest"
-        - "traefik.http.services.lockss-repository-rest.loadbalancer.server.port={{REPO_REST_PORT}}"
+        - "traefik.http.routers.lockss-repo-rest-router.entrypoints=repo-rest"
+        - "traefik.http.routers.lockss-repo-rest-router.service=lockss-repo-rest-service"
+        - "traefik.http.services.lockss-repo-rest-service.loadbalancer.server.port={{REPO_REST_PORT}}"
     image: {{REPO_IMG}}:{{REPO_VERSION}}
     configs:
       - source: repo_properties
