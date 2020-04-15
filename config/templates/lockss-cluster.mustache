@@ -43,7 +43,7 @@ org.lockss.db.databaseNamePrefix={{LOCKSS_DBNAME_PREFIX}}
 # UI and service bindings
 org.lockss.ui.start=yes
 org.lockss.ui.authType=Form
-org.lockss.app.serviceBindings=cfg={{CFG_HOST}}:{{CFG_REST_PORT}}:{{CFG_UI_PORT}};poller={{POL_HOST}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};crawler={{POL_HOST}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};mdx={{MDX_HOST}}:{{MDX_REST_PORT}}:{{MDX_UI_PORT}};mdq={{MDQ_HOST}}:{{MDQ_REST_PORT}}:{{MDQ_UI_PORT}};repo={{REPO_HOST}}:{{REPO_REST_PORT}}
+org.lockss.app.serviceBindings=cfg={{LOCKSS_HOSTNAME}}:{{CFG_REST_PORT}}:{{CFG_UI_PORT}};poller={{LOCKSS_HOSTNAME}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};crawler={{LOCKSS_HOSTNAME}}:{{POL_REST_PORT}}:{{POL_UI_PORT}};mdx={{LOCKSS_HOSTNAME}}:{{MDX_REST_PORT}}:{{MDX_UI_PORT}};mdq={{LOCKSS_HOSTNAME}}:{{MDQ_REST_PORT}}:{{MDQ_UI_PORT}};repo={{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}
 # determines which component crawls plugin registries
 org.lockss.daemon.pluginsCrawler=cfg
 # default no crawls

@@ -177,6 +177,7 @@ init_service_arrays() {
 check_installed_secrets() {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
+  Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss_ui_pass'
   Check_Secret 'lockss-auth'
 }
@@ -235,7 +236,7 @@ deploy_stack() {
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
-  docker stack deploy --prune --resolve-image never --compose-file  ${DOCKER_COMPOSE_FILE} $stack
+  docker stack deploy --compose-file  ${DOCKER_COMPOSE_FILE} $stack
   popd &>/dev/null
 }
 
