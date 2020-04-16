@@ -178,7 +178,7 @@ check_installed_secrets() {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
-  Check_Secret 'lockss_ui_pass'
+#  Check_Secret 'lockss_ui_pass'
   Check_Secret 'lockss-auth'
 }
 

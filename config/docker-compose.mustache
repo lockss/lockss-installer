@@ -90,7 +90,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss-ui-pass
-      - lockss_ui_pass
+#      - lockss_ui_pass
       - lockss-auth
     networks:
       - lockss-network
@@ -126,7 +126,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss-ui-pass
-      - lockss_ui_pass
+#      - lockss_ui_pass
       - lockss-auth
     networks:
       - lockss-network
@@ -161,8 +161,7 @@ services:
     secrets:
       - lockss-postgres-pass
       - lockss-ui-pass
-      - lockss_ui_pass
-      - lockss-auth
+#      - lockss_ui_pass
     networks:
       - lockss-network
 {{/USE_LOCKSS_MDX}}
@@ -201,7 +200,7 @@ services:
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     secrets:
       - lockss-ui-pass
-      - lockss_ui_pass
+#      - lockss_ui_pass
       - lockss-auth
     networks:
       - lockss-network
@@ -246,7 +245,7 @@ services:
       - lockss-network
     secrets:
       - lockss-ui-pass
-      - lockss_ui_pass
+#      - lockss_ui_pass
       - lockss-auth
 {{/USE_LOCKSS_REPO}}
 
@@ -422,8 +421,8 @@ configs:
 secrets:
   lockss-postgres-pass:
     external: true
-  lockss_ui_pass:
-    external: true
+#  lockss_ui_pass:
+#    external: true
   lockss-ui-pass:
     external: true
   lockss-auth:
