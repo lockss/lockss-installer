@@ -185,7 +185,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   declare -a REPO_DATA_MAP
   REPO_NUMS[0]=""
   REPO_DATA_MAP[0]="lockss-repo-data:/data"
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_DIRS}"
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
   len=${#datadirs[@]}
   for (( count=1; count<$len; count++ )); do
     REPO_NUMS[${count}]="$count"

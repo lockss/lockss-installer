@@ -231,8 +231,8 @@ LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
 LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP}"
 LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
-LOCKSS_REPO_VOLS="${LOCKSS_REPO_VOLS}
-LOCKSS_REPO_DIRS="${LOCKSS_REPO_DIRS}"
+LOCKSS_REPO_HOST_DIRS="${LOCKSS_REPO_HOST_DIRS}
+LOCKSS_REPO_CONTAINER_DIRS="${LOCKSS_REPO_CONTAINER_DIRS}"
 LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
 LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
 LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
@@ -399,10 +399,10 @@ build_config_file() {
         DATA_PATHS_OK=Y
       fi
     done
-    if [ "X${LOCKSS_REPO_VOLS}" = X ]; then
+    if [ "X${LOCKSS_REPO_HOST_DIRS}" = X ]; then
       USE_MULTIPLE_CACHES=false
     else
-     IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_VOLS}"
+     IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
     fi
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
@@ -421,9 +421,9 @@ build_config_file() {
         fi
       done
       new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" == ${LOCKSS_REPO_VOLS} ] || echo "Run repo cache updater."
-      LOCKSS_REPO_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
-      LOCKSS_REPO_VOLS=${new_repo_vols}
+      [ "$new_repo_vols" == ${LOCKSS_REPO_HOST_DIRS} ] || echo "Run repo cache updater."
+      LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
+      LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
     fi
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
