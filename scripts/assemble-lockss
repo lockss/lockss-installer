@@ -234,7 +234,7 @@ add_stack_volumes() {
 
 add_additional_stack_volumes() {
   local stack=$1
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CACHE}"
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_VOLS}"
   count=1
   for count in "${!datadirs[@]}"; do
     mtpoint=${datadirs[$count]}/$stack-repo-data
