@@ -399,10 +399,12 @@ build_config_file() {
         DATA_PATHS_OK=Y
       fi
     done
-    if [ "X${LOCKSS_REPO_HOST_DIRS}" = X ]; then
-      USE_MULTIPLE_CACHES=false
-    else
+    USE_MULTIPLE_CACHES=false
+    if [ "X${LOCKSS_REPO_HOST_DIRS}" != X ]; then
      IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+     if test ${#prevPaths[*]} -gt 1; then
+      USE_MULTIPLE_CACHES=true
+     fi
     fi
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
