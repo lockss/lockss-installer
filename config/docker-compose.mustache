@@ -108,7 +108,7 @@ services:
       - host-network
 {{/USE_LOCKSS_CFG}}
 
- {{#USE_LOCKSS_MDQ}}
+{{#USE_LOCKSS_MDQ}}
   #
   # SERVICE lockss-metadata-service
   #
@@ -147,7 +147,7 @@ services:
       - lockss-auth
     networks:
       - host-network
-{{/USE_LOCKSS_MDQ}}
+ {{/USE_LOCKSS_MDQ}}
  {{#USE_LOCKSS_MDX}}
   #
   # SERVICE lockss-metadata-extraction-service
@@ -189,7 +189,7 @@ services:
       - host-network
 {{/USE_LOCKSS_MDX}}
 
- {{#USE_LOCKSS_POL}}
+{{#USE_LOCKSS_POL}}
   #
   # SERVICE lockss-poller
   #
@@ -285,7 +285,9 @@ services:
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
       - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
     volumes:
-      - lockss-repo-data:/data
+  {{#REPO_DATA_MAP}}
+      - {{.}}
+  {{/REPO_DATA_MAP}}
       - lockss-repo-logs:/var/log/lockss
     networks:
       - host-network
@@ -429,7 +431,6 @@ services:
 configs:
   lockss_bootstrap:
     external: true
-    external: true
     name: {{STACK}}-lockss-bootstrap
   lockss_cluster:
     external: true
@@ -528,9 +529,11 @@ volumes:
     name: {{STACK}}-pol-logs
 {{/USE_LOCKSS_POL}}
 {{#USE_LOCKSS_REPO}}
-  lockss-repo-data:
+  {{#REPO_NUMS}}
+  lockss-repo-data{{.}}:
     external: true
-    name: {{STACK}}-repo-data
+    name: {{STACK}}-repo-data{{.}}
+  {{/REPO_NUMS}}
   lockss-repo-logs:
     external: true
     name: {{STACK}}-repo-logs
