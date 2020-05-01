@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/usr/bin/bash
 # ---------------------------------------------------------------------------
 # generate-lockss - Generate files needed to run a LOCKSS stack
 #

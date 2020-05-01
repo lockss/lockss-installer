@@ -423,7 +423,7 @@ build_config_file() {
         fi
       done
       new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" == ${LOCKSS_REPO_HOST_DIRS} ] || echo "Run repo cache updater."
+      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "Run repo cache updater."
       LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
       LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
     fi
