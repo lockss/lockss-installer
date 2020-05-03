@@ -426,6 +426,12 @@ build_config_file() {
       [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "Run repo cache updater."
       LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
       LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
+    else
+      if test ${#prevPaths[*]} -gt 1; then
+        echo "Run repo cache updater."
+      fi
+      LOCKSS_REPO_CONTAINER_DIRS="/data"
+      LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
