@@ -89,7 +89,6 @@ spec:
         name: lockss-repository-service
         ports:
         - containerPort: {{REPO_DEFAULT_REST_PORT}}
-        resources: {}
         volumeMounts:
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
@@ -99,6 +98,14 @@ spec:
           name: lockss-repo-data
         - mountPath: /var/log/lockss
           name: lockss-repo-logs
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: repo-service
+        - mountPath: /run/configs/lockss_service_opt
+          name: repo-service-opt
+        - mountPath: /run/configs/lockss.properties
+          name: repo-properties
       restartPolicy: OnFailure
       volumes:
       - name: lockss-ui-pass
@@ -113,6 +120,18 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
+      - name: lockss-bootstrap
+        hostPath:
+          ./lockss_bootstrap
+      - name: repo-service
+        hostPath:
+          ./repo-service
+      - name: repo-service-opt
+        hostPath:
+          ./repo-service_opt
+      - name: repo-properties
+        hostPath:
+          ./repo_properties
       - name: lockss-repo-data
         persistentVolumeClaim:
           claimName: lockss-repo-data

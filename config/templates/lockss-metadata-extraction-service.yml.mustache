@@ -98,6 +98,12 @@ spec:
           name: lockss-mdx-data
         - mountPath: /var/log/lockss
           name: lockss-mdx-logs
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: mdx-service
+        - mountPath: /run/configs/lockss_service_opt
+          name: mdx-service-opt
       restartPolicy: OnFailure
       volumes:
       - name: lockss-postgres-pass
@@ -112,6 +118,15 @@ spec:
           - key: lockss-ui-pass
             path: lockss-ui-pass
           secretName: lockss-ui-pass
+      - name: lockss-bootstrap
+        hostPath:
+          ./lockss_bootstrap
+      - name: mdx-service
+        hostPath:
+          ./mdx-service
+      - name: mdx-service-opt
+        hostPath:
+          ./mdx-service_opt
       - name: lockss-mdx-data
         persistentVolumeClaim:
           claimName: lockss-mdx-data

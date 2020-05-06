@@ -83,7 +83,6 @@ spec:
           value: "{{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
-        resources: {}
         volumeMounts:
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
@@ -95,6 +94,12 @@ spec:
           name: lockss-mdq-data
         - mountPath: /var/log/lockss
           name: lockss-mdq-logs
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: mdq-service
+        - mountPath: /run/configs/lockss_service_opt
+          name: mdq-service-opt
         image: "{{MDQ_IMG}}:{{MDQ_VERSION}}"
         name: lockss-metadata-service
         ports:
@@ -120,6 +125,15 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
+      - name: lockss-bootstrap
+        hostPath:
+          ./lockss_bootstrap
+      - name: mdq-service
+        hostPath:
+          ./mdq-service
+      - name: mdq-service-opt
+        hostPath:
+          ./mdq-service_opt
       - name: lockss-mdq-data
         persistentVolumeClaim:
           claimName: lockss-mdq-data

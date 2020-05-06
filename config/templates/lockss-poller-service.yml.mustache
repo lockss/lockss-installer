@@ -103,7 +103,7 @@ spec:
         - containerPort: {{POL_DEFAULT_REST_PORT}}
         - containerPort: {{POL_DEFAULT_UI_PORT}}
         - containerPort: {{LOCKSS_LCAP_PORT}}
-        - containerPort: {SERV_DEFAULT_PORT}}
+        - containerPort: {{SERV_DEFAULT_PORT}}
         - containerPort: {{LOCKSS_PROXY_PORT}}
         - containerPort: {{LOCKSS_AUDIT_PORT}}
         - containerPort: {{LOCKSS_ICP_PORT}}
@@ -118,7 +118,13 @@ spec:
           name: lockss-pol-data
         - mountPath: /var/log/lockss
           name: lockss-pol-logs
-      restartPolicy: OnFailure
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: pol-service
+        - mountPath: /run/configs/lockss_service_opt
+          name: pol-service-opt
+     restartPolicy: OnFailure
       volumes:
       - name: lockss-ui-pass
         secret:
@@ -132,6 +138,15 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
+      - name: lockss-bootstrap
+        hostPath:
+          ./lockss_bootstrap
+      - name: pol-service
+        hostPath:
+          ./pol-service
+      - name: pol-service-opt
+        hostPath:
+          ./pol-service_opt
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data
