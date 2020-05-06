@@ -129,15 +129,6 @@ _EOF_
   return
 }
 
-# $1=file $2=blankfile
-Config_Or_Blank()
-{
-  if [ -f "${1}/${2}" ]; then
-    echo "${1}/${2}"
-  else
-    echo "${1}/${3}"
-  fi
-}
 
 Check_Physical_Volumes() {
   if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
@@ -145,46 +136,6 @@ Check_Physical_Volumes() {
     exit 1
   fi
 }
-
-#initialize the service arrays based on system.cfg info.
-init_service_arrays() {
-  if ${USE_LOCKSS_CFG}; then
-    svcs+=("cfg")
-    svcs_confs+=("cfg")
-  fi
-  if ${USE_LOCKSS_MDQ}; then
-    svcs+=("mdq")
-    svcs_confs+=("mdq")
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    svcs+=("mdx")
-    svcs_confs+=("mdx")
-  fi
-  if ${USE_LOCKSS_POL}; then
-    svcs+=("pol")
-    svcs_confs+=("pol")
-  fi
-  if ${USE_LOCKSS_REPO}; then
-    svcs+=("repo")
-    svcs_confs+=("repo")
-  fi
-  if ${USE_LOCKSS_POSTGRES}; then
-     svcs+=("postgres")
-  fi
-  if ${USE_LOCKSS_SOLR}; then
-    svcs+=("solr")
-  fi
-  if ${USE_LOCKSS_HDFS}; then
-    svcs+=("hdfs")
-  fi
-  if ${USE_LOCKSS_PYWB}; then
-    svcs+=("pywb")
-  fi
-  if ${USE_LOCKSS_OPENWB}; then
-    svcs+=("openwb")
-  fi
-}
-
 
 # Create a mount points for each stack
 add_stack_volumes()
@@ -194,7 +145,7 @@ add_stack_volumes()
 
 # Create stack network
 add_stack_network() {
-  kubectl apply -f lockss-stack-networkpolicy.yml
+  kubectl apply -f lockss-networkpolicy.yml
 }
 
 check_stack_solr() {
@@ -234,9 +185,12 @@ assemble_stack() {
   set -a
     . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
+  pushd . &>/dev/null
+  cd "${DOCKER_CONFIGS_DIR}/$stack"
   add_stack_network $stack
   add_stack_volumes $stack
   check_stack_solr $stack
+  popd &>/dev/null
 }
 
 ###
@@ -278,7 +232,7 @@ if $(am_i_root); then
 fi
 
 # Sanity checks
-Check_Runnable
+#Check_Runnable
 Check_Physical_Volumes
 
 init_service_arrays
@@ -298,7 +252,7 @@ else
 fi
 
 msg ""
-msg "Successfully installed into docker all configs and volumes and networks."
+msg "Successfully installed volumes and networks."
 msg ""
 msg "Run deploy-lockss to deploy the assembled stack(s)."
 
