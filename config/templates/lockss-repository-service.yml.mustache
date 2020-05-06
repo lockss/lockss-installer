@@ -72,15 +72,15 @@ spec:
         - name: LOCKSS_IS_REPO
           value: "true"
         - name: LOCKSS_JMS_HOST
-          value: {{JMS_HOST}}
+          value: "{{JMS_HOST}}"
         - name: LOCKSS_JMS_PORT
-          value: {{JMS_DEFAULT_PORT}}
+          value: "{{JMS_DEFAULT_PORT}}"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_SOLR_HOST
           value: {{SOLR_HOST}}
         - name: LOCKSS_SOLR_PORT
-          value: {{SOLR_DEFAULT_PORT}}
+          value: "{{SOLR_DEFAULT_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
           value: {{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}
         - name: TZ
@@ -122,16 +122,16 @@ spec:
           secretName: lockss-auth
       - name: lockss-bootstrap
         hostPath:
-          ./lockss_bootstrap
+          path: ./lockss_bootstrap
       - name: repo-service
         hostPath:
-          ./repo-service
+          path: ./repo-service
       - name: repo-service-opt
         hostPath:
-          ./repo-service_opt
+          path: ./repo-service_opt
       - name: repo-properties
         hostPath:
-          ./repo_properties
+          path: ./repo_properties
       - name: lockss-repo-data
         persistentVolumeClaim:
           claimName: lockss-repo-data

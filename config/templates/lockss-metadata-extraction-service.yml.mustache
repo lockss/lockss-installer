@@ -120,13 +120,13 @@ spec:
           secretName: lockss-ui-pass
       - name: lockss-bootstrap
         hostPath:
-          ./lockss_bootstrap
+          path: ./lockss_bootstrap
       - name: mdx-service
         hostPath:
-          ./mdx-service
+          path: ./mdx-service
       - name: mdx-service-opt
         hostPath:
-          ./mdx-service_opt
+          path: ./mdx-service_opt
       - name: lockss-mdx-data
         persistentVolumeClaim:
           claimName: lockss-mdx-data

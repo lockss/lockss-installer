@@ -84,27 +84,27 @@ spec:
           value: {{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
-          volumeMounts:
-          - mountPath: /run/secrets/lockss-postgres-pass
-            name: lockss-postgres-pass
-          - mountPath: /run/secrets/lockss-ui-pass
-            name: lockss-ui-pass
-          - mountPath: /run/secrets/lockss-auth
-            name: lockss-auth
-          - mountPath: /data
-            name: lockss-cfg-data
-          - mountPath: /var/log/lockss
-            name: lockss-cfg-logs
-          - mountPath: /run/configs/lockss_bootstrap
-            name: lockss-bootstrap
-          - mountPath: /run/configs/lockss_service
-            name: cfg-service
-          - mountPath: /run/configs/lockss_service_opt
-            name: cfg-service-opt
-          - mountPath: /run/configs/lockss_cluster
-            name: lockss-cluster
-          - mountPath: /run/configs/lockss_cluster_opt
-            name: lockss-cluster-opt
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+        - mountPath: /run/secrets/lockss-ui-pass
+          name: lockss-ui-pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+        - mountPath: /data
+          name: lockss-cfg-data
+        - mountPath: /var/log/lockss
+          name: lockss-cfg-logs
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: cfg-service
+        - mountPath: /run/configs/lockss_service_opt
+          name: cfg-service-opt
+        - mountPath: /run/configs/lockss_cluster
+          name: lockss-cluster
+        - mountPath: /run/configs/lockss_cluster_opt
+          name: lockss-cluster-opt
         image: {{CFG_IMG}}:{{CFG_VERSION}}
         name: lockss-configuration-service
         ports:
@@ -133,19 +133,19 @@ spec:
             secretName: lockss-auth
         - name: lockss-bootstrap
           hostPath:
-            ./lockss_bootstrap
+            path: ./lockss_bootstrap
         - name: cfg-service
           hostPath:
-            ./cfg-service
+            path: ./cfg-service
         - name: cfg-service-opt
           hostPath:
-            ./cfg-service_opt
+            path: ./cfg-service_opt
         - name: lockss-cluster
           hostPath:
-            ./lockss-cluster
+            path: ./lockss-cluster
         - name: lockss-cluster-opt
           hostPath:
-            ./lockss-cluster_opt
+            path: ./lockss-cluster_opt
         - name: lockss-cfg-data
           persistentVolumeClaim:
             claimName: lockss-cfg-data

@@ -125,7 +125,7 @@ spec:
         - mountPath: /run/configs/lockss_service_opt
           name: pol-service-opt
      restartPolicy: OnFailure
-      volumes:
+     volumes:
       - name: lockss-ui-pass
         secret:
           items:
@@ -140,13 +140,13 @@ spec:
           secretName: lockss-auth
       - name: lockss-bootstrap
         hostPath:
-          ./lockss_bootstrap
+          path: ./lockss_bootstrap
       - name: pol-service
         hostPath:
-          ./pol-service
+          path: ./pol-service
       - name: pol-service-opt
         hostPath:
-          ./pol-service_opt
+          path: ./pol-service_opt
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data

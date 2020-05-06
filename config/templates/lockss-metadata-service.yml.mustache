@@ -127,13 +127,13 @@ spec:
           secretName: lockss-auth
       - name: lockss-bootstrap
         hostPath:
-          ./lockss_bootstrap
+          path: ./lockss_bootstrap
       - name: mdq-service
         hostPath:
-          ./mdq-service
+          path: ./mdq-service
       - name: mdq-service-opt
         hostPath:
-          ./mdq-service_opt
+          path: ./mdq-service_opt
       - name: lockss-mdq-data
         persistentVolumeClaim:
           claimName: lockss-mdq-data
