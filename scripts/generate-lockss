@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # generate-lockss - Generate files needed to run a LOCKSS stack
 #
@@ -179,8 +179,8 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   set +a
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
-  msg "${PROGNAME}:  Generating stack docker-compose file..."
-  mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
+  #msg "${PROGNAME}:  Generating stack docker-compose file..."
+  #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
   #add the lockss config file templates
   for f in ${CONFIG_DIR}/templates/*.mustache ; do

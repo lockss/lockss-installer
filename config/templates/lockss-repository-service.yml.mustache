@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: lockss-repository-service
+  name: lockss-repository-service
+spec:
+  ports:
+  - name: "lockss-repo-rest-port"
+    port: {{REPO_REST_PORT}}
+    targetPort: {{REPO_DEFAULT_REST_PORT}}
+  selector:
+    io.kompose.service: lockss-repository-service
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-repo-data
+  name: lockss-repo-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-repo-logs
+  name: lockss-repo-logs
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockss-repo-deployment
+  namespace: default
+  labels:
+    app: lockss-repository-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lockss-repository-service
+  template:
+    metadata:
+      labels:
+        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.service: lockss-repository-service
+      name: lockss-repository-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_IS_REPO
+          value: "true"
+        - name: LOCKSS_JMS_HOST
+          value: {{JMS_HOST}}
+        - name: LOCKSS_JMS_PORT
+          value: {{JMS_DEFAULT_PORT}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_SOLR_HOST
+          value: {{SOLR_HOST}}
+        - name: LOCKSS_SOLR_PORT
+          value: {{SOLR_DEFAULT_PORT}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{REPO_IMG}}:{{REPO_VERSION}}
+        name: lockss-repository-service
+        ports:
+        - containerPort: {{REPO_DEFAULT_REST_PORT}}
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-ui-pass
+          name: lockss-ui-pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+        - mountPath: /data
+          name: lockss-repo-data
+        - mountPath: /var/log/lockss
+          name: lockss-repo-logs
+      restartPolicy: OnFailure
+      volumes:
+      - name: lockss-ui-pass
+        secret:
+          items:
+          - key: lockss-ui-pass
+            path: lockss-ui-pass
+          secretName: lockss-ui-pass
+      - name: lockss-auth
+        secret:
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+          secretName: lockss-auth
+      - name: lockss-repo-data
+        persistentVolumeClaim:
+          claimName: lockss-repo-data
+      - name: lockss-repo-logs
+        persistentVolumeClaim:
+          claimName: lockss-repo-logs

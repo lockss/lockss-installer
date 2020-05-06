@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.21.0 ()
+  labels:
+    io.kompose.service: lockss-poller
+  name: lockss-poller
+spec:
+  ports:
+  - name: "lockss-pol-service-rest-port"
+    port: 24630
+    targetPort: 24630
+  - name: "lockss-pol-service-ui-port"
+    port: 24631
+    targetPort: 24631
+  - name: "lockss-lcap-port"
+    port: 9729
+    targetPort: 9729
+  - name: "lockss-servecontent-port"
+    port: 24680
+    targetPort: 24680
+  - name: "lockss-proxy-port"
+    port: 24670
+    targetPort: 24670
+  - name: "lockss-audit-port"
+    port: 24672
+    targetPort: 24672
+  - name: "lockss-icp-port"
+    port: 24674
+    protocol: UDP
+    targetPort: 24674
+  selector:
+    io.kompose.service: lockss-poller
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-pol-data
+  name: lockss-pol-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-pol-logs
+  name: lockss-pol-logs
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockss-pol-deployment
+  namespace: default
+  labels:
+    app: lockss-poller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lockss-poller
+  template:
+    metadata:
+      labels:
+        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.service: lockss-poller
+      name: lockss-poller
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_WAIT_FOR_200
+          value: {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{POL_IMG}}:{{POL_VERSION}}
+        name: lockss-poller
+        ports:
+        - containerPort: {{POL_DEFAULT_REST_PORT}}
+        - containerPort: {{POL_DEFAULT_UI_PORT}}
+        - containerPort: {{LOCKSS_LCAP_PORT}}
+        - containerPort: {SERV_DEFAULT_PORT}}
+        - containerPort: {{LOCKSS_PROXY_PORT}}
+        - containerPort: {{LOCKSS_AUDIT_PORT}}
+        - containerPort: {{LOCKSS_ICP_PORT}}
+          protocol: UDP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-ui-pass
+          name: lockss-ui-pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+        - mountPath: /data
+          name: lockss-pol-data
+        - mountPath: /var/log/lockss
+          name: lockss-pol-logs
+      restartPolicy: OnFailure
+      volumes:
+      - name: lockss-ui-pass
+        secret:
+          items:
+          - key: lockss-ui-pass
+            path: lockss-ui-pass
+          secretName: lockss-ui-pass
+      - name: lockss-auth
+        secret:
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+          secretName: lockss-auth
+      - name: lockss-pol-data
+        persistentVolumeClaim:
+          claimName: lockss-pol-data
+      - name: lockss-pol-logs
+        persistentVolumeClaim:
+          claimName: lockss-pol-logs

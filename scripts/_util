@@ -120,6 +120,14 @@ Add_Secret()
   fi
 }
 
+Add_Kube_Secret()
+{
+  local NAME="${1}"
+  local VALUE="${2}"
+
+  kubectl create secret generic $NAME --from-literal=$NAME='$VALUE'
+}
+
 Check_Volume()
 {
     if ! docker volume inspect ${1} &> /dev/null; then

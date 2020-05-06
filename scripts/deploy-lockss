@@ -157,19 +157,19 @@ init_service_arrays() {
   fi
   if ${USE_LOCKSS_SOLR}; then
     svcs+=("solr")
-    deploy_service_names+=("lockss-solr")
+    deploy_service_names+=("lockss-solr-service")
   fi
   if ${USE_LOCKSS_HDFS}; then
     svcs+=("hdfs")
-    deploy_service_names+=("lockss-hdfs")
+    deploy_service_names+=("lockss-hdfs-service")
   fi
   if ${USE_LOCKSS_PYWB}; then
     svcs+=("pywb")
-    deploy_service_names+=("lockss-pywb")
+    deploy_service_names+=("lockss-pywb-service")
   fi
   if ${USE_LOCKSS_OPENWB}; then
     svcs+=("openwayback")
-    deploy_service_names+=("lockss-openwayback")
+    deploy_service_names+=("lockss-openwayback-service")
   fi
 }
 
@@ -178,27 +178,9 @@ check_installed_secrets() {
   echo "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
-#  Check_Secret 'lockss_ui_pass'
   Check_Secret 'lockss-auth'
 }
 
-# Check the global configs
-check_installed_configs() {
-  local stack=$1
-
-  for gconf in "${global_confs[@]}"; do
-    echo "checking installed configs for $stack-${gconf}..."
-    Check_Config "$stack-${gconf}"
-    Check_Config "$stack-${gconf}_opt"
-  done
-
-  # Check the configs for each lockss service
-  for sconf in "${service_confs[@]}"; do
-    echo "checking installed configs for $stack-${sconf}..."
-    Check_Config "$stack-${sconf}-service"
-    Check_Config "$stack-${sconf}-service_opt"
-  done
-}
 
 check_installed_volumes() {
   local stack=$1
@@ -215,28 +197,20 @@ check_installed_network() {
   Check_Network "$stack-network"
 }
 
-Check_Swarm_installed() {
-  local stack=${STACK_PREFIX}$1
-
-  echo "Checking installation for stack $stack..."
-  check_installed_configs $stack
-  check_installed_volumes $stack
-  check_installed_network $stack
-}
-
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-  local compose_file=${DOCKER_CONFIGS_DIR}/$stack/${DOCKER_COMPOSE_FILE}
-
-  echo "Deploying service from ${compose_file} as docker stack $stack..."
   # Source config.info and env.sh
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
-  docker stack deploy --compose-file  ${DOCKER_COMPOSE_FILE} $stack
+  kubectl create namespace -f lockss-namespace.yml
+  for svc in "${deploy_service_names[@]}"; do
+    echo "Deploying service from ${svc}..."
+    kubectl apply -f "${svc}.yml"
+  done
   popd &>/dev/null
 }
 
@@ -297,11 +271,9 @@ elif [ ${NUM_STACKS} -eq 1 ]; then
 elif [ ${STACK_NUM} -eq 0 ]; then
   echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   for ((num = 1; num <= $NUM_STACKS; num++)); do
-    Check_Swarm_installed $num
     deploy_stack $num
   done
 elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
-  Check_Swarm_installed ${STACK_NUM}
   deploy_stack ${STACK_NUM}
 else
   error_exit "Unable to find generated stack info for ${STACK_NUM}"

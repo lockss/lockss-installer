@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: lockss-pywb
+  name: lockss-pywb
+spec:
+  ports:
+  - name: "lockss-pywb-port"
+    port: {{PYWB_PORT}}
+    targetPort: {{PYWB_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-pywb
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: lockss-pywb-data
+  name: lockss-pywb-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockss-pywb-deployment
+  namespace: default
+  labels:
+    app: lockss-pywb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lockss-pywb
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.service: lockss-pywb
+      name: lockss-pywb
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_WAIT_FOR_200
+          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
+        - name: REPO_HOST
+          value: {{REPO_HOST}}
+        - name: REPO_REST_PORT
+          value: {{REPO_DEFAULT_REST_PORT}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{PYWB_IMG}}:{{PYWB_VERSION}}
+        name: lockss-pywb
+        ports:
+        - containerPort: {{PYWB_DEFAULT_PORT}}
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+        - mountPath: /data
+          name: lockss-pywb-data
+      restartPolicy: OnFailure
+      volumes:
+      - name: lockss-auth
+        secret:
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+          secretName: lockss-auth
+      - name: lockss-pywb-data
+        persistentVolumeClaim:
+          claimName: lockss-pywb-data
+    status: {}

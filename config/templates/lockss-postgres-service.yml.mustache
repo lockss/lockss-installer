@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: lockss-postgres
+  name: lockss-postgres
+spec:
+  ports:
+  - name: "lockss-postgres-port"
+    port: {{POSTGRES_PORT}}
+    targetPort: {{POSTGRES_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-postgres
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-postgres-data
+  name: lockss-postgres-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-postgres-logs
+  name: lockss-postgres-logs
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockss-postres-deployment
+  namespace: default
+  labels:
+    app: lockss-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lockss-postgres
+  template:
+    metadata:
+      labels:
+        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.service: lockss-postgres
+      name: lockss-postgres
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: PGDATA
+          value: /data
+        - name: POSTGRES_DB
+          value: {{POSTGRES_DB}}
+        - name: POSTGRES_PASSWORD_FILE
+          value: /run/secrets/lockss-postgres-pass
+        - name: POSTGRES_USER
+          value: {{POSTGRES_USER}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
+        name: lockss-postgres
+        ports:
+        - containerPort: {{POSTGRES_DEFAULT_PORT}}
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+        - mountPath: /data
+          name: lockss-postgres-data
+        - mountPath: /var/logs/postgres
+          name: lockss-postgres-logs
+      restartPolicy: OnFailure
+      volumes:
+      - name: lockss-postgres-pass
+        secret:
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
+          secretName: lockss-postgres-pass
+      - name: lockss-postgres-data
+        persistentVolumeClaim:
+          claimName: lockss-postgres-data
+      - name: lockss-postgres-logs
+        persistentVolumeClaim:
+          claimName: lockss-postgres-logs
+    status: {}

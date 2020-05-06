@@ -185,83 +185,16 @@ init_service_arrays() {
   fi
 }
 
-# Create configs for each stack
-add_stack_configs()
-{
-  local stack=$1
-  local stack_path="${DOCKER_CONFIGS_DIR}/$stack"
-
-  # Create the global configs
-  for gconf in "${global_confs[@]}"
-  do
-    echo "removing old $stack-${gconf} and $stack-${gconf}_opt"
-    docker config rm $stack-${gconf} $stack-${gconf}_opt &> /dev/null
-    echo "adding docker config $stack-${gconf}..."
-    if ! docker config create --template-driver golang $stack-${gconf} $(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") ; then
-      error_exit "${_0}: error creating config $stack-${gconf}"
-    fi
-    if ! docker config create --template-driver golang $stack-${gconf}_opt $(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") ; then
-      error_exit "${_0}: error creating config $stack-${gconf}_opt"
-    fi
-  done
-  # Create the configs for each lockss service
-  for sconf in "${svcs_confs[@]}"
-  do
-    echo "adding docker config ${sconf}..."
-    docker config rm $stack-${sconf}-service $stack-${sconf}-service_opt &> /dev/null
-    if ! docker config create --template-driver golang $stack-${sconf}-service $(Config_Or_Blank $stack_path "${sconf}-service" "blank_lockss") ; then
-      error_exit "${_0}: error creating config $stack-${sconf}-service"
-    fi
-    if ! docker config create --template-driver golang $stack-${sconf}-service_opt $(Config_Or_Blank $stack_path "${sconf}-service_opt" "blank_lockss_opt") ; then
-      error_exit "${_0}: error creating config $stack-${sconf}-service_opt"
-    fi
-  done
-}
 
 # Create a mount points for each stack
 add_stack_volumes()
 {
-  local stack=$1
-  for svc in "${svcs[@]}"
-  do
-    echo "creating docker data and log volumes for $stack-${svc}..."
-    docker volume remove $stack-${svc}-data $stack-${svc}-logs &> /dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data ; then
-      error_exit "${_0}: error creating volume $stack-${svc}-data"
-    fi
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs ; then
-      error_exit "${_0}: error creating volume $stack-${svc}-logs"
-    fi
-  done
+  kubectl apply -f lockss-persistent-volumes.yml
 }
 
 # Create stack network
 add_stack_network() {
-  local stack=$1
-  # Create a lockss network
-  echo "Creating lockss network"
-  docker network remove $stack-network &> /dev/null
-  if ! docker network create -d overlay --opt encrypted $stack-network; then
-    error_exit "$stack-network: error creating network."
-  fi
-}
-
-check_stack_images() {
-  for svc in "${svcs[@]}"
-  do
-    base=$(echo $svc | tr [a-z] [A-Z])
-    img="${base}_IMG"
-    vers="${base}_VERSION"
-    docker_image=${!img}
-    docker_version=${!vers}
-    echo "ensuring image for $docker_image:$docker_version..."
-    if [ ! $(docker images "$docker_image:$docker_version" &>/dev/null | grep ${docker_image}) ]; then
-      msg "downloading image: $docker_image:$docker_version..."
-      docker pull "${docker_image}:${docker_version}"
-    elif [ ${UPDATE_IMAGES} -eq 1 ]; then
-      docker pull "${docker_image}:${docker_version}"
-    fi
-  done
+  kubectl apply -f lockss-stack-networkpolicy.yml
 }
 
 check_stack_solr() {
@@ -301,8 +234,6 @@ assemble_stack() {
   set -a
     . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  check_stack_images
-  add_stack_configs $stack
   add_stack_network $stack
   add_stack_volumes $stack
   check_stack_solr $stack

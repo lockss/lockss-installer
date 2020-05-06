@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.21.0 ()
+  labels:
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-metadata-extraction-service
+spec:
+  ports:
+  - name: "lockss-mdx-service-rest-port"
+    port: {{MDX_REST_PORT}}
+    targetPort: {{MDX_DEFAULT_REST_PORT}}
+  - name: "lockss-mdx-service-ui-port"
+    port: {{MDX_UI_PORT}}
+    targetPort: {{MDX_DEFAULT_UI_PORT}}
+  selector:
+    io.kompose.service: lockss-metadata-extraction-service
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-mdx-data
+  name: lockss-mdx-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-mdx-logs
+  name: lockss-mdx-logs
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockss-mdx-deployment
+  namespace: default
+  labels:
+    app: lockss-metadata-extraction-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lockss-metadata-extraction-service
+  template:
+    metadata:
+      labels:
+        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.service: lockss-metadata-extraction-service
+      name: lockss-metadata-extraction-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_WAIT_FOR_200
+          value: "{{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: "{{MDX_IMG}}:{{MDX_VERSION}}"
+        name: lockss-metadata-extraction-service
+        ports:
+        - containerPort: {{MDX_DEFAULT_REST_PORT}}
+        - containerPort: {{MDX_DEFAULT_UI_PORT}}
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+        - mountPath: /run/secrets/lockss-ui-pass
+          name: lockss-ui-pass
+        - mountPath: /data
+          name: lockss-mdx-data
+        - mountPath: /var/log/lockss
+          name: lockss-mdx-logs
+      restartPolicy: OnFailure
+      volumes:
+      - name: lockss-postgres-pass
+        secret:
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
+          secretName: lockss-postgres-pass
+      - name: lockss-ui-pass
+        secret:
+          items:
+          - key: lockss-ui-pass
+            path: lockss-ui-pass
+          secretName: lockss-ui-pass
+      - name: lockss-mdx-data
+        persistentVolumeClaim:
+          claimName: lockss-mdx-data
+      - name: lockss-mdx-logs
+        persistentVolumeClaim:
+          claimName: lockss-mdx-logs
