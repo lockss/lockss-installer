@@ -70,8 +70,6 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 #Data
 declare -a arr deploy_service_names
 declare -a arr svcs
-declare -a arr svcs_confs
-declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
 
 STACK_PREFIX="lockss-stack"
 
@@ -129,22 +127,18 @@ _EOF_
 init_service_arrays() {
   if ${USE_LOCKSS_CFG}; then
     svcs+=("cfg")
-    svcs_confs+=("cfg")
     deploy_service_names+=("lockss-configuration-service")
   fi
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
-    svcs_confs+=("mdq")
     deploy_service_names+=("lockss-metadata-service")
   fi
   if ${USE_LOCKSS_MDX}; then
     svcs+=("mdx")
-    svcs_confs+=("mdx")
     deploy_service_names+=("lockss-metadata-extraction-service")
   fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")
-    svcs_confs+=("pol")
     deploy_service_names+=("lockss-poller-service")
   fi
   if ${USE_LOCKSS_REPO}; then
@@ -153,7 +147,7 @@ init_service_arrays() {
   fi
   if ${USE_LOCKSS_POSTGRES}; then
     svcs+=("postgres")
-    deploy_service_names+=("lockss-postgres")
+    deploy_service_names+=("lockss-postgres-service")
   fi
   if ${USE_LOCKSS_SOLR}; then
     svcs+=("solr")
@@ -206,10 +200,11 @@ deploy_stack() {
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
-  kubectl create namespace -f lockss-namespace.yml
+  kubectl apply -f lockss-namespace.yml
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yml"
+    kubectl expose deployment "${svc}"
   done
   popd &>/dev/null
 }
@@ -260,7 +255,7 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-Check_Runnable
+#Check_Runnable
 
 init_service_arrays
 
