@@ -124,34 +124,27 @@ while [[ -n $1 ]]; do
   shift
 done
 
-# Sanity checks
-Check_Runnable
+undeploy_stack() {
+  local stack=${STACK_PREFIX}$1
+  # Source config.info and env.sh
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
+  kubectl apply -f lockss-namespace.yml
+  for svc in ${DOCKER_CONFIGS_DIR}/$stack/*.yml ; do
+    echo "Deploying service from ${svc}..."
+    kubectl delete -f "${svc}"
+    kubectl delete namespace $stack
+  done
+}
 
-if which "gxargs" &> /dev/null; then
-  alias xargs='gxargs -r'
-else
-  alias xargs='xargs -r'
-fi
+# Sanity checks
+#Check_Runnable
+
 if [[ ${STACK_NUM} -eq 0 ]]; then
-  if docker stack ps 'lockss-stack' &> /dev/null; then
-    echo "Shutting down all LOCKSS stacks..."
-    docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
-    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
-    echo "Stopped all containers and removed containers and stacks. Run start-lockss to run again."
-  else
-    echo "The stack 'lockss-stack' is not running. Run start-lockss to run again."
-  fi
+  undeploy_stack ""
 else
-  if docker stack ps "lockss-stack${STACK_NUM}" &> /dev/null; then
-    echo "Shutting down lockss-stack${STACK_NUM}"
-    docker stack ls | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker stack rm
-    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container rm
-    echo "Stopped all containers and removed containers for lockss-stack${STACK_NUM}. Run start-lockss ${STACK_NUM} to run again."
-  else
-    echo "The stack lockss-stack${STACK_NUM} is not running. Run start-lockss ${STACK_NUM} to run again."
-  fi
+  undeploy_stack ${STACK_NUM}
 fi
 
 graceful_exit
