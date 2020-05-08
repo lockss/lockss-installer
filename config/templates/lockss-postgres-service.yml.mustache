@@ -11,8 +11,8 @@ spec:
     targetPort: {{POSTGRES_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-postgres
-status:
-  loadBalancer: {}
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -45,21 +45,21 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-postres-deployment
-  namespace: default
   labels:
-    app: lockss-postgres
+    io.kompose.service: lockss-postgres
+  name: lockss-postgres
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-postgres
+      io.kompose.service: lockss-postgres
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-postgres
-      name: lockss-postgres
     spec:
       containers:
       - env:
@@ -87,7 +87,7 @@ spec:
           name: lockss-postgres-data
         - mountPath: /var/logs/postgres
           name: lockss-postgres-logs
-      restartPolicy: OnFailure
+      restartPolicy: Always
       volumes:
       - name: lockss-postgres-pass
         secret:
@@ -101,3 +101,4 @@ spec:
       - name: lockss-postgres-logs
         persistentVolumeClaim:
           claimName: lockss-postgres-logs
+status: {}

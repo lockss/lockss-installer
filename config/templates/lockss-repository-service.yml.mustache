@@ -11,8 +11,8 @@ spec:
     targetPort: {{REPO_DEFAULT_REST_PORT}}
   selector:
     io.kompose.service: lockss-repository-service
-status:
-  loadBalancer: {}
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -42,24 +42,41 @@ spec:
       storage: 100Mi
 status: {}
 ---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: lockss-repository-service
+  name: lockss-repository-service
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          serviceName: lockss-repository-service
+          servicePort: {{REPO_REST_PORT}}
+status:
+  loadBalancer: {}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-repo-deployment
-  namespace: default
   labels:
-    app: lockss-repository-service
+    io.kompose.service: lockss-repository-service
+  name: lockss-repository-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-repository-service
+      io.kompose.service: lockss-repository-service
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-repository-service
-      name: lockss-repository-service
     spec:
       containers:
       - env:
@@ -106,7 +123,7 @@ spec:
           name: repo-service-opt
         - mountPath: /run/configs/lockss.properties
           name: repo-properties
-      restartPolicy: OnFailure
+      restartPolicy: Always
       volumes:
       - name: lockss-ui-pass
         secret:
@@ -138,3 +155,4 @@ spec:
       - name: lockss-repo-logs
         persistentVolumeClaim:
           claimName: lockss-repo-logs
+status: {}

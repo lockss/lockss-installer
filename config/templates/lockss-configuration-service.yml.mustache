@@ -20,8 +20,8 @@ spec:
     targetPort: {{CFG_DEFAULT_UI_PORT}}
   selector:
     io.kompose.service: lockss-configuration-service
-status:
-  loadBalancer: {}
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -54,19 +54,19 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-cfg-deployment
-  namespace: default
   labels:
-    app: lockss-configuration-service
+    io.kompose.service: lockss-configuration-service
+  name: lockss-configuration-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-configuration-service
+      io.kompose.service: lockss-configuration-service
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
-        app: lockss-configuration-service
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-configuration-service
     spec:
@@ -111,7 +111,7 @@ spec:
         - containerPort: {{CFG_DEFAULT_REST_PORT}}
         - containerPort: {{CFG_DEFAULT_UI_PORT}}
         - containerPort: {{JMS_DEFAULT_PORT}}
-      restartPolicy: OnFailure
+      restartPolicy: Always
       volumes:
         - name: lockss-postgres-pass
           secret:
@@ -152,3 +152,4 @@ spec:
         - name: lockss-cfg-logs
           persistentVolumeClaim:
             claimName: lockss-cfg-logs
+status: {}

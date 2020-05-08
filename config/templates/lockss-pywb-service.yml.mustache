@@ -11,8 +11,8 @@ spec:
     targetPort: {{PYWB_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-pywb
-status:
-  loadBalancer: {}
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,22 +32,21 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-pywb-deployment
-  namespace: default
   labels:
-    app: lockss-pywb
+    io.kompose.service: lockss-pywb
+  name: lockss-pywb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-pywb
+      io.kompose.service: lockss-pywb
+  strategy:
+    type: Recreate
   template:
     metadata:
-      creationTimestamp: null
       labels:
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-pywb
-      name: lockss-pywb
     spec:
       containers:
       - env:
@@ -60,7 +59,7 @@ spec:
         - name: REPO_HOST
           value: {{REPO_HOST}}
         - name: REPO_REST_PORT
-          value: {{REPO_DEFAULT_REST_PORT}}
+          value: '{{REPO_DEFAULT_REST_PORT}}'
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{PYWB_IMG}}:{{PYWB_VERSION}}
@@ -73,7 +72,7 @@ spec:
           name: lockss-auth
         - mountPath: /data
           name: lockss-pywb-data
-      restartPolicy: OnFailure
+      restartPolicy: Always
       volumes:
       - name: lockss-auth
         secret:
@@ -84,3 +83,4 @@ spec:
       - name: lockss-pywb-data
         persistentVolumeClaim:
           claimName: lockss-pywb-data
+status: {}

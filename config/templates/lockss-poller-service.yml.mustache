@@ -1,40 +1,37 @@
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    kompose.cmd: kompose convert
-    kompose.version: 1.21.0 ()
   labels:
-    io.kompose.service: lockss-poller
-  name: lockss-poller
+    io.kompose.service: lockss-poller-service
+  name: lockss-poller-service
 spec:
   ports:
   - name: "lockss-pol-service-rest-port"
-    port: 24630
-    targetPort: 24630
+    port: {{POL_REST_PORT}}
+    targetPort: {{POL_DEFAULT_REST_PORT}}
   - name: "lockss-pol-service-ui-port"
-    port: 24631
-    targetPort: 24631
+    port: {{POL_UI_PORT}}
+    targetPort: {{POL_DEFAULT_UI_PORT}}
   - name: "lockss-lcap-port"
-    port: 9729
-    targetPort: 9729
+    port: {{LOCKSS_LCAP_PORT}}
+    targetPort: {{LOCKSS_LCAP_PORT}}
   - name: "lockss-servecontent-port"
-    port: 24680
-    targetPort: 24680
+    port: {{SERV_PORT}}
+    targetPort: {{SERV_DEFAULT_PORT}}
   - name: "lockss-proxy-port"
-    port: 24670
-    targetPort: 24670
+    port: {{LOCKSS_PROXY_PORT}}
+    targetPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
   - name: "lockss-audit-port"
-    port: 24672
-    targetPort: 24672
+    port: {{LOCKSS_AUDIT_PORT}}
+    targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
   - name: "lockss-icp-port"
-    port: 24674
+    port: {{LOCKSS_ICP_PORT}}
     protocol: UDP
-    targetPort: 24674
+    targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
   selector:
-    io.kompose.service: lockss-poller
-status:
-  loadBalancer: {}
+    io.kompose.service: lockss-poller-service
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -48,6 +45,7 @@ spec:
   resources:
     requests:
       storage: 100Mi
+status: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -65,21 +63,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-pol-deployment
-  namespace: default
   labels:
-    app: lockss-poller
+    io.kompose.service: lockss-poller-service
+  name: lockss-poller-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-poller
+      io.kompose.service: lockss-poller-service
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
-        io.kompose.service: lockss-poller
-      name: lockss-poller
+        io.kompose.service: lockss-poller-service
     spec:
       containers:
       - env:
@@ -92,23 +90,11 @@ spec:
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_WAIT_FOR_200
-          value: {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}
+          value: "{{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}
+          value: "{{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
-        image: {{POL_IMG}}:{{POL_VERSION}}
-        name: lockss-poller
-        ports:
-        - containerPort: {{POL_DEFAULT_REST_PORT}}
-        - containerPort: {{POL_DEFAULT_UI_PORT}}
-        - containerPort: {{LOCKSS_LCAP_PORT}}
-        - containerPort: {{SERV_DEFAULT_PORT}}
-        - containerPort: {{LOCKSS_PROXY_PORT}}
-        - containerPort: {{LOCKSS_AUDIT_PORT}}
-        - containerPort: {{LOCKSS_ICP_PORT}}
-          protocol: UDP
-        resources: {}
         volumeMounts:
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
@@ -124,7 +110,19 @@ spec:
           name: pol-service
         - mountPath: /run/configs/lockss_service_opt
           name: pol-service-opt
-     restartPolicy: OnFailure
+        image: {{POL_IMG}}:{{POL_VERSION}}
+        name: lockss-poller-service
+        ports:
+        - containerPort: {{POL_DEFAULT_REST_PORT}}
+        - containerPort: {{POL_DEFAULT_UI_PORT}}
+        - containerPort: {{LOCKSS_LCAP_PORT}}
+        - containerPort: {{SERV_DEFAULT_PORT}}
+        - containerPort: {{LOCKSS_PROXY_PORT}}
+        - containerPort: {{LOCKSS_AUDIT_PORT}}
+        - containerPort: {{LOCKSS_ICP_PORT}}
+          protocol: UDP
+        resources: {}
+     restartPolicy: Always
      volumes:
       - name: lockss-ui-pass
         secret:
@@ -153,3 +151,4 @@ spec:
       - name: lockss-pol-logs
         persistentVolumeClaim:
           claimName: lockss-pol-logs
+status: {}

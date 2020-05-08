@@ -11,8 +11,8 @@ spec:
     targetPort: {{SOLR_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-solr
-status:
-  loadBalancer: {}
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -45,21 +45,21 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockss-solr-deployment
-  namespace: default
   labels:
-    app: lockss-solr
+    io.kompose.service: lockss-solr
+  name: lockss-solr
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lockss-solr
+      io.kompose.service: lockss-solr
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-solr
-      name: lockss-solr
     spec:
       containers:
       - args:
@@ -80,7 +80,7 @@ spec:
           name: lockss-solr-data
         - mountPath: /opt/solr/server/logs
           name: lockss-solr-logs
-      restartPolicy: OnFailure
+      restartPolicy: Always
       volumes:
       - name: lockss-auth
         secret:
@@ -94,3 +94,4 @@ spec:
       - name: lockss-solr-logs
         persistentVolumeClaim:
           claimName: lockss-solr-logs
+status: {}
