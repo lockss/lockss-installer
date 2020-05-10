@@ -2,24 +2,24 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    io.kompose.service: lockss-postgres
-  name: lockss-postgres
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-service
 spec:
   ports:
   - name: "lockss-postgres-port"
     port: {{POSTGRES_PORT}}
     targetPort: {{POSTGRES_DEFAULT_PORT}}
   selector:
-    io.kompose.service: lockss-postgres
+    io.kompose.service: lockss-postgres-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-postgres-data
-  name: lockss-postgres-data
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -32,8 +32,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-postgres-logs
-  name: lockss-postgres-logs
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -46,20 +46,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    io.kompose.service: lockss-postgres
-  name: lockss-postgres
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: lockss-postgres
+      io.kompose.service: lockss-postgres-service
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
-        io.kompose.service: lockss-postgres
+        io.kompose.service: lockss-postgres-service
     spec:
       containers:
       - env:
@@ -76,7 +76,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
-        name: lockss-postgres
+        name: lockss-postgres-service
         ports:
         - containerPort: {{POSTGRES_DEFAULT_PORT}}
         resources: {}
@@ -97,8 +97,8 @@ spec:
           secretName: lockss-postgres-pass
       - name: lockss-postgres-data
         persistentVolumeClaim:
-          claimName: lockss-postgres-data
+          claimName: lockss-postgres-data-pvc
       - name: lockss-postgres-logs
         persistentVolumeClaim:
-          claimName: lockss-postgres-logs
+          claimName: lockss-postgres-logs-pvc
 status: {}

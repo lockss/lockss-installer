@@ -15,14 +15,14 @@ spec:
   selector:
     io.kompose.service: lockss-metadata-extraction-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-mdx-data
-  name: lockss-mdx-data
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -35,8 +35,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-mdx-logs
-  name: lockss-mdx-logs
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -126,8 +126,8 @@ spec:
           path: ./mdx-service_opt
       - name: lockss-mdx-data
         persistentVolumeClaim:
-          claimName: lockss-mdx-data
+          claimName: lockss-mdx-data-pvc
       - name: lockss-mdx-logs
         persistentVolumeClaim:
-          claimName: lockss-mdx-logs
+          claimName: lockss-mdx-logs-pvc
 status: {}

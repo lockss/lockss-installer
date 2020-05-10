@@ -26,39 +26,47 @@ spec:
     targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
   - name: "lockss-icp-port"
     port: {{LOCKSS_ICP_PORT}}
-    protocol: UDP
     targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
   selector:
     io.kompose.service: lockss-poller-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-pol-data
-  name: lockss-pol-data
+    io.kompose.service: lockss-poller-service
+  name: lockss-pol-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
       storage: 100Mi
-status: {}
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-pol-data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-pol-logs
-  name: lockss-pol-logs
+    io.kompose.service: lockss-poller-service
+  name: lockss-pol-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
       storage: 100Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-pol-logs"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -138,17 +146,17 @@ spec:
           secretName: lockss-auth
       - name: lockss-bootstrap
         hostPath:
-          path: ./lockss_bootstrap
+          path: lockss_bootstrap
       - name: pol-service
         hostPath:
-          path: ./pol-service
+          path: pol-service
       - name: pol-service-opt
         hostPath:
-          path: ./pol-service_opt
+          path: pol-service_opt
       - name: lockss-pol-data
         persistentVolumeClaim:
-          claimName: lockss-pol-data
+          claimName: lockss-pol-data-pvc
       - name: lockss-pol-logs
         persistentVolumeClaim:
-          claimName: lockss-pol-logs
+          claimName: lockss-pol-logs-pvc
 status: {}

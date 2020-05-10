@@ -2,17 +2,17 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    io.kompose.service: lockss-pywb
-  name: lockss-pywb
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-service
 spec:
   ports:
   - name: "lockss-pywb-port"
     port: {{PYWB_PORT}}
     targetPort: {{PYWB_DEFAULT_PORT}}
   selector:
-    io.kompose.service: lockss-pywb
+    io.kompose.service: lockss-pywb-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -20,7 +20,7 @@ metadata:
   creationTimestamp: null
   labels:
     io.kompose.service: lockss-pywb-data
-  name: lockss-pywb-data
+  name: lockss-pywb-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -33,20 +33,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    io.kompose.service: lockss-pywb
-  name: lockss-pywb
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: lockss-pywb
+      io.kompose.service: lockss-pywb-service
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
-        io.kompose.service: lockss-pywb
+        io.kompose.service: lockss-pywb-service
     spec:
       containers:
       - env:
@@ -63,7 +63,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{PYWB_IMG}}:{{PYWB_VERSION}}
-        name: lockss-pywb
+        name: lockss-pywb-service
         ports:
         - containerPort: {{PYWB_DEFAULT_PORT}}
         resources: {}
@@ -82,5 +82,5 @@ spec:
           secretName: lockss-auth
       - name: lockss-pywb-data
         persistentVolumeClaim:
-          claimName: lockss-pywb-data
+          claimName: lockss-pywb-data-pvc
 status: {}

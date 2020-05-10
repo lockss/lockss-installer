@@ -12,52 +12,46 @@ spec:
   selector:
     io.kompose.service: lockss-repository-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  labels:
-    io.kompose.service: lockss-repo-data
-  name: lockss-repo-data
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-status: {}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  labels:
-    io.kompose.service: lockss-repo-logs
-  name: lockss-repo-logs
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-status: {}
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  creationTimestamp: null
   labels:
     io.kompose.service: lockss-repository-service
-  name: lockss-repository-service
+  name: lockss-repo-data-pvc
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          serviceName: lockss-repository-service
-          servicePort: {{REPO_REST_PORT}}
-status:
-  loadBalancer: {}
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 100Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-repo-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-repository-service
+  name: lockss-repo-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 100Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-repo-logs"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -151,8 +145,8 @@ spec:
           path: ./repo_properties
       - name: lockss-repo-data
         persistentVolumeClaim:
-          claimName: lockss-repo-data
+          claimName: lockss-repo-data-pvc
       - name: lockss-repo-logs
         persistentVolumeClaim:
-          claimName: lockss-repo-logs
+          claimName: lockss-repo-logs-pvc
 status: {}

@@ -42,9 +42,14 @@ VERSION="1.0"
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
+COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+echo "Setting Compose Dir: ${COMPOSE_DIR}"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+
+STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
-	unalias xargs
 	return
 }
 
@@ -130,12 +135,9 @@ undeploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  kubectl apply -f lockss-namespace.yml
-  for svc in ${DOCKER_CONFIGS_DIR}/$stack/*.yml ; do
-    echo "Deploying service from ${svc}..."
-    kubectl delete -f "${svc}"
-    kubectl delete namespace $stack
-  done
+  echo "Removing all installed elements in ${DOCKER_CONFIGS_DIR}/$stack."
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack"
+  kubectl delete namespace $stack
 }
 
 # Sanity checks

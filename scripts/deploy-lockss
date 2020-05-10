@@ -204,7 +204,6 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yml"
-    kubectl expose deployment "${svc}"
   done
   popd &>/dev/null
 }

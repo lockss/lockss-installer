@@ -107,7 +107,7 @@ configure_services() {
   ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
   if is_yes "${ANS}"; then
     USE_LOCKSS_POSTGRES=true
-    LOCKSS_POSTGRES_HOST='lockss-postgres'
+    LOCKSS_POSTGRES_HOST='lockss-postgres-service'
     LOCKSS_POSTGRES_PORT=5432
     LOCKSS_POSTGRES_USER="LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
@@ -174,7 +174,7 @@ configure_services() {
   ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
   if is_yes "${ANS}"; then
     USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST='lockss-solr'
+    LOCKSS_SOLR_HOST='lockss-solr-service'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO="lockss-repo"
   else
@@ -452,7 +452,7 @@ build_config_file() {
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
     export LOCKSS_CONFIG_VERSION=2
-    write_config_file ${TMP_CONFIG}
+    write_config_file ${TMP_CONFIG} ${LOCKSS_USER}
     echo
     echo "Configuration:"
     cat ${TMP_CONFIG}

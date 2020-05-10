@@ -21,14 +21,14 @@ spec:
   selector:
     io.kompose.service: lockss-configuration-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-cfg-logs
-  name: lockss-cfg-logs
+    io.kompose.service: lockss-configuration-service
+  name: lockss-cfg-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -41,8 +41,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-cfg-data
-  name: lockss-cfg-data
+    io.kompose.service: lockss-configuration-service
+  name: lockss-cfg-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -148,8 +148,8 @@ spec:
             path: ./lockss-cluster_opt
         - name: lockss-cfg-data
           persistentVolumeClaim:
-            claimName: lockss-cfg-data
+            claimName: lockss-cfg-data-pvc
         - name: lockss-cfg-logs
           persistentVolumeClaim:
-            claimName: lockss-cfg-logs
+            claimName: lockss-cfg-logs-pvc
 status: {}

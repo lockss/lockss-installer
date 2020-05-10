@@ -2,74 +2,81 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    io.kompose.service: lockss-solr
-  name: lockss-solr
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-service
 spec:
   ports:
   - name: "lockss-solr-port"
     port: {{SOLR_PORT}}
     targetPort: {{SOLR_DEFAULT_PORT}}
   selector:
-    io.kompose.service: lockss-solr
+    io.kompose.service: lockss-solr-service
   externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-solr-data
-  name: lockss-solr-data
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
       storage: 100Mi
-status: {}
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-solr-data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-solr-logs
-  name: lockss-solr-logs
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
       storage: 100Mi
-status: {}
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-solr-logs"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    io.kompose.service: lockss-solr
-  name: lockss-solr
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: lockss-solr
+      io.kompose.service: lockss-solr-service
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
         io.kompose.network/lockss-stack-network: "true"
-        io.kompose.service: lockss-solr
+        io.kompose.service: lockss-solr-service
     spec:
       containers:
-      - args:
-        - solr-precreate
-        - lockss-repo
-        - /opt/solr/server/solr/configsets/lockss/v3
+      - command: [{{SOLR_CMD}}]
+        args: [{{SOLR_CORE_REPO}}}, {{SOLR_CONFIGSET}}]
         env:
         - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
-        name: lockss-solr
+        name: lockss-solr-service
         ports:
         - containerPort: {{SOLR_DEFAULT_PORT}}
         resources: {}
@@ -90,8 +97,8 @@ spec:
           secretName: lockss-auth
       - name: lockss-solr-data
         persistentVolumeClaim:
-          claimName: lockss-solr-data
+          claimName: lockss-solr-data-pvc
       - name: lockss-solr-logs
         persistentVolumeClaim:
-          claimName: lockss-solr-logs
+          claimName: lockss-solr-logs-pvc
 status: {}
