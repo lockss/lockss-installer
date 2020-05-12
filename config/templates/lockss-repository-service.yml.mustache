@@ -13,27 +13,8 @@ spec:
     io.kompose.service: lockss-repository-service
   externalTrafficPolicy: Local
   type: NodePort
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  labels:
-    io.kompose.service: lockss-repository-service
-  name: lockss-repo-data-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-  volumeMode: Filesystem
-  resources:
-    requests:
-      storage: 100Mi
-  storageClassName: local-storage
-  selector:
-    matchLabels:
-      usage: "lockss-repo-data"
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -47,11 +28,29 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
   storageClassName: local-storage
   selector:
     matchLabels:
       usage: "lockss-repo-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-repository-service
+  name: lockss-repo-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-repo-data"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -101,24 +100,56 @@ spec:
         ports:
         - containerPort: {{REPO_DEFAULT_REST_PORT}}
         volumeMounts:
+        - mountPath: /run/configs/lockss.properties
+          name: repo-properties
+          subPath: lockss.properties
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: repo-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: repo-service-opt
+          subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
+          subPath: lockss-ui-pass
+          readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
+          subPath: lockss-auth
+          readOnly: true
         - mountPath: /data
           name: lockss-repo-data
         - mountPath: /var/log/lockss
           name: lockss-repo-logs
-        - mountPath: /run/configs/lockss_bootstrap
-          name: lockss-bootstrap
-        - mountPath: /run/configs/lockss_service
-          name: repo-service
-        - mountPath: /run/configs/lockss_service_opt
-          name: repo-service-opt
-        - mountPath: /run/configs/lockss.properties
-          name: repo-properties
       restartPolicy: Always
       volumes:
+      - configMap:
+          items:
+          - key: repo-properties
+            path: lockss.properties
+          name: repo-properties
+        name: repo-properties
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: repo-service
+            path: lockss_service
+          name: repo-service
+        name: repo-service
+      - configMap:
+          items:
+          - key: repo-service-opt
+            path: lockss_service_opt
+          name: repo-service-opt
+        name: repo-service-opt
       - name: lockss-ui-pass
         secret:
           items:
@@ -131,18 +162,6 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
-      - name: lockss-bootstrap
-        hostPath:
-          path: ./lockss_bootstrap
-      - name: repo-service
-        hostPath:
-          path: ./repo-service
-      - name: repo-service-opt
-        hostPath:
-          path: ./repo-service_opt
-      - name: repo-properties
-        hostPath:
-          path: ./repo_properties
       - name: lockss-repo-data
         persistentVolumeClaim:
           claimName: lockss-repo-data-pvc

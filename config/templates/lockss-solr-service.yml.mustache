@@ -13,6 +13,8 @@ spec:
     io.kompose.service: lockss-solr-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -23,14 +25,14 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
-  volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
   storageClassName: local-storage
   selector:
     matchLabels:
       usage: "lockss-solr-data"
+status: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -41,14 +43,14 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
-  volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
   storageClassName: local-storage
   selector:
     matchLabels:
       usage: "lockss-solr-logs"
+status: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -70,8 +72,7 @@ spec:
         io.kompose.service: lockss-solr-service
     spec:
       containers:
-      - command: [{{SOLR_CMD}}]
-        args: [{{SOLR_CORE_REPO}}}, {{SOLR_CONFIGSET}}]
+      - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
         env:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
@@ -83,6 +84,7 @@ spec:
         volumeMounts:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
+          readOnly: true
         - mountPath: /opt/solr/server/solr
           name: lockss-solr-data
         - mountPath: /opt/solr/server/logs
@@ -91,10 +93,10 @@ spec:
       volumes:
       - name: lockss-auth
         secret:
+          secretName: lockss-auth
           items:
           - key: lockss-auth
             path: lockss-auth
-          secretName: lockss-auth
       - name: lockss-solr-data
         persistentVolumeClaim:
           claimName: lockss-solr-data-pvc

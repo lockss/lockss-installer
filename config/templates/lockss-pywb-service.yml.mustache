@@ -13,20 +13,43 @@ spec:
     io.kompose.service: lockss-pywb-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  creationTimestamp: null
   labels:
-    io.kompose.service: lockss-pywb-data
+    io.kompose.service: lockss-pywb-service
   name: lockss-pywb-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-pywb-data"
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-pywb-logs"
 status: {}
 ---
 apiVersion: apps/v1

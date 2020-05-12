@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # deploy-lockss - Collect host system information needed to run a LOCKSS stack
 #
@@ -68,9 +68,9 @@ DOCKER_COMPOSE_FILE="docker-compose.yml"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 #Data
+declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
 declare -a arr deploy_service_names
 declare -a arr svcs
-
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -170,6 +170,7 @@ init_service_arrays() {
 # Check our secrets
 check_installed_secrets() {
   echo "checking installed secrets..."
+
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
@@ -194,13 +195,14 @@ check_installed_network() {
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
+  kubectl config set-context --current --namespace=${stack}
+
   # Source config.info and env.sh
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"
-  kubectl apply -f lockss-namespace.yml
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yml"

@@ -13,7 +13,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-cfg-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-cfg-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -38,7 +38,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-cfg-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-cfg-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -63,7 +63,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-mdq-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-mdq-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -88,7 +88,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-mdq-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-mdq-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -113,7 +113,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-mdx-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-mdx-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -138,7 +138,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-mdx-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-mdx-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -163,7 +163,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-pol-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-pol-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -188,7 +188,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-pol-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-pol-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -213,7 +213,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-postgres-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-postgres-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -238,7 +238,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-postgres-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-postgres-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -263,7 +263,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-pywb-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-pywb-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -288,7 +288,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-pywb-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-pywb-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -313,7 +313,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-repo-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-repo-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -338,7 +338,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-repo-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-repo-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -363,7 +363,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-solr-data
+    path: {{LOCKSS_DATA_DIR}}/{{STACK}}-solr-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -388,7 +388,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_DIR}}/lockss-stack-solr-logs
+    path: {{LOCKSS_LOGS_DIR}}/{{STACK}}-solr-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:

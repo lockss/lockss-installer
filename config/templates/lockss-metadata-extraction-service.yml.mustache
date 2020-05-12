@@ -16,6 +16,8 @@ spec:
     io.kompose.service: lockss-metadata-extraction-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -28,7 +30,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-mdx-data"
 status: {}
 ---
 apiVersion: v1
@@ -42,7 +48,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-mdx-logs"
 status: {}
 ---
 apiVersion: apps/v1
@@ -87,22 +97,47 @@ spec:
         - containerPort: {{MDX_DEFAULT_UI_PORT}}
         resources: {}
         volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: mdx-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: mdx-service-opt
+          subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
+          readOnly: true
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
+          subPath: lockss-ui-pass
+          readOnly: true
         - mountPath: /data
           name: lockss-mdx-data
         - mountPath: /var/log/lockss
           name: lockss-mdx-logs
-        - mountPath: /run/configs/lockss_bootstrap
-          name: lockss-bootstrap
-        - mountPath: /run/configs/lockss_service
-          name: mdx-service
-        - mountPath: /run/configs/lockss_service_opt
-          name: mdx-service-opt
       restartPolicy: Always
       volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: mdx-service
+            path: lockss_service
+          name: mdx-service
+        name: mdx-service
+      - configMap:
+          items:
+          - key: mdx-service-opt
+            path: lockss-service-opt
+          name: mdx-service-opt
+        name: mdx-service-opt
       - name: lockss-postgres-pass
         secret:
           items:
@@ -115,15 +150,6 @@ spec:
           - key: lockss-ui-pass
             path: lockss-ui-pass
           secretName: lockss-ui-pass
-      - name: lockss-bootstrap
-        hostPath:
-          path: ./lockss_bootstrap
-      - name: mdx-service
-        hostPath:
-          path: ./mdx-service
-      - name: mdx-service-opt
-        hostPath:
-          path: ./mdx-service_opt
       - name: lockss-mdx-data
         persistentVolumeClaim:
           claimName: lockss-mdx-data-pvc

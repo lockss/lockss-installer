@@ -96,7 +96,7 @@ Check_LocalPersistPlugin()
 Check_Secret()
 {
   if ! docker secret inspect ${1} &> /dev/null ; then
-    err "${1}: Docker Secret has not been installed."
+   err "${1}: Docker Secret has not been installed."
     err_exit "     Run configure and install scripts."
   fi
 
@@ -120,17 +120,11 @@ Add_Secret()
   fi
 }
 
-Add_Kube_Secret()
-{
-  local NAME="${1}"
-  local VALUE="${2}"
-
-  kubectl create secret generic $NAME --from-literal=$NAME='$VALUE'
-}
 
 Check_Volume()
 {
-    if ! docker volume inspect ${1} &> /dev/null; then
+#    if ! docker volume inspect ${1} &> /dev/null; then
+    if ! kubectl get pv ${1} &> /dev/null ; then
       err "${1}: Docker Volume has not been installed."
       err "${1}: Run lockss-install script."
       exit 1
@@ -140,7 +134,8 @@ Check_Volume()
 
 Check_Config()
 {
-    if ! docker config inspect ${1} &> /dev/null; then
+#    if ! docker config inspect ${1} &> /dev/null; then
+    if ! kubectl get config ${1} &> /dev/null ; then
       err "${1}: Config file is missing. Run configure and install scripts.."
       err "${1}: Run lockss-install script."
       exit 1
@@ -149,7 +144,8 @@ Check_Config()
 
 Check_Network()
 {
-    if ! docker network inspect ${1} &> /dev/null  ; then
+#    if ! docker network inspect ${1} &> /dev/null  ; then
+    if ! kubectl get network ${1} &> /dev/null ; then
       err "${1}: Docker network has not been installed."
       err "${1}: Run lockss-install script."
       exit 1

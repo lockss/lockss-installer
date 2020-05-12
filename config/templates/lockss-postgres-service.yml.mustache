@@ -13,6 +13,8 @@ spec:
     io.kompose.service: lockss-postgres-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -25,7 +27,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-postgres-data"
 status: {}
 ---
 apiVersion: v1
@@ -39,7 +45,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-postgres-logs"
 status: {}
 ---
 apiVersion: apps/v1

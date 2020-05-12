@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #---------------------------------------------------------------------------
 # configure-lockss - Collect host system information needed to run LOCKSS stack(s).
 
@@ -59,6 +59,7 @@ COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+SECRETS_DIR="${CONFIG_DIR}/useropts"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
@@ -159,8 +160,8 @@ configure_services() {
       SHA256=$(echo ${SHA256} | sed 's/ .*$//')
       LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
       POSTGRES_PASS=${P1}
-      Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
-      Add_Kube_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
+#      Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
+      echo -n '${POSTGRES_PASS}' | base64 > "${SECRETS_DIR}"/lockss-postgres-pass
     fi
   done
 
@@ -443,10 +444,10 @@ build_config_file() {
         SHA256=$(echo ${SHA256} | sed 's/ .*$//')
         LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
         UI_PASS=${P1}
-        Add_Secret "lockss-ui-pass" "${UI_PASS}"
-        Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
-        Add_Kube_Secret "lockss-ui-pass" "${UI_PASS}"
-        Add_Kube_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
+#        Add_Secret "lockss-ui-pass" "${UI_PASS}"
+#        Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
+        echo -n "${UI_PASS}"| base64 > "${SECRETS_DIR}"/lockss-ui-pass
+        echo -n "${LOCKSS_ADMIN_USER}:${UI_PASS}" | base64 > "${SECRETS_DIR}"/lockss-auth
       fi
     done
     configure_services

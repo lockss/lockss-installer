@@ -16,6 +16,8 @@ spec:
     io.kompose.service: lockss-metadata-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -28,7 +30,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-mdq-data"
 status: {}
 ---
 apiVersion: v1
@@ -42,7 +48,11 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-mdq-logs"
 status: {}
 ---
 apiVersion: apps/v1
@@ -81,22 +91,32 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: mdq-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: mdq-service-opt
+          subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
+          readOnly: true
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
+          subPath: lockss-ui-pass
+          readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
+          subPath: lockss-auth
+          readOnly: true
         - mountPath: /data
+          subPath: lockss-auth
           name: lockss-mdq-data
         - mountPath: /var/log/lockss
           name: lockss-mdq-logs
-        - mountPath: /run/configs/lockss_bootstrap
-          name: lockss-bootstrap
-        - mountPath: /run/configs/lockss_service
-          name: mdq-service
-        - mountPath: /run/configs/lockss_service_opt
-          name: mdq-service-opt
         image: "{{MDQ_IMG}}:{{MDQ_VERSION}}"
         name: lockss-metadata-service
         ports:
@@ -104,6 +124,24 @@ spec:
         - containerPort: {{MDQ_DEFAULT_UI_PORT}}
       restartPolicy: Always
       volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: mdq-service
+            path: lockss-service
+          name: mdq-service
+        name: mdq-service
+      - configMap:
+          items:
+          - key: mdq-service-opt
+            path: lockss-service-opt
+          name: mdq-service-opt
+        name: mdq-service-opt
       - name: lockss-postgres-pass
         secret:
           items:
@@ -122,15 +160,6 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
-      - name: lockss-bootstrap
-        hostPath:
-          path: ./lockss_bootstrap
-      - name: mdq-service
-        hostPath:
-          path: ./mdq-service
-      - name: mdq-service-opt
-        hostPath:
-          path: ./mdq-service_opt
       - name: lockss-mdq-data
         persistentVolumeClaim:
           claimName: lockss-mdq-data-pvc

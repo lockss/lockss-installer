@@ -31,24 +31,8 @@ spec:
     io.kompose.service: lockss-poller-service
   externalTrafficPolicy: Local
   type: NodePort
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  labels:
-    io.kompose.service: lockss-poller-service
-  name: lockss-pol-data-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  volumeMode: Filesystem
-  resources:
-    requests:
-      storage: 100Mi
-  storageClassName: local-storage
-  selector:
-    matchLabels:
-      usage: "lockss-pol-data"
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -62,11 +46,29 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
+      storage: 10Mi
   storageClassName: local-storage
   selector:
     matchLabels:
       usage: "lockss-pol-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: lockss-poller-service
+  name: lockss-pol-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-pol-data"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -103,22 +105,8 @@ spec:
           value: "{{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
-        volumeMounts:
-        - mountPath: /run/secrets/lockss-ui-pass
-          name: lockss-ui-pass
-        - mountPath: /run/secrets/lockss-auth
-          name: lockss-auth
-        - mountPath: /data
-          name: lockss-pol-data
-        - mountPath: /var/log/lockss
-          name: lockss-pol-logs
-        - mountPath: /run/configs/lockss_bootstrap
-          name: lockss-bootstrap
-        - mountPath: /run/configs/lockss_service
-          name: pol-service
-        - mountPath: /run/configs/lockss_service_opt
-          name: pol-service-opt
         image: {{POL_IMG}}:{{POL_VERSION}}
+        imagePullPolicy: ""
         name: lockss-poller-service
         ports:
         - containerPort: {{POL_DEFAULT_REST_PORT}}
@@ -130,8 +118,48 @@ spec:
         - containerPort: {{LOCKSS_ICP_PORT}}
           protocol: UDP
         resources: {}
-     restartPolicy: Always
-     volumes:
+        volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: pol-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: pol-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss-ui-pass
+          name: lockss-ui-pass
+          subPath: lockss-ui-pass
+          readOnly: true
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+          readOnly: true
+        - mountPath: /data
+          name: lockss-pol-data
+        - mountPath: /var/log/lockss
+          name: lockss-pol-logs
+      restartPolicy: Always
+      volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: pol-service
+            path: lockss_service
+          name: pol-service
+        name: pol-service
+      - configMap:
+          items:
+          - key: pol-service-opt
+            path: lockss-service-opt
+          name: pol-service-opt
+        name: pol-service-opt
       - name: lockss-ui-pass
         secret:
           items:
@@ -144,15 +172,6 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
-      - name: lockss-bootstrap
-        hostPath:
-          path: lockss_bootstrap
-      - name: pol-service
-        hostPath:
-          path: pol-service
-      - name: pol-service-opt
-        hostPath:
-          path: pol-service_opt
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data-pvc

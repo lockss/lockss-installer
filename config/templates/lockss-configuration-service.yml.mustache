@@ -22,6 +22,8 @@ spec:
     io.kompose.service: lockss-configuration-service
   externalTrafficPolicy: Local
   type: NodePort
+status:
+  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,10 +34,14 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
-status: {}
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-cfg-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -46,10 +52,14 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
+  volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
-status: {}
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      usage: "lockss-cfg-data"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,26 +95,34 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: cfg-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: cfg-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/configs/lockss_cluster
+          name: lockss-cluster
+          subPath: lockss_cluster
+        - mountPath: /run/configs/lockss_cluster_opt
+          name: lockss-cluster-opt
+          subPath: lockss_cluster_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
+          subPath: lockss-ui-pass
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
+          subPath: lockss-auth
         - mountPath: /data
           name: lockss-cfg-data
         - mountPath: /var/log/lockss
           name: lockss-cfg-logs
-        - mountPath: /run/configs/lockss_bootstrap
-          name: lockss-bootstrap
-        - mountPath: /run/configs/lockss_service
-          name: cfg-service
-        - mountPath: /run/configs/lockss_service_opt
-          name: cfg-service-opt
-        - mountPath: /run/configs/lockss_cluster
-          name: lockss-cluster
-        - mountPath: /run/configs/lockss_cluster_opt
-          name: lockss-cluster-opt
         image: {{CFG_IMG}}:{{CFG_VERSION}}
         name: lockss-configuration-service
         ports:
@@ -113,43 +131,58 @@ spec:
         - containerPort: {{JMS_DEFAULT_PORT}}
       restartPolicy: Always
       volumes:
-        - name: lockss-postgres-pass
-          secret:
-            items:
-            - key: lockss-postgres-pass
-              path: lockss-postgres-pass
-            secretName: lockss-postgres-pass
-        - name: lockss-ui-pass
-          secret:
-            items:
-            - key: lockss-ui-pass
-              path: lockss-ui-pass
-            secretName: lockss-ui-pass
-        - name: lockss-auth
-          secret:
-            items:
-            - key: lockss-auth
-              path: lockss-auth
-            secretName: lockss-auth
-        - name: lockss-bootstrap
-          hostPath:
-            path: ./lockss_bootstrap
-        - name: cfg-service
-          hostPath:
-            path: ./cfg-service
-        - name: cfg-service-opt
-          hostPath:
-            path: ./cfg-service_opt
-        - name: lockss-cluster
-          hostPath:
-            path: ./lockss-cluster
-        - name: lockss-cluster-opt
-          hostPath:
-            path: ./lockss-cluster_opt
-        - name: lockss-cfg-data
-          persistentVolumeClaim:
-            claimName: lockss-cfg-data-pvc
-        - name: lockss-cfg-logs
-          persistentVolumeClaim:
-            claimName: lockss-cfg-logs-pvc
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: cfg-service
+            path: lockss_service
+          name: cfg-service
+        name: cfg-service
+      - configMap:
+          items:
+          - key: cfg-service-opt
+            path: lockss_service-opt
+          name: cfg-service-opt
+        name: cfg-service-opt
+      - configMap:
+          items:
+          - key: lockss-cluster
+            path: lockss_cluster
+          name: lockss-cluster
+        name: lockss-cluster
+      - configMap:
+          items:
+          - key: lockss-cluster-opt
+            path: lockss_cluster-opt
+          name: lockss-cluster-opt
+        name: lockss-cluster-opt
+      - name: lockss-postgres-pass
+        secret:
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
+          secretName: lockss-postgres-pass
+      - name: lockss-ui-pass
+        secret:
+          items:
+          - key: lockss-ui-pass
+            path: lockss-ui-pass
+          secretName: lockss-ui-pass
+      - name: lockss-auth
+        secret:
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+          secretName: lockss-auth
+      - name: lockss-cfg-data
+        persistentVolumeClaim:
+          claimName: lockss-cfg-data-pvc
+      - name: lockss-cfg-logs
+        persistentVolumeClaim:
+          claimName: lockss-cfg-logs-pvc
 status: {}
