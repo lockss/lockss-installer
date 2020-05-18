@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-metadata-service
   name: lockss-metadata-service
 spec:
@@ -23,6 +24,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-metadata-service
   name: lockss-mdq-data-pvc
 spec:
@@ -30,17 +32,18 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-mdq-data"
+      owner: "lockss-mdq-data"
 status: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-metadata-service
   name: lockss-mdq-logs-pvc
 spec:
@@ -48,17 +51,18 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-mdq-logs"
+      owner: "lockss-mdq-logs"
 status: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-metadata-service
   name: lockss-metadata-service
 spec:

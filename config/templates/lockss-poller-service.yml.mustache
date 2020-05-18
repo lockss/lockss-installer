@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-poller-service
   name: lockss-poller-service
 spec:
@@ -38,6 +39,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-poller-service
   name: lockss-pol-logs-pvc
 spec:
@@ -46,11 +48,11 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-pol-logs"
+      owner: "lockss-pol-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -64,16 +66,17 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-pol-data"
+      owner: "lockss-pol-data"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-poller-service
   name: lockss-poller-service
 spec:
@@ -86,6 +89,7 @@ spec:
   template:
     metadata:
       labels:
+        app: lockss
         io.kompose.network/lockss-stack-network: "true"
         io.kompose.service: lockss-poller-service
     spec:

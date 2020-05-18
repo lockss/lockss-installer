@@ -3,7 +3,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-cfg-data-pv
   labels:
-    usage: lockss-cfg-data
+    type: hostPath
+    app: lockss
+    owner: lockss-cfg-data
 spec:
   capacity:
     storage: 5Gi
@@ -28,7 +30,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-cfg-logs-pv
   labels:
-    usage: lockss-cfg-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-cfg-logs
 spec:
   capacity:
     storage: 5Gi
@@ -53,7 +57,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-mdq-data-pv
   labels:
-    usage: lockss-mdq-data
+    type: hostPath
+    app: lockss
+    owner: lockss-mdq-data
 spec:
   capacity:
     storage: 5Gi
@@ -78,7 +84,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-mdq-logs-pv
   labels:
-    usage: lockss-mdq-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-mdq-logs
 spec:
   capacity:
     storage: 5Gi
@@ -103,7 +111,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-mdx-data-pv
   labels:
-    usage: lockss-mdx-data
+    type: hostPath
+    app: lockss
+    owner: lockss-mdx-data
 spec:
   capacity:
     storage: 5Gi
@@ -128,7 +138,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-mdx-logs-pv
   labels:
-    usage: lockss-mdx-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-mdx-logs
 spec:
   capacity:
     storage: 5Gi
@@ -153,7 +165,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-pol-data-pv
   labels:
-    usage: lockss-pol-data
+    type: hostPath
+    app: lockss
+    owner: lockss-pol-data
 spec:
   capacity:
     storage: 5Gi
@@ -178,7 +192,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-pol-logs-pv
   labels:
-    usage: lockss-pol-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-pol-logs
 spec:
   capacity:
     storage: 5Gi
@@ -203,7 +219,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-postgres-data-pv
   labels:
-    usage: lockss-postgres-data
+    type: hostPath
+    app: lockss
+    owner: lockss-postgres-data
 spec:
   capacity:
     storage: 5Gi
@@ -228,7 +246,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-postgres-logs-pv
   labels:
-    usage: lockss-postgres-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-postgres-logs
 spec:
   capacity:
     storage: 5Gi
@@ -253,7 +273,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-pywb-data-pv
   labels:
-    usage: lockss-pywb-data
+    type: hostPath
+    app: lockss
+    owner: lockss-pywb-data
 spec:
   capacity:
     storage: 5Gi
@@ -278,7 +300,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-pywb-logs-pv
   labels:
-    usage: lockss-pywb-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-pywb-logs
 spec:
   capacity:
     storage: 5Gi
@@ -303,7 +327,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-repo-data-pv
   labels:
-    usage: lockss-repo-data
+    type: hostPath
+    app: lockss
+    owner: lockss-repo-data
 spec:
   capacity:
     storage: 5Gi
@@ -328,7 +354,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-repo-logs-pv
   labels:
-    usage: lockss-repo-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-repo-logs
 spec:
   capacity:
     storage: 5Gi
@@ -353,7 +381,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-solr-data-pv
   labels:
-    usage: lockss-solr-data
+    type: hostPath
+    app: lockss
+    owner: lockss-solr-data
 spec:
   capacity:
     storage: 5Gi
@@ -378,7 +408,9 @@ kind: PersistentVolume
 metadata:
   name: lockss-solr-logs-pv
   labels:
-    usage: lockss-solr-logs
+    type: hostPath
+    app: lockss
+    owner: lockss-solr-logs
 spec:
   capacity:
     storage: 5Gi

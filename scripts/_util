@@ -47,12 +47,19 @@ msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
 }
 
+#Check_Runnable()
+#{
+#  Check_Installed 'docker'
+#  Check_Docker
+#  Check_Swarm
+#  Check_LocalPersistPlugin
+#}
 Check_Runnable()
 {
-  Check_Installed 'docker'
-  Check_Docker
-  Check_Swarm
-  Check_LocalPersistPlugin
+  Check_Installed 'minikube'
+  if ! minikube status | grep "Running" ; then
+    err_exit "minikube is not running.Please run `minikube start`"
+  fi
 }
 
 ##

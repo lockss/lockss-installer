@@ -150,7 +150,6 @@ Check_Physical_Volumes() {
 add_stack_volumes()
 {
   echo "skipping volumes..."
-  #kubectl apply -f lockss-persistent-volumes.yml
   local stack=$1
   for svc in "${svcs[@]}"
   do
@@ -159,6 +158,11 @@ add_stack_volumes()
     init_one_dir ${LOCKSS_LOGS_DIR}/$stack-${svc}-logs ${LOCKSS_USER}
   done
   kubectl apply -f lockss-persistent-volumes.yml
+}
+
+init_minikube() {
+  minikube start
+  kubectl patch deployment nginx-ingress-controller --patch "$(cat nginx-ingress-controller-patch.yaml)" -n kube-system
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -294,8 +298,8 @@ assemble_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack"
   add_stack_shared $stack
   add_stack_volumes $stack
-  check_stack_solr $stack
   add_stack_configs ${stack}
+  check_stack_solr $stack
   popd &>/dev/null
 }
 
@@ -341,6 +345,8 @@ fi
 #Check_Runnable
 #Check_Physical_Volumes
 
+init_minikube
+
 init_service_arrays
 
 if [ ${NUM_STACKS} -eq 0 ]; then
@@ -358,7 +364,7 @@ else
 fi
 
 msg ""
-msg "Successfully installed volumes and networks."
+msg "Successfully installed."
 msg ""
 msg "Run deploy-lockss to deploy the assembled stacks."
 

@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-configuration-service
   name: lockss-configuration-service
 spec:
@@ -29,6 +30,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-configuration-service
   name: lockss-cfg-logs-pvc
 spec:
@@ -37,16 +39,17 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-cfg-logs"
+      owner: "lockss-cfg-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-configuration-service
   name: lockss-cfg-data-pvc
 spec:
@@ -55,16 +58,17 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 10Mi
+      storage: 1Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      usage: "lockss-cfg-data"
+      owner: "lockss-cfg-data"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app: lockss
     io.kompose.service: lockss-configuration-service
   name: lockss-configuration-service
 spec:

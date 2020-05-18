@@ -64,7 +64,7 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
-STORAGE_CLASS="${CONFIG_DIR}/local-storage.yaml"
+STORAGE_CLASS="${CONFIG_DIR}/local-storageA.yaml"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
@@ -73,6 +73,7 @@ PORT_BASE=245
 
 # Variables
 declare -i STACK_COUNT=1
+declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 clean_up() { # Perform pre-exit housekeeping
   return
