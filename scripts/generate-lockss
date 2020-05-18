@@ -64,9 +64,10 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
-STORAGE_CLASS="${CONFIG_DIR}/local-storageA.yaml"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+INGRESS_PATCH_FILE="nginx-ingress-controller-patch.yaml"
+STORAGE_CLASS_FILE="local-storage.yaml"
 
 STACK_PREFIX="lockss-stack"
 PORT_BASE=245
@@ -179,7 +180,9 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   set -a
   . "${stack_env_file}"
   set +a
-  cp "${LOCAL_STORAGE}" "${STACK_CONFIG_DIR}/"
+
+  cp "${CONFIG_DIR}/${STORAGE_CLASS}" "${STACK_CONFIG_DIR}/${STORAGE_CLASS}"
+
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
   #msg "${PROGNAME}:  Generating stack docker-compose file..."
