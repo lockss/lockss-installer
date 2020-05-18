@@ -160,9 +160,12 @@ add_stack_volumes()
   kubectl apply -f lockss-persistent-volumes.yml
 }
 
-init_minikube() {
+start_minikube() {
+  minikube config set driver docker
   minikube start
-  kubectl patch deployment nginx-ingress-controller --patch "$(cat nginx-ingress-controller-patch.yaml)" -n kube-system
+  minikube addons enable ingress
+  minikube mount "${LOCKSS_DATA_DIR}":"/data/${LOCKSS_DATA_DIR}" &
+  minikube mount "${LOCKSS_LOGS_DIR}":"/data/${LOCKSS_LOGS_DIR}" &
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -244,11 +247,14 @@ add_stack_shared() {
   fi
   msg "setting namespace in context..."
   kubectl config set-context --current --namespace=${stack}
+
   kubectl delete pods,services,configmaps,secrets --all
   msg "adding storage class: local-storage"
   kubectl apply -f local-storage.yaml
   msg "adding networkpolicy..."
   kubectl apply -f lockss-networkpolicy.yml
+  msg "patching ingress ports..."
+  kubectl patch deployment nginx-ingress-controller --patch "$(cat nginx-ingress-controller-patch.yml)
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     if ! kubectl create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"; then
@@ -344,8 +350,6 @@ fi
 # Sanity checks
 #Check_Runnable
 #Check_Physical_Volumes
-
-#init_minikube
 
 init_service_arrays
 
