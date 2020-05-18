@@ -345,7 +345,7 @@ fi
 #Check_Runnable
 #Check_Physical_Volumes
 
-init_minikube
+#init_minikube
 
 init_service_arrays
 
