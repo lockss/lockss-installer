@@ -243,6 +243,8 @@ LOCKSS_PROPS_PROXY="${LOCKSS_PROPS_PROXY}"
 LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}"
 LOCKSS_PRESERVATION_GROUP="${LOCKSS_PRESERVATION_GROUP}"
 LOCKSS_DATA_DIR="${LOCKSS_DATA_DIR}"
+LOCKSS_REPO_HOST_DIRS="${LOCKSS_REPO_HOST_DIRS}"
+LOCKSS_REPO_CONTAINER_DIRS="${LOCKSS_REPO_CONTAINER_DIRS}"
 LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
 LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
 LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
@@ -404,12 +406,46 @@ build_config_file() {
     LOCKSS_PRESERVATION_GROUP="${ANS}"
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Content data storage directory" ${LOCKSS_DATA_DIR}
+      ask_for_input "Primary content data storage directory" ${LOCKSS_DATA_DIR}
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="${ANS}"
         DATA_PATHS_OK=Y
       fi
     done
+    USE_MULTIPLE_CACHES=false
+    if [ "X${LOCKSS_REPO_HOST_DIRS}" != X ]; then
+     IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+     if test ${#prevPaths[*]} -gt 1; then
+      USE_MULTIPLE_CACHES=true
+     fi
+    fi
+    prevPaths[0]=${LOCKSS_DATA_DIR}
+    curPaths[0]=${LOCKSS_DATA_DIR}
+    repoDirs[0]="/data"
+    ask_for_input "Use additional directories for content storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
+    if is_yes "${ANS}"; then
+      count=1
+      until is_yes "${done}"; do
+        ask_for_input "Enter path to additional content storage directory $count (q to quit)" ${prevPaths[count]}
+        if [ "X${ANS}" = Xq ]; then
+          done=Y
+        else
+          curPaths[count]=${ANS}
+          repoDirs[count]="/data$count"
+          count=$((count+1))
+        fi
+      done
+      new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
+      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "Run repo cache updater."
+      LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
+      LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
+    else
+      if test ${#prevPaths[*]} -gt 1; then
+        echo "Run repo cache updater."
+      fi
+      LOCKSS_REPO_CONTAINER_DIRS="/data"
+      LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
+    fi
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
       ask_for_input "Service logs directory" ${LOCKSS_LOGS_DIR}
@@ -471,6 +507,13 @@ build_config_file() {
       if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
         exit 1
       fi
+      echo "Checking additional content storage directories..."
+      for dir in "${curPaths[@]}"
+      do
+        if ! init_one_dir ${dir} $2; then
+          err "${dir} cannot be created or written by $2.  Please fix permissions."
+        fi
+      done
       rm -f ${TMP_CONFIG}
       echo Done
       CONFIG_OK=Y

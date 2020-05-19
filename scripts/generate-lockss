@@ -66,7 +66,6 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-INGRESS_PATCH_FILE="nginx-ingress-controller-patch.yaml"
 STORAGE_CLASS_FILE="local-storage.yaml"
 
 STACK_PREFIX="lockss-stack"
@@ -172,20 +171,31 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   stack_env_file="${STACK_CONFIG_DIR}/env.sh"
   stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
 
-  echo "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
+  msg "${PROGNAME}: Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
   mkdir -p "${STACK_CONFIG_DIR}"
 
-  echo "generate the stack env.sh file..."
+  msg "${PROGNAME}: Generating the stack env.sh file..."
   mo "${ENV_TMPL}" > "${stack_env_file}"
   set -a
   . "${stack_env_file}"
   set +a
 
-  cp "${CONFIG_DIR}/${STORAGE_CLASS}" "${STACK_CONFIG_DIR}/${STORAGE_CLASS}"
+  cp "${CONFIG_DIR}/${STORAGE_CLASS_FILE}" "${STACK_CONFIG_DIR}/${STORAGE_CLASS_FILE}"
 
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
-  #msg "${PROGNAME}:  Generating stack docker-compose file..."
+  declare -a REPO_NUMS
+  declare -a REPO_DATA_MAP
+  REPO_NUMS[0]=""
+  REPO_DATA_MAP[0]="lockss-repo-data:/data"
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
+  len=${#datadirs[@]}
+  for (( count=1; count<$len; count++ )); do
+    REPO_NUMS[${count}]="$count"
+    REPO_DATA_MAP[${count}]="lockss-repo-data${count}:/data${count}"
+  done
+  export REPO_DATA_MAP
+  export REPO_NUMS
   #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
   #add the lockss config file templates
