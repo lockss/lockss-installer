@@ -149,45 +149,22 @@ Check_Physical_Volumes() {
   fi
 }
 
-# Create a mount points for each stack
-add_stack_volumes() {
-  local stack=$1
-  for svc in "${svcs[@]}"; do
-    echo "creating docker data and log volumes for $stack-${svc}..."
-    docker volume remove $stack-${svc}-data $stack-${svc}-logs &>/dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data; then
-      error_exit "${_0}: error creating volume $stack-${svc}-data"
-    fi
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs; then
-      error_exit "${_0}: error creating volume $stack-${svc}-logs"
-    fi
-  done
-  add_additional_stack_volumes $stack
-  kubectl apply -f lockss-persistent-volumes.yml
-
-}
-
-add_additional_stack_volumes() {
-  local stack=$1
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  count=1
-  for count in "${!datadirs[@]}"; do
-    mtpoint=${datadirs[$count]}/$stack-repo-data
-    mtname=$stack-repo-data${count}
-    echo "creating additional docker data volumes for $stack-repo.."
-    docker volume remove $mtname &>/dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${mtpoint} --name=${mtname}; then
-      error_exit "${_0}: error creating volume ${mtname} for ${mtpoint};"
-    fi
-  done
-}
-
 start_minikube() {
   minikube config set driver docker
   minikube start
-  minikube addons enable ingress
-#  minikube mount "/var/lib/docker":"/var/lib/docker" &
-#  minikube mount "${LOCKSS_LOGS_DIR}":"/data/${LOCKSS_LOGS_DIR}" &
+  if ! kubectl get namespace lockss; then
+    kubectl create namespace lockss
+  fi
+  kubectl config set-context --current --namespace="lockss"
+#  minikube addons enable ingress
+  minikube mount "${LOCKSS_DATA_DIR}":"/data${LOCKSS_DATA_DIR}" &
+  minikube mount "${LOCKSS_LOGS_DIR}":"/data${LOCKSS_LOGS_DIR}" &
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
+  count=1
+  for count in "${!datadirs[@]}"; do
+    minikube mount "${datadirs[$count]}": "/data${datadirs[$count]}"
+    count=$count+1
+  done
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -262,23 +239,21 @@ add_stack_configs() {
 # Add shared stack elements
 add_stack_shared() {
   local stack=$1
-
-  msg "Checking for namespace ${stack}..."
-  if ! kubectl get namespace ${stack}; then
-    kubectl create namespace ${stack}
-  fi
-  msg "setting namespace in context..."
-  kubectl config set-context --current --namespace=${stack}
-
-  kubectl delete pods,services,configmaps,secrets,pvc --all
-  msg "adding storage class: local-storage"
-  kubectl apply -f local-storage.yaml
-  msg "adding network policy..."
-  kubectl apply -f lockss-networkpolicy.yml
-  msg "patching ingress ports..."
-  kubectl patch deployment nginx-ingress-controller --patch "$(cat ${INGRESS_PATCH_FILE})"
+  mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
+  msg "clearing old deployments and configmaps..."
+  echo kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
+  echo kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
+  msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
+  kubectl apply -f "${mk_dir}/local-storage.yaml"
+  msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
+  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
+  #  msg "patching ingress ports..."
+  #  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+  #  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+  #  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
+    msg "adding ${sec}"
     if ! kubectl create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"; then
       error_exit "${_0}: unable to create secret ${sec}"
     fi
@@ -313,6 +288,38 @@ check_stack_solr() {
     sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
       error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
   fi
+}
+
+# Create a mount points for each stack
+add_stack_volumes() {
+  local stack=$1
+  for svc in "${svcs[@]}"; do
+    echo "creating docker data and log volumes for $stack-${svc}..."
+    docker volume remove $stack-${svc}-data $stack-${svc}-logs &>/dev/null
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data; then
+      error_exit "${_0}: error creating volume $stack-${svc}-data"
+    fi
+    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs; then
+      error_exit "${_0}: error creating volume $stack-${svc}-logs"
+    fi
+  done
+  add_additional_stack_volumes $stack
+  kubectl apply -f mk/lockss-persistent-volumes.yaml
+}
+
+add_additional_stack_volumes() {
+  local stack=$1
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
+  count=1
+  msg "creating additional data volumes for $stack-repository-service..."
+  for count in "${!datadirs[@]}"; do
+    mtpoint=${datadirs[$count]}/$stack-repo-data
+    mtname=$stack-repo-data${count}
+    docker volume remove mtname &>/dev/null
+    if ! docker volume create -d local-persist -o mountpoint=${mtpont} --name=${mtname}; then
+      error_exit "${_0}: error creating volume ${mtname}"
+    fi
+  done
 }
 
 assemble_stack() {

@@ -5,6 +5,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-cfg-data
 spec:
   capacity:
@@ -15,7 +16,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-cfg-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-cfg-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -32,6 +33,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-cfg-logs
 spec:
   capacity:
@@ -42,7 +44,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-cfg-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-cfg-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -59,6 +61,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-mdq-data
 spec:
   capacity:
@@ -69,7 +72,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-mdq-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-mdq-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -86,6 +89,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-mdq-logs
 spec:
   capacity:
@@ -96,7 +100,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-mdq-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-mdq-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -113,6 +117,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-mdx-data
 spec:
   capacity:
@@ -123,7 +128,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-mdx-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-mdx-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -140,6 +145,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-mdx-logs
 spec:
   capacity:
@@ -150,7 +156,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-mdx-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-mdx-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -167,6 +173,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-pol-data
 spec:
   capacity:
@@ -177,7 +184,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-pol-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-pol-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -194,6 +201,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-pol-logs
 spec:
   capacity:
@@ -204,7 +212,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-pol-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-pol-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -221,6 +229,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-postgres-data
 spec:
   capacity:
@@ -231,7 +240,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-postgres-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-postgres-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -248,6 +257,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-postgres-logs
 spec:
   capacity:
@@ -258,7 +268,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-postgres-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-postgres-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -275,6 +285,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-pywb-data
 spec:
   capacity:
@@ -285,7 +296,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-pywb-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-pywb-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -302,6 +313,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-pywb-logs
 spec:
   capacity:
@@ -312,7 +324,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-pywb-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-pywb-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -329,6 +341,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-repo-data
 spec:
   capacity:
@@ -339,7 +352,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-repo-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-repo-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -356,6 +369,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-repo-logs
 spec:
   capacity:
@@ -366,7 +380,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-repo-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-repo-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -383,6 +397,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-solr-data
 spec:
   capacity:
@@ -393,7 +408,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_DATA_ROOT}}/{{STACK}}-solr-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-solr-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -410,6 +425,7 @@ metadata:
   labels:
     type: hostPath
     app: lockss
+    lockss-stack-id: {{STACK}}
     owner: lockss-solr-logs
 spec:
   capacity:
@@ -420,7 +436,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{LOCKSS_LOGS_ROOT}}/{{STACK}}-solr-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-solr-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:

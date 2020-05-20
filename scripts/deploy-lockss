@@ -57,7 +57,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
@@ -68,9 +68,9 @@ DOCKER_COMPOSE_FILE="docker-compose.yml"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 #Data
-declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo_properties")
 declare -a arr deploy_service_names
 declare -a arr svcs
+declare -a arr port_maps
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -128,6 +128,7 @@ init_service_arrays() {
   if ${USE_LOCKSS_CFG}; then
     svcs+=("cfg")
     deploy_service_names+=("lockss-configuration-service")
+    port_maps=
   fi
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
@@ -170,12 +171,10 @@ init_service_arrays() {
 # Check our secrets
 check_installed_secrets() {
   echo "checking installed secrets..."
-
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
 }
-
 
 check_installed_volumes() {
   local stack=$1
@@ -195,17 +194,20 @@ check_installed_network() {
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-  kubectl config set-context --current --namespace=${stack}
 
   # Source config.info and env.sh
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   pushd . &>/dev/null
-  cd "${DOCKER_CONFIGS_DIR}/$stack"
+  cd "${DOCKER_CONFIGS_DIR}/$stack/svcs"
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yml"
+  done
+  for ((i = 0; i < ${#svcs[@]}; i++)); do
+    echo "Opening local access for ${deploy_service_names[i]}"
+    kubectl port-forward --address 0.0.0.0 "deploy/${deploy_service_names[i]}" "${port_maps[i]}"
   done
   popd &>/dev/null
 }

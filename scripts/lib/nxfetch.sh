@@ -12,7 +12,7 @@ usage()
 {
 cat <<EOF
 
-owner: $0 options
+usage: $0 options
 
 This script will fetch an artifact from a Nexus server using the Nexus REST redirect service.
 

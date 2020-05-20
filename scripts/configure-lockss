@@ -90,17 +90,7 @@ configure_services() {
     USE_LOCKSS_MDX=false
   fi
   #check repository service
-  # right now we require a lockss repository and do minimal configuration
-  # this will change when we support multiple repositories
-  #    if [ "X${USE_LOCKSS_REPO}" = X ]; then
   USE_LOCKSS_REPO=true
-  #    fi
-  #    ask_for_input "Use LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_REPO})
-  #    if is_yes "${ANS}"; then
-  #        USE_LOCKSS_REPO=true
-  #    else
-  #        USE_LOCKSS_REPO=false
-  #    fi
   #check postgres service
   if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
     USE_LOCKSS_POSTGRES=true
@@ -576,10 +566,7 @@ fi
 case "${1}" in
 '') CONFIG_COUNT=1 ;;
 [1-9]) CONFIG_COUNT="${1}" ;;
-*)
-  echo "$(date) Invalid number of parallel stacks: ${1}"
-  exit 1
-  ;;
+  *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
 #build config file

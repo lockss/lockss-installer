@@ -57,11 +57,13 @@ _D0=$(dirname "${0}")
 # Directories
 COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
+
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
-
+SERVICES_DIR="${TEMPLATES_DIR}/svcs"
+MK_DIR="${TEMPLATES_DIR}/mk"
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
@@ -180,7 +182,6 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   . "${stack_env_file}"
   set +a
 
-  cp "${CONFIG_DIR}/${STORAGE_CLASS_FILE}" "${STACK_CONFIG_DIR}/${STORAGE_CLASS_FILE}"
 
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
@@ -197,9 +198,27 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   export REPO_DATA_MAP
   export REPO_NUMS
   #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
+  #add the service deployments
+  mkdir "${STACK_CONFIG_DIR}/svcs"
+  for f in ${SERVICES_DIR}/*.mustache ; do
+    src="${f}"
+    dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
+    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    mo "${src}" > "${dst}"
+  done
+  #add the minikube custom elements
+  mk_dst="${STACK_CONFIG_DIR}/mk"
+  mkdir "${mk_dst}"
+  cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+  for f in ${MK_DIR}/*.mustache ; do
+    src="${f}"
+    dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
+    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    mo "${src}" > "${dst}"
+  done
 
   #add the lockss config file templates
-  for f in ${CONFIG_DIR}/templates/*.mustache ; do
+  for f in ${TEMPLATES_DIR}/*.mustache ; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."

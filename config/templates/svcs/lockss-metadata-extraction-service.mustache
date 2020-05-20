@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-extraction-service
   name: lockss-metadata-extraction-service
 spec:
@@ -25,6 +26,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-extraction-service
   name: lockss-mdx-data-pvc
 spec:
@@ -44,6 +46,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-extraction-service
   name: lockss-mdx-logs-pvc
 spec:
@@ -63,6 +66,7 @@ kind: Deployment
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-extraction-service
   name: lockss-metadata-extraction-service
 spec:
@@ -76,7 +80,8 @@ spec:
     metadata:
       labels:
         app: lockss
-        io.kompose.network/lockss-stack-network: "true"
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-metadata-extraction-service
     spec:
       containers:

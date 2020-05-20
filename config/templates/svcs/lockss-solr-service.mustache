@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
   name: lockss-solr-service
 spec:
@@ -22,6 +23,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
   name: lockss-solr-data-pvc
 spec:
@@ -41,6 +43,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
   name: lockss-solr-logs-pvc
 spec:
@@ -60,6 +63,7 @@ kind: Deployment
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
   name: lockss-solr-service
 spec:
@@ -73,7 +77,8 @@ spec:
     metadata:
       labels:
         app: lockss
-        io.kompose.network/lockss-stack-network: "true"
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-solr-service
     spec:
       containers:

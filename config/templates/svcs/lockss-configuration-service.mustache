@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-configuration-service
   name: lockss-configuration-service
 spec:
@@ -31,6 +32,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-configuration-service
   name: lockss-cfg-logs-pvc
 spec:
@@ -50,6 +52,7 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-configuration-service
   name: lockss-cfg-data-pvc
 spec:
@@ -69,6 +72,7 @@ kind: Deployment
 metadata:
   labels:
     app: lockss
+    lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-configuration-service
   name: lockss-configuration-service
 spec:
@@ -81,8 +85,9 @@ spec:
   template:
     metadata:
       labels:
-        io.kompose.network/lockss-stack-network: "true"
+        io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-configuration-service
+        lockss-stack-id: {{STACK}}
     spec:
       containers:
       - env:

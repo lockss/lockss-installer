@@ -3,33 +3,16 @@ kind: Service
 metadata:
   labels:
     app: lockss
-    io.kompose.service: lockss-poller-service
-  name: lockss-poller-service
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-repository-service
+  name: lockss-repository-service
 spec:
   ports:
-  - name: "lockss-pol-service-rest-port"
-    port: {{POL_REST_PORT}}
-    targetPort: {{POL_DEFAULT_REST_PORT}}
-  - name: "lockss-pol-service-ui-port"
-    port: {{POL_UI_PORT}}
-    targetPort: {{POL_DEFAULT_UI_PORT}}
-  - name: "lockss-lcap-port"
-    port: {{LOCKSS_LCAP_PORT}}
-    targetPort: {{LOCKSS_LCAP_PORT}}
-  - name: "lockss-servecontent-port"
-    port: {{SERV_PORT}}
-    targetPort: {{SERV_DEFAULT_PORT}}
-  - name: "lockss-proxy-port"
-    port: {{LOCKSS_PROXY_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
-  - name: "lockss-audit-port"
-    port: {{LOCKSS_AUDIT_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
-  - name: "lockss-icp-port"
-    port: {{LOCKSS_ICP_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
+  - name: "lockss-repo-rest-port"
+    port: {{REPO_REST_PORT}}
+    targetPort: {{REPO_DEFAULT_REST_PORT}}
   selector:
-    io.kompose.service: lockss-poller-service
+    io.kompose.service: lockss-repository-service
   externalTrafficPolicy: Local
   type: NodePort
 status:
@@ -40,26 +23,30 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: lockss
-    io.kompose.service: lockss-poller-service
-  name: lockss-pol-logs-pvc
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-repository-service
+  name: lockss-repo-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 1Mi
+      storage: 10Mi
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-pol-logs"
+      owner: "lockss-repo-logs"
 ---
+{{#REPO_NUMS}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: lockss-poller-service
-  name: lockss-pol-data-pvc
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-repository-service
+  name: lockss-repo-data{{.}}-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -70,28 +57,31 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-pol-data"
+      owner: "lockss-repo-data{{.}}"
 ---
+{{/REPO_NUMS}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: lockss
-    io.kompose.service: lockss-poller-service
-  name: lockss-poller-service
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-repository-service
+  name: lockss-repository-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: lockss-poller-service
+      io.kompose.service: lockss-repository-service
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
         app: lockss
-        io.kompose.network/lockss-stack-network: "true"
-        io.kompose.service: lockss-poller-service
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-repository-service
     spec:
       containers:
       - env:
@@ -101,36 +91,38 @@ spec:
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
           value: {{CFG_URL}}
+        - name: LOCKSS_IS_REPO
+          value: "true"
+        - name: LOCKSS_JMS_HOST
+          value: "{{JMS_HOST}}"
+        - name: LOCKSS_JMS_PORT
+          value: "{{JMS_DEFAULT_PORT}}"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
-        - name: LOCKSS_WAIT_FOR_200
-          value: "{{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
+        - name: LOCKSS_SOLR_HOST
+          value: {{SOLR_HOST}}
+        - name: LOCKSS_SOLR_PORT
+          value: "{{SOLR_DEFAULT_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
+          value: {{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
-        image: {{POL_IMG}}:{{POL_VERSION}}
-        imagePullPolicy: ""
-        name: lockss-poller-service
+        image: {{REPO_IMG}}:{{REPO_VERSION}}
+        name: lockss-repository-service
         ports:
-        - containerPort: {{POL_DEFAULT_REST_PORT}}
-        - containerPort: {{POL_DEFAULT_UI_PORT}}
-        - containerPort: {{LOCKSS_LCAP_PORT}}
-        - containerPort: {{SERV_DEFAULT_PORT}}
-        - containerPort: {{LOCKSS_PROXY_PORT}}
-        - containerPort: {{LOCKSS_AUDIT_PORT}}
-        - containerPort: {{LOCKSS_ICP_PORT}}
-          protocol: UDP
-        resources: {}
+        - containerPort: {{REPO_DEFAULT_REST_PORT}}
         volumeMounts:
+        - mountPath: /run/configs/lockss.properties
+          name: repo-properties
+          subPath: lockss.properties
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap
           subPath: lockss_bootstrap
         - mountPath: /run/configs/lockss_service
-          name: pol-service
+          name: repo-service
           subPath: lockss_service
         - mountPath: /run/configs/lockss_service_opt
-          name: pol-service-opt
+          name: repo-service-opt
           subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-ui-pass
           name: lockss-ui-pass
@@ -140,12 +132,20 @@ spec:
           name: lockss-auth
           subPath: lockss-auth
           readOnly: true
-        - mountPath: /data
-          name: lockss-pol-data
+{{#REPO_NUMS}}
+        - mountPath: /data{{.}}
+          name: lockss-repo-data{{.}}
+{{/REPO_NUMS}}
         - mountPath: /var/log/lockss
-          name: lockss-pol-logs
+          name: lockss-repo-logs
       restartPolicy: Always
       volumes:
+      - configMap:
+          items:
+          - key: repo-properties
+            path: lockss.properties
+          name: repo-properties
+        name: repo-properties
       - configMap:
           items:
           - key: lockss-bootstrap
@@ -154,16 +154,16 @@ spec:
         name: lockss-bootstrap
       - configMap:
           items:
-          - key: pol-service
+          - key: repo-service
             path: lockss_service
-          name: pol-service
-        name: pol-service
+          name: repo-service
+        name: repo-service
       - configMap:
           items:
-          - key: pol-service-opt
-            path: lockss-service-opt
-          name: pol-service-opt
-        name: pol-service-opt
+          - key: repo-service-opt
+            path: lockss_service_opt
+          name: repo-service-opt
+        name: repo-service-opt
       - name: lockss-ui-pass
         secret:
           items:
@@ -176,10 +176,12 @@ spec:
           - key: lockss-auth
             path: lockss-auth
           secretName: lockss-auth
-      - name: lockss-pol-data
+{{#REPO_NUMS}}
+      - name: lockss-repo-data{{.}}
         persistentVolumeClaim:
-          claimName: lockss-pol-data-pvc
-      - name: lockss-pol-logs
+          claimName: lockss-repo-data{{.}}-pvc
+{{/REPO_NUMS}}
+      - name: lockss-repo-logs
         persistentVolumeClaim:
-          claimName: lockss-pol-logs-pvc
+          claimName: lockss-repo-logs-pvc
 status: {}

@@ -135,11 +135,10 @@ undeploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  kubectl config set-context --current --namespace=${stack}
   echo "Removing all installed elements in ${DOCKER_CONFIGS_DIR}/$stack."
-  kubectl delete pods,services,configmaps,secrets,pvc --all
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack"
-  kubectl delete pv --all
+  kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
+  kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk"
 }
 
 # Sanity checks
