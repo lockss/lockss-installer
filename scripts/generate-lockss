@@ -55,7 +55,7 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
 
 CONFIG_DIR="${COMPOSE_DIR}/config"
@@ -94,13 +94,16 @@ graceful_exit() {
 
 signal_exit() { # Handle trapped signals
   case $1 in
-    INT)
-      error_exit "Program interrupted by user" ;;
-    TERM)
-      echo -e "\n$PROGNAME: Program terminated" >&2
-      graceful_exit ;;
-    *)
-      error_exit "$PROGNAME: Terminating on unknown signal" ;;
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
   esac
 }
 
@@ -109,7 +112,7 @@ usage() {
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
   Generate files needed to run a LOCKSS stack.
 
@@ -129,20 +132,25 @@ _EOF_
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-      STACK_COUNT=$1;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  [1-9])
+    STACK_COUNT=$1
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
@@ -160,7 +168,7 @@ msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
 msg "${PROGNAME}:  Generating config files for $STACK_COUNT stacks..."
-for (( num=1 ; num<=$STACK_COUNT ; num++)); do
+for ((num = 1; num <= $STACK_COUNT; num++)); do
   export STACK_PORT_BASE=$((${PORT_BASE} + $num))
   if [ ${STACK_COUNT} = 1 ]; then
     STACK_NAME="${STACK_PREFIX}"
@@ -168,7 +176,7 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
     STACK_NAME="${STACK_PREFIX}$num"
   fi
   export STACK_NAME
-  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num -1))
+  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
   export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
   stack_env_file="${STACK_CONFIG_DIR}/env.sh"
   stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
@@ -177,64 +185,62 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
   mkdir -p "${STACK_CONFIG_DIR}"
 
   msg "${PROGNAME}: Generating the stack env.sh file..."
-  mo "${ENV_TMPL}" > "${stack_env_file}"
+  mo "${ENV_TMPL}" >"${stack_env_file}"
   set -a
   . "${stack_env_file}"
   set +a
 
-
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
   declare -a REPO_NUMS
-  declare -a REPO_DATA_MAP
   REPO_NUMS[0]=""
-  REPO_DATA_MAP[0]="lockss-repo-data:/data"
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
   len=${#datadirs[@]}
-  for (( count=1; count<$len; count++ )); do
+  export REPO_DATA_MAP=${MK_DATA_ROOT}
+  for ((count = 1; count < $len; count++)); do
     REPO_NUMS[${count}]="$count"
-    REPO_DATA_MAP[${count}]="lockss-repo-data${count}:/data${count}"
+    export REPO_DATA_MAP_${count}="/data${datadirs[$count]}"
   done
-  export REPO_DATA_MAP
   export REPO_NUMS
   #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
+
   #add the service deployments
   mkdir "${STACK_CONFIG_DIR}/svcs"
-  for f in ${SERVICES_DIR}/*.mustache ; do
+  for f in ${SERVICES_DIR}/*.mustache; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
+    mo "${src}" >"${dst}"
   done
   #add the minikube custom elements
   mk_dst="${STACK_CONFIG_DIR}/mk"
   mkdir "${mk_dst}"
   cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
-  for f in ${MK_DIR}/*.mustache ; do
+  for f in ${MK_DIR}/*.mustache; do
     src="${f}"
     dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
+    mo "${src}" >"${dst}"
   done
-
+  envsubst < "${mk_dst}/lockss-persistent-volumes.yaml" > "${mk_dst}/lockss-persistent-volumes.yml"
   #add the lockss config file templates
-  for f in ${TEMPLATES_DIR}/*.mustache ; do
+  for f in ${TEMPLATES_DIR}/*.mustache; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
+    mo "${src}" >"${dst}"
   done
   #add the user config file templates
-  for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
+  for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
       msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-      mo "${src}" > "${dst}"
+      mo "${src}" >"${dst}"
     fi
   done
   #add any remaining user opt files
-  for f in ${USEROPTS_DIR}/*_opt ; do
+  for f in ${USEROPTS_DIR}/*_opt; do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
