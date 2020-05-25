@@ -68,9 +68,9 @@ DOCKER_COMPOSE_FILE="docker-compose.yml"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 #Data
-declare -a arr deploy_service_names
-declare -a arr svcs
-declare -a arr port_maps
+declare -a deploy_service_names
+declare -a svcs
+declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -128,31 +128,37 @@ init_service_arrays() {
   if ${USE_LOCKSS_CFG}; then
     svcs+=("cfg")
     deploy_service_names+=("lockss-configuration-service")
-    port_maps=
+    svc_port_map["lockss-configuration-service"]="$CFG_UI_PORT:$CFG_DEFAULT_UI_PORT $CFG_REST_PORT:$CFG_DEFAULT_REST_PORT"
   fi
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
     deploy_service_names+=("lockss-metadata-service")
+    svc_port_map["lockss-metadata-service"]="$MDQ_UI_PORT:$MDQ_DEFAULT_UI_PORT $MDQ_REST_PORT:$MDQ_DEFAULT_REST_PORT"
   fi
   if ${USE_LOCKSS_MDX}; then
     svcs+=("mdx")
     deploy_service_names+=("lockss-metadata-extraction-service")
+    svc_port_map["lockss-metadata-extraction-service"]="$MDX_UI_PORT:$MDX_DEFAULT_UI_PORT $MDX_REST_PORT:$MDX_DEFAULT_REST_PORT"
   fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")
     deploy_service_names+=("lockss-poller-service")
+    svc_port_map["lockss-poller-service"]="$POL_UI_PORT:$POL_DEFAULT_UI_PORT $POL_REST_PORT:$POL_DEFAULT_REST_PORT"
   fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     deploy_service_names+=("lockss-repository-service")
+    svc_port_map["lockss-repository-service"]="$REPO_REST_PORT:$REPO_DEFAULT_REST_PORT"
   fi
   if ${USE_LOCKSS_POSTGRES}; then
     svcs+=("postgres")
     deploy_service_names+=("lockss-postgres-service")
+    svc_port_map["lockss-postgres-service"]="$POSTGRES_PORT:$POSTGRES_DEFAULT_PORT"
   fi
   if ${USE_LOCKSS_SOLR}; then
     svcs+=("solr")
     deploy_service_names+=("lockss-solr-service")
+    svc_port_map["lockss-solr-service"]="$SOLR_PORT:$SOLR_DEFAULT_PORT"
   fi
   if ${USE_LOCKSS_HDFS}; then
     svcs+=("hdfs")
@@ -161,10 +167,12 @@ init_service_arrays() {
   if ${USE_LOCKSS_PYWB}; then
     svcs+=("pywb")
     deploy_service_names+=("lockss-pywb-service")
+    svc_port_map["lockss-pywb-service"]="$PYWB_PORT:$PYWB_DEFAULT_PORT"
   fi
   if ${USE_LOCKSS_OPENWB}; then
     svcs+=("openwayback")
     deploy_service_names+=("lockss-openwayback-service")
+    svc_port_map["lockss-openwayback-service"]="$OPENWB_PORT:$OPENWB_DEFAULT_PORT"
   fi
 }
 
@@ -203,11 +211,9 @@ deploy_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack/svcs"
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
-    kubectl apply -f "${svc}.yml"
-  done
-  for ((i = 0; i < ${#svcs[@]}; i++)); do
-    echo "Opening local access for ${deploy_service_names[i]}"
-    kubectl port-forward --address 0.0.0.0 "deploy/${deploy_service_names[i]}" "${port_maps[i]}"
+    kubectl apply -f "${svc}.yaml"
+#    echo "Opening local access for ${svc_port_map[${svc}]}"
+#    kubectl port-forward --address localhost,${LOCKSS_IPADDR} "deploy/${svc}"" ${svc_port_map[${svc}]"}
   done
   popd &>/dev/null
 }

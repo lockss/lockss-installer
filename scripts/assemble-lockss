@@ -75,7 +75,6 @@ INGRESS_PATCH_FILE="nginx-ingress-controller-patch.yaml"
 declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties")
 declare -a arr svcs
 declare -a arr svcs_confs
-declare -a arr repo_mounts
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 STACK_PREFIX="lockss-stack"
@@ -149,21 +148,38 @@ Check_Physical_Volumes() {
   fi
 }
 
+configure_minikube() {
+#  minikube config set driver docker
+#   minikube config set memory 4096
+#   minikube config set cpus 4
+#   minikube config set disk-size 50g
+  minikube addons enable ingress
+  minikube addons enable dashboard
+  minikube addons enable metrics-server
+}
+
 start_minikube() {
-  minikube config set driver docker
-  minikube start
-  if ! kubectl get namespace lockss; then
+
+  minikube start --extra-config=kubeadm.apiserver-advertise-address=${LOCKSS_IPADDR} \
+    -logtostderr --v=10 \
+    --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
+    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
+    --docker-env HTTPS_PROXY=http://192.168.1.3:1087
+
+  if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
   kubectl config set-context --current --namespace="lockss"
-#  minikube addons enable ingress
-  minikube mount "${LOCKSS_DATA_DIR}":"/data${LOCKSS_DATA_DIR}" &
-  minikube mount "${LOCKSS_LOGS_DIR}":"/data${LOCKSS_LOGS_DIR}" &
+  eval "$(minikube docker-env)"
+  #minikube ssh "sudo $(mkdir -p /data/lockss)" && exit
+  minikube mount "${LOCKSS_DATA_DIR}:${MK_DATA_ROOT}" &
+  minikube mount "${LOCKSS_LOGS_DIR}:${MK_LOGS_ROOT}" &
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  count=1
-  for count in "${!datadirs[@]}"; do
-    minikube mount "${datadirs[$count]}": "/data${datadirs[$count]}"
-    count=$count+1
+  len=${#datadirs[@]}
+  cnt=1
+  while [ $cnt -lt $len ]; do
+    path="${datadirs[$cnt]}"
+    minikube mount "${path}:${MK_DATA_ROOT}$cnt" &
   done
 }
 
@@ -215,9 +231,11 @@ add_stack_configs() {
   msg "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
+    kubectl delete configmap ${key}  &>/dev/null
     if ! kubectl create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
+    kubectl delete configmap ${key}-opt &>/dev/null
     if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
@@ -227,10 +245,12 @@ add_stack_configs() {
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     echo "adding service config ${key}..."
+    kubectl delete configmap ${key}  &>/dev/null
     if ! kubectl create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
       error_exit "${_0}: error creating config ${key}"
     fi
-    if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${sconf}-service-opt" "blank_lockss_opt"); then
+    kubectl delete configmap ${key}-opt  &>/dev/null
+    if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
@@ -250,13 +270,11 @@ add_stack_shared() {
   #  msg "patching ingress ports..."
   #  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
   #  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-  #  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
+  # kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     msg "adding ${sec}"
-    if ! kubectl create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"; then
-      error_exit "${_0}: unable to create secret ${sec}"
-    fi
+    kubectl create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"
   done
 }
 
@@ -312,13 +330,14 @@ add_additional_stack_volumes() {
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
   count=1
   msg "creating additional data volumes for $stack-repository-service..."
-  for count in "${!datadirs[@]}"; do
+  while count < "${#datadirs[@]}"; do
     mtpoint=${datadirs[$count]}/$stack-repo-data
     mtname=$stack-repo-data${count}
     docker volume remove mtname &>/dev/null
     if ! docker volume create -d local-persist -o mountpoint=${mtpont} --name=${mtname}; then
       error_exit "${_0}: error creating volume ${mtname}"
     fi
+    count++
   done
 }
 
@@ -330,7 +349,7 @@ assemble_stack() {
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   pushd . &>/dev/null
-  cd "${DOCKER_CONFIGS_DIR}/$stack"
+  cd "${DOCKER_CONFIGS_DIR}/$stack" || error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared $stack
   add_stack_volumes $stack
   add_stack_configs ${stack}
@@ -384,7 +403,11 @@ fi
 # Sanity checks
 #Check_Runnable
 #Check_Physical_Volumes
+echo "configuring local minikube..."
+configure_minikube
+echo "starting local minikube..."
 start_minikube
+
 init_service_arrays
 
 if [ ${NUM_STACKS} -eq 0 ]; then

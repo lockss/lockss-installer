@@ -138,7 +138,7 @@ undeploy_stack() {
   echo "Removing all installed elements in ${DOCKER_CONFIGS_DIR}/$stack."
   kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
   kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk"
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk" &>/dev/null
 }
 
 # Sanity checks

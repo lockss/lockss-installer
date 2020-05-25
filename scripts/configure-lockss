@@ -572,5 +572,4 @@ esac
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-
 echo "$(date) Call start-lockss to launch the LOCKSS stack 'lockss-stack'..."

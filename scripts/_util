@@ -39,8 +39,8 @@ err() {
 }
 
 err_exit() {
-    echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
-    exit 1
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+  exit 1
 }
 
 msg() {
@@ -54,11 +54,10 @@ msg() {
 #  Check_Swarm
 #  Check_LocalPersistPlugin
 #}
-Check_Runnable()
-{
+Check_Runnable() {
   Check_Installed 'minikube'
-  if ! minikube status | grep "Running" ; then
-    err_exit "minikube is not running.Please run `minikube start`"
+  if ! minikube status | grep "Running"; then
+    err_exit "minikube is not running.Please run $(minikube start)"
   fi
 }
 
@@ -66,21 +65,18 @@ Check_Runnable()
 ## function Check_Swarm
 ##
 
-Check_Swarm()
-{
-  if ! docker stack ls &> /dev/null ; then
+Check_Swarm() {
+  if ! docker stack ls &>/dev/null; then
     err_exit "${_0}: Docker Swarm is not inited"
   fi
 }
-
 
 ##
 ## function Check_Docker
 ##
 
-Check_Docker()
-{
-  if ! docker info &> /dev/null ; then
+Check_Docker() {
+  if ! docker info &>/dev/null; then
     err_exit "${_0}: Docker is not running"
   fi
 }
@@ -89,9 +85,8 @@ Check_Docker()
 ## function Check_Docker
 ##
 
-Check_LocalPersistPlugin()
-{
-  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &> /dev/null ; then
+Check_LocalPersistPlugin() {
+  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &>/dev/null; then
     err_exit "${_0}: The local-persist volume plugin is not available. See readme for instructions."
   fi
 }
@@ -100,26 +95,24 @@ Check_LocalPersistPlugin()
 ## Check For installed secret
 ##
 
-Check_Secret()
-{
-  if ! docker secret inspect ${1} &> /dev/null ; then
-   err "${1}: Docker Secret has not been installed."
+Check_Secret() {
+  if ! docker secret inspect ${1} &>/dev/null; then
+    err "${1}: Docker Secret has not been installed."
     err_exit "     Run configure and install scripts."
   fi
 
 }
 
-Add_Secret()
-{
+Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
 
-  if docker secret inspect "${NAME}" &> /dev/null; then
+  if docker secret inspect "${NAME}" &>/dev/null; then
     echo "removing stored password for ${NAME}"
     docker secret rm "${NAME}"
   fi
   echo "Storing ${NAME} as a docker secret .."
-  if ! echo -n "${VALUE}" | docker secret create "${NAME}" - ; then
+  if ! echo -n "${VALUE}" | docker secret create "${NAME}" -; then
     err "Docker secret creation failed for ${NAME}"
     return 1
   else
@@ -127,46 +120,40 @@ Add_Secret()
   fi
 }
 
-
-Check_Volume()
-{
-#    if ! docker volume inspect ${1} &> /dev/null; then
-    if ! kubectl get pv ${1} &> /dev/null ; then
-      err "${1}: Docker Volume has not been installed."
-      err "${1}: Run lockss-install script."
-      exit 1
-    fi
+Check_Volume() {
+  #    if ! docker volume inspect ${1} &> /dev/null; then
+  if ! kubectl get pv ${1} &>/dev/null; then
+    err "${1}: Docker Volume has not been installed."
+    err "${1}: Run lockss-install script."
+    exit 1
+  fi
 }
 
-
-Check_Config()
-{
-#    if ! docker config inspect ${1} &> /dev/null; then
-    if ! kubectl get config ${1} &> /dev/null ; then
-      err "${1}: Config file is missing. Run configure and install scripts.."
-      err "${1}: Run lockss-install script."
-      exit 1
-    fi
+Check_Config() {
+  #    if ! docker config inspect ${1} &> /dev/null; then
+  if ! kubectl get config ${1} &>/dev/null; then
+    err "${1}: Config file is missing. Run configure and install scripts.."
+    err "${1}: Run lockss-install script."
+    exit 1
+  fi
 }
 
-Check_Network()
-{
-#    if ! docker network inspect ${1} &> /dev/null  ; then
-    if ! kubectl get network ${1} &> /dev/null ; then
-      err "${1}: Docker network has not been installed."
-      err "${1}: Run lockss-install script."
-      exit 1
-    fi
+Check_Network() {
+  #    if ! docker network inspect ${1} &> /dev/null  ; then
+  if ! kubectl get network ${1} &>/dev/null; then
+    err "${1}: Docker network has not been installed."
+    err "${1}: Run lockss-install script."
+    exit 1
+  fi
 }
 
 ##
 ## function Check_Installed
 ##
 
-Check_Installed()
-{
+Check_Installed() {
   while [ "X${1}" != "X" ]; do
-    if ! which "${1}" &> /dev/null; then
+    if ! which "${1}" &>/dev/null; then
       err "${_0}: ${1} not on the PATH (${PATH})"
       exit 1
     fi
@@ -178,8 +165,7 @@ Check_Installed()
 ## function Get_Value
 ##
 
-Get_Value()
-{
+Get_Value() {
   local PAIR="${1}"
   echo "${PAIR}" | sed -e 's@^[^=]\+=@@'
 }
@@ -188,8 +174,7 @@ Get_Value()
 ## function Wait_For_200
 ##
 
-Wait_For_200()
-{
+Wait_For_200() {
   local HOST="${1}"
   local PORT="${2}"
   local SLEEP="${3}"
@@ -197,7 +182,7 @@ Wait_For_200()
     SLEEP='30'
   fi
   local URL="http://${HOST}:${PORT}/status"
-  while true ; do
+  while true; do
     echo "Waiting for ${URL} ... " && curl --silent --fail --output /dev/null "${URL}" && echo "succeeded" && break
     echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
   done
@@ -207,15 +192,14 @@ Wait_For_200()
 ## function Wait_For_Port
 ##
 
-Wait_For_Port()
-{
+Wait_For_Port() {
   local HOST="${1}"
   local PORT="${2}"
   local SLEEP="${3}"
   if [ "X${SLEEP}" = "X" ]; then
     SLEEP='30'
   fi
-  while true ; do
+  while true; do
     echo "Waiting for ${HOST}:${PORT} ... " && nc -z "${HOST}" "${PORT}" && echo "succeeded" && break
     echo "failed; retrying in ${SLEEP} seconds" && sleep "${SLEEP}"
   done
@@ -223,7 +207,7 @@ Wait_For_Port()
 
 # check if running as root
 am_i_root() {
-    [ "$(id -u)" -eq 0 ]
+  [ "$(id -u)" -eq 0 ]
 }
 
 is_lockss_running() {
@@ -235,55 +219,53 @@ is_lockss_running() {
 # Must be run before LOCKSS daemon can be started
 #
 read_config() {
-    local FILE="$1"
-    local OLD_IFS="${IFS}"
-    IFS='
+  local FILE="$1"
+  local OLD_IFS="${IFS}"
+  IFS='
 '
-    for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
 \1=\2/' $1); do
-        eval "$A"
-    done
-    IFS="${OLD_IFS}"
+    eval "$A"
+  done
+  IFS="${OLD_IFS}"
 }
 
 ask_for_input() {
-    echo "$1: [$2] "
-    read ANS
-    if [ "X${ANS}" = "X" ]
-    then
-        ANS=$2
-    fi
+  echo "$1: [$2] "
+  read ANS
+  if [ "X${ANS}" = "X" ]; then
+    ANS=$2
+  fi
 }
 
 ask_for_input_shadow() {
-    echo "$1: [$2] "
-    local STTY_ORIG=`stty -g`
-    stty -echo
-    read ANS
-    stty "$STTY_ORIG"
-    echo
-    if [ "X${ANS}" = "X" ]
-    then
-        ANS=$2
-    fi
+  echo "$1: [$2] "
+  local STTY_ORIG=$(stty -g)
+  stty -echo
+  read ANS
+  stty "$STTY_ORIG"
+  echo
+  if [ "X${ANS}" = "X" ]; then
+    ANS=$2
+  fi
 }
 
 is_yes() {
-    local WORD="${1}"
-    if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
-        return 0
-    else
-        return 1
-    fi
+  local WORD="${1}"
+  if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 to_yes_no() {
-   local WORD="${1}"
-    if [ "X${WORD}" = Xtrue -o "X${WORD}" = XTRUE ]; then
-        echo "Y"
-    else
-        echo "N"
-    fi
+  local WORD="${1}"
+  if [ "X${WORD}" = Xtrue -o "X${WORD}" = XTRUE ]; then
+    echo "Y"
+  else
+    echo "N"
+  fi
 }
 
 is_pos() {
@@ -294,149 +276,148 @@ is_pos() {
 
 # init_one_dir dir user
 init_one_dir() {
-    local DIR="$1"
-    if [ ! -d "${DIR}" ]; then
-        ask_for_input "${DIR} does not exist; shall I create it" Y
-        if is_yes "${ANS}"; then
-            mkdir -p "${DIR}"
-            if [ "X${CONFIG_USER}" != "X${2}" ] ; then
-                chown ${2} "${DIR}"
-            fi
-            chmod 750 "${DIR}"
-            if check_writable "${DIR}" ${2} ; then
-                return 0
-            else
-                echo "${DIR} not writable by user ${2}"
-                echo " Please make it so (check parent dir execute bits)"
-                echo " LOCKSS will not run properly without it."
-            fi
-        else
-            echo "Please create ${DIR} and make it writable by user ${2};"
-            echo " LOCKSS will not run properly without it."
-        fi
+  local DIR="$1"
+  if [ ! -d "${DIR}" ]; then
+    ask_for_input "${DIR} does not exist; shall I create it" Y
+    if is_yes "${ANS}"; then
+      mkdir -p "${DIR}"
+      if [ "X${CONFIG_USER}" != "X${2}" ]; then
+        chown ${2} "${DIR}"
+      fi
+      chmod 750 "${DIR}"
+      if check_writable "${DIR}" ${2}; then
         return 0
-    fi
-    if check_writable "${DIR}" $2 ; then
-        echo "${DIR} exists and is writable by ${2}"
+      else
+        echo "${DIR} not writable by user ${2}"
+        echo " Please make it so (check parent dir execute bits)"
+        echo " LOCKSS will not run properly without it."
+      fi
     else
-        ask_for_input "${DIR} is not writable; shall I chown it" Y
-        if is_yes "${ANS}"; then
-            chown ${2} "${DIR}"
-            if check_writable "${DIR}" $2 ; then
-                return 0
-            else
-                echo "${DIR} still not writable by user ${2}"
-                echo " Please make it so (check parent dir execute bits)"
-                echo " LOCKSS will not run properly without it."
-            fi
-        else
-            echo "Please ensure that ${DIR} is writable by user ${2};"
-            echo " LOCKSS will not run properly without it."
-        fi
+      echo "Please create ${DIR} and make it writable by user ${2};"
+      echo " LOCKSS will not run properly without it."
     fi
+    return 0
+  fi
+  if check_writable "${DIR}" $2; then
+    echo "${DIR} exists and is writable by ${2}"
+  else
+    ask_for_input "${DIR} is not writable; shall I chown it" Y
+    if is_yes "${ANS}"; then
+      chown ${2} "${DIR}"
+      if check_writable "${DIR}" $2; then
+        return 0
+      else
+        echo "${DIR} still not writable by user ${2}"
+        echo " Please make it so (check parent dir execute bits)"
+        echo " LOCKSS will not run properly without it."
+      fi
+    else
+      echo "Please ensure that ${DIR} is writable by user ${2};"
+      echo " LOCKSS will not run properly without it."
+    fi
+  fi
 }
-
 
 # check_writable (dir, user)
 check_writable() {
-    local DIR="$1"
-    true&
-    local PROBE_FILE=${DIR}/probe_$!
-    if [ "X${CONFIG_USER}" != "X${2}" ]; then
-        SUDO="sudo -u ${2}"
-    else
-        SUDO=""
-    fi
-    if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
-        rm -f ${PROBE_FILE}
-        return 0
-    fi
-    return 1
+  local DIR="$1"
+  true &
+  local PROBE_FILE=${DIR}/probe_$!
+  if [ "X${CONFIG_USER}" != "X${2}" ]; then
+    SUDO="sudo -u ${2}"
+  else
+    SUDO=""
+  fi
+  if ${SUDO} touch ${PROBE_FILE} >/dev/null 2>&1; then
+    rm -f ${PROBE_FILE}
+    return 0
+  fi
+  return 1
 }
 
 #parse_ip_address inp
 parse_ip_address() {
-    local INP=$1
-    local OLD_IFS="${IFS}"
-    IFS="."
-    local COUNT=0
-    local GOODCOUNT=0
-    local IPADDR=0
-    for A in ${INP}; do
-      if  ( expr ${A} + 1 >/dev/null 2>&1 ); then
-          if [ ${A} -ge 0 -a ${A} -lt 256 ]; then
-              GOODCOUNT=`expr ${GOODCOUNT} + 1`
-              IPADDR=`expr ${IPADDR} \* 256 + ${A}`
-          fi
+  local INP=$1
+  local OLD_IFS="${IFS}"
+  IFS="."
+  local COUNT=0
+  local GOODCOUNT=0
+  local IPADDR=0
+  for A in ${INP}; do
+    if (expr ${A} + 1 >/dev/null 2>&1); then
+      if [ ${A} -ge 0 -a ${A} -lt 256 ]; then
+        GOODCOUNT=$(expr ${GOODCOUNT} + 1)
+        IPADDR=$(expr ${IPADDR} \* 256 + ${A})
       fi
-      COUNT=`expr ${COUNT} + 1`
-    done
-    IFS="${OLD_IFS}"
-    if [ ${COUNT} != 4 -o ${GOODCOUNT} != 4 ]; then
-        echo 0
-    else
-        echo ${IPADDR}
     fi
+    COUNT=$(expr ${COUNT} + 1)
+  done
+  IFS="${OLD_IFS}"
+  if [ ${COUNT} != 4 -o ${GOODCOUNT} != 4 ]; then
+    echo 0
+  else
+    echo ${IPADDR}
+  fi
 }
 
 # read_config file
 read_config() {
-    local FILE="$1"
-    local OLD_IFS="${IFS}"
-    IFS='
+  local FILE="$1"
+  local OLD_IFS="${IFS}"
+  IFS='
 '
-    for A in `sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1` ; do
-        eval "$A"
-    done
-    IFS="${OLD_IFS}"
+  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+\1=\2/' $1); do
+    eval "$A"
+  done
+  IFS="${OLD_IFS}"
 }
 
 # valid_ip_address address
 valid_ip_address() {
-    local IPADDR=`parse_ip_address "$1"`
-    if [ ${IPADDR} -eq 0 ]; then
-        return 1
-    else
-        return 0
-    fi
+  local IPADDR=$(parse_ip_address "$1")
+  if [ ${IPADDR} -eq 0 ]; then
+    return 1
+  else
+    return 0
+  fi
 }
 
 #
 # Usage: valid_subnet address
 #
 valid_subnet() {
-    local INP=$1
-    if ! echo ${INP} | grep -s '/' >/dev/null; then
-        oct='[0-9]{1,3}'
-        if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
-            return 0
-        fi
-        return 1
+  local INP=$1
+  if ! echo ${INP} | grep -s '/' >/dev/null; then
+    oct='[0-9]{1,3}'
+    if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
+      return 0
     fi
-    local NET=`echo ${INP} | sed 's/\/.*//'`
-    local MASK=`echo ${INP} | sed 's/.*\///'`
-    local NETADDR=`parse_ip_address "${NET}"`
-    if [ ${NETADDR} -eq 0 ]; then
-        return 1
+    return 1
+  fi
+  local NET=$(echo ${INP} | sed 's/\/.*//')
+  local MASK=$(echo ${INP} | sed 's/.*\///')
+  local NETADDR=$(parse_ip_address "${NET}")
+  if [ ${NETADDR} -eq 0 ]; then
+    return 1
+  fi
+  if echo ${MASK} | grep -s '\.' >/dev/null; then
+    local MASKADDR=$(parse_ip_address "${MASK}")
+    if [ ${MASKADDR} -eq 0 ]; then
+      return 1
     fi
-    if echo ${MASK} | grep -s '\.' >/dev/null; then
-        local MASKADDR=`parse_ip_address "${MASK}"`
-        if [ ${MASKADDR} -eq 0 ]; then
-            return 1
-        fi
-        # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
-        return 0;
-    else
-        if ! expr ${MASK} + 1 >/dev/null 2>&1; then
-            return 1
-        fi
-        if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
-            return 1
-        fi
-        # should check legal cidr
-        return 0;
+    # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
+    return 0
+  else
+    if ! expr ${MASK} + 1 >/dev/null 2>&1; then
+      return 1
     fi
+    if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
+      return 1
+    fi
+    # should check legal cidr
+    return 0
+  fi
 }
 
 #
@@ -445,18 +426,16 @@ valid_subnet() {
 # Remove /./ and dir/.. sequences from a pathname and write result to stdout.
 # from https://www.linuxjournal.com/content/normalizing-path-names-bash
 #
-function normalize_path()
-{
-    # Remove all /./ sequences.
-    local path=${1//\/.\//\/}
+function normalize_path() {
+  # Remove all /./ sequences.
+  local path=${1//\/.\//\/}
 
-    # Remove first dir/.. sequence.
-    local npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  # Remove first dir/.. sequence.
+  local npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
 
-    # Remove remaining dir/.. sequence.
-    while [[ $npath != $path ]]
-    do
-        path=$npath
-        npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
-    done
+  # Remove remaining dir/.. sequence.
+  while [[ $npath != $path ]]; do
+    path=$npath
+    npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  done
 }

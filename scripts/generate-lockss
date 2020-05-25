@@ -222,7 +222,6 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  envsubst < "${mk_dst}/lockss-persistent-volumes.yaml" > "${mk_dst}/lockss-persistent-volumes.yml"
   #add the lockss config file templates
   for f in ${TEMPLATES_DIR}/*.mustache; do
     src="${f}"

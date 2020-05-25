@@ -353,7 +353,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: ${REPO_DATA_MAP{{.}}}/{{STACK}}-repo-data
+    path: {{MK_DATA_ROOT}}{{.}}/{{STACK}}-repo-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
