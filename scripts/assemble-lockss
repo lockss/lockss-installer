@@ -149,41 +149,36 @@ Check_Physical_Volumes() {
 }
 
 configure_minikube() {
-  #  minikube config set driver docker
-  #   minikube config set memory 4096
-  #   minikube config set cpus 4
-  #   minikube config set disk-size 50g
   minikube start
-  minikube addons enable ingress
-  minikube addons enable dashboard
-  minikube addons enable metrics-server
-  #minikube ssh
-  #sudo mkdir -p /data/lockss
-  #curl -fsSL https://raw.githubusercontent.com/MatchbookLab/local-persist/master/scripts/install.sh | sudo bash
+ # minikube addons enable ingress
+ # minikube addons enable dashboard
+#  minikube addons enable metrics-server
+#  minikube ssh mkdir -p /data/lockss
+#  minikube ssh curl -fsSL https://raw.githubusercontent.com/MatchbookLab/local-persist/master/scripts/install.sh | sudo bash
 }
 
 start_minikube() {
-
-  minikube start --extra-config=kubeadm.apiserver-advertise-address=${LOCKSS_IPADDR} \
-    --extra-config=apiserver.service-node-port-range=1-65535 \
-    --logtostderr --v=10 \
-    --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
-    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
-    --docker-env HTTPS_PROXY=http://192.168.1.3:1087
-
   if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
   kubectl config set-context --current --namespace="lockss"
   eval "$(minikube docker-env)"
-  minikube mount "${LOCKSS_DATA_DIR}:/data/lockss/data" &
-  minikube mount "${LOCKSS_LOGS_DIR}:/data/lockss/logs}" &
+
+  minikube start \
+    --extra-config=apiserver.service-node-port-range=1-65535 \
+    --logtostderr --v=1 \
+ #   --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
+#    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
+ #   --docker-env HTTPS_PROXY=http://192.168.1.3:1087
+
+  minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
+  minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
   len=${#datadirs[@]}
   cnt=1
   while [ $cnt -lt $len ]; do
     path="${datadirs[$cnt]}"
-    minikube mount "${path}:${MK_DATA_ROOT}$cnt" &
+    minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${path}:${MK_DATA_ROOT}$cnt" &
   done
 }
 
@@ -271,10 +266,10 @@ add_stack_shared() {
   kubectl apply -f "${mk_dir}/local-storage.yaml"
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
   kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
-  msg "patching ingress ports..."
-  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
-  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
+#  msg "patching ingress ports..."
+#  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+#  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+#  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     kubectl delete secret ${sec} &>/dev/null
@@ -292,7 +287,7 @@ check_stack_solr() {
   SOLR_FILE="${SOLR_HOME_PATH}/solr.xml"
   OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
   SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
-  SOLR_OWNER="8983:8983"
+  SOLR_OWNER="${LOCKSS_UID}:${LOCKSS_GID}"
 
   msg "Checking solr installation at ${SOLR_HOME_PATH}..."
 
@@ -306,9 +301,9 @@ check_stack_solr() {
     msg "Preparing solr for new install to ${SOLR_HOME_PATH}..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
-    sudo cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
+    cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
       error_exit "Unable to install LOCKSS solr configuration files, exiting..."
-    sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
+    chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
       error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
   fi
 }

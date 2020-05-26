@@ -527,7 +527,7 @@ build_config_file() {
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
 LOCKSS_TEAM=lockssdiag@lockss.org
-LOCKSS_USER=lockss
+LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(uname -n)
 
 echo "$(date) Checking system state..Plese run check_sys as root if needed."

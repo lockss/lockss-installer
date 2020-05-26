@@ -81,15 +81,6 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-solr-service
     spec:
-      initContainers:
-        - name: volume-permissions
-          image: busybox
-          command: ['sh', '-c', 'chmod -R g+rwx  /opt/solr/server/solr']
-          volumeMounts:
-          - mountPath: /opt/solr/server/solr
-            name: lockss-solr-data
-          - mountPath: /opt/solr/server/logs
-            name: lockss-solr-logs
       containers:
       - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
         env:
@@ -123,6 +114,6 @@ spec:
         persistentVolumeClaim:
           claimName: lockss-solr-logs-pvc
       securityContext:
-        runAsUser: 8983
-        fsGroup: 8983
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}
 status: {}
