@@ -397,7 +397,7 @@ kind: PersistentVolume
 metadata:
   name: lockss-solr-data-pv
   annotations:
-    pv.beta.kubernetes.io/gid: {{LOCKSS_GID}}
+    pv.beta.kubernetes.io/gid: "{{LOCKSS_GID}}"
   labels:
     type: hostPath
     app: lockss
@@ -427,7 +427,7 @@ kind: PersistentVolume
 metadata:
   name: lockss-solr-logs-pv
   annotations:
-    pv.beta.kubernetes.io/gid: {{LOCKSS_GID}}
+    pv.beta.kubernetes.io/gid: "{{LOCKSS_GID}}"
   labels:
     type: hostPath
     app: lockss

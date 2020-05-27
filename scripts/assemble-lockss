@@ -162,17 +162,15 @@ start_minikube() {
     kubectl create namespace lockss
   fi
   kubectl config set-context --current --namespace="lockss"
-  eval "$(minikube docker-env)"
 
   minikube start \
     --extra-config=apiserver.service-node-port-range=1-65535 \
-    --logtostderr --v=1 \
- #   --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
-#    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
- #   --docker-env HTTPS_PROXY=http://192.168.1.3:1087
+    --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
+    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
+    --docker-env HTTPS_PROXY=http://192.168.1.3:1087
 
-  minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
-  minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
+  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
+  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
   len=${#datadirs[@]}
   cnt=1
