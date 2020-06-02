@@ -129,12 +129,21 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
+          items:
+          - key: mdx-service
+            path: lockss_service
           name: mdx-service
         name: mdx-service
       - configMap:
+          items:
+          - key: mdx-service-opt
+            path: lockss_service_opt
           name: mdx-service-opt
         name: mdx-service-opt
       - name: lockss-postgres-pass

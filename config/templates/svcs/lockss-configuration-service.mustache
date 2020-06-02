@@ -121,13 +121,10 @@ spec:
           subPath: lockss_cluster_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
-          subPath: lockss-postgres-pass
         - mountPath: /run/secrets/lockss_ui_pass
           name: lockss-ui-pass
-          subPath: lockss_ui_pass
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
-          subPath: lockss-auth
         - mountPath: /data
           name: lockss-cfg-data
         - mountPath: /var/log/lockss
@@ -141,18 +138,33 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
+          items:
+          - key: cfg-service
+            path: lockss_service
           name: cfg-service
         name: cfg-service
       - configMap:
+          items:
+          - key: cfg-service-opt
+            path: lockss_service-opt
           name: cfg-service-opt
         name: cfg-service-opt
       - configMap:
+          items:
+          - key: lockss-cluster
+            path: lockss_cluster
           name: lockss-cluster
         name: lockss-cluster
       - configMap:
+          items:
+          - key: lockss-cluster-opt
+            path: lockss_cluster_opt
           name: lockss-cluster-opt
         name: lockss-cluster-opt
       - name: lockss-postgres-pass

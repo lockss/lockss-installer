@@ -112,18 +112,14 @@ spec:
           subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
-          subPath: lockss-postgres-pass
           readOnly: true
         - mountPath: /run/secrets/lockss_ui_pass
           name: lockss-ui-pass
-          subPath: lockss_ui_pass
           readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
-          subPath: lockss-auth
           readOnly: true
         - mountPath: /data
-          subPath: lockss-auth
           name: lockss-mdq-data
         - mountPath: /var/log/lockss
           name: lockss-mdq-logs
@@ -135,12 +131,21 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
+          items:
+          - key: mdq-service
+            path: lockss_service
           name: mdq-service
         name: mdq-service
       - configMap:
+          items:
+          - key: mdq-service-opt
+            path: lockss_service_opt
           name: mdq-service-opt
         name: mdq-service-opt
       - name: lockss-postgres-pass

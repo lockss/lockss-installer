@@ -140,11 +140,9 @@ spec:
           subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss_ui_pass
           name: lockss-ui-pass
-          subPath: lockss_ui_pass
           readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
-          subPath: lockss-auth
           readOnly: true
         - mountPath: /data
           name: lockss-pol-data
@@ -153,12 +151,21 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
+          items:
+          - key: pol-service
+            path: lockss_service
           name: pol-service
         name: pol-service
       - configMap:
+          items:
+          - key: pol-service-opt
+            path: lockss_service_opt
           name: pol-service-opt
         name: pol-service-opt
       - name: lockss-ui-pass
