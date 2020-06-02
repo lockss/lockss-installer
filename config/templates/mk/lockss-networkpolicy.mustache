@@ -2,15 +2,24 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{STACK}}-network
+  namespace: lockss
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
 spec:
+  podSelector:
+    matchLabels:
+      io.kompose.network/{{STACK}}-network: "true"
+  policyTypes:
+  - Ingress
+  - Egress
   ingress:
   - from:
     - podSelector:
         matchLabels:
           io.kompose.network/{{STACK}}-network: "true"
-  podSelector:
-    matchLabels:
-      io.kompose.network/{{STACK}}-network: "true"
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          io.kompose.network/{{STACK}}-network: "true"

@@ -148,36 +148,26 @@ Check_Physical_Volumes() {
   fi
 }
 
-configure_minikube() {
-  minikube start
- # minikube addons enable ingress
- # minikube addons enable dashboard
-#  minikube addons enable metrics-server
-#  minikube ssh mkdir -p /data/lockss
-#  minikube ssh curl -fsSL https://raw.githubusercontent.com/MatchbookLab/local-persist/master/scripts/install.sh | sudo bash
-}
-
 start_minikube() {
+  LOCKSS_UID=$(id -u ${LOCKSS_USER})
+  LOCKSS_GID=$(id -g ${LOCKSS_USER})
+  msg "Preparing mounts for ip:${LOCKSS_IPADDR} gid:${LOCKSS_GID} uid:${LOCKSS_UID}..."
+  minikube start --vm \
+    --extra-config=apiserver.service-node-port-range=1-65535
+  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
+  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
+  len=${#datadirs[@]}
+  start=1
+  for (( cnt=$start; cnt<$len; cnt++ )); do
+    path="${datadirs[$cnt]}"
+    minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${path}:${MK_DATA_ROOT}$cnt" &
+  done
   if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
   kubectl config set-context --current --namespace="lockss"
 
-  minikube start \
-    --extra-config=apiserver.service-node-port-range=1-65535 \
-    --docker-env NO_PROXY=localhost,127.0.0.1,192.168.99.0/24,192.168.64.0/24 \
-    --docker-env HTTP_PROXY=http://192.168.1.3:1087 \
-    --docker-env HTTPS_PROXY=http://192.168.1.3:1087
-
-  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
-  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  len=${#datadirs[@]}
-  cnt=1
-  while [ $cnt -lt $len ]; do
-    path="${datadirs[$cnt]}"
-    minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${path}:${MK_DATA_ROOT}$cnt" &
-  done
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -258,16 +248,18 @@ add_stack_shared() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   msg "clearing old deployments and configmaps..."
-  echo kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
-  echo kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
+  kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
+  kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
+  msg "adding global customizaiont"
+  kubectl apply -k "${mk_dir}/customization.yaml"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   kubectl apply -f "${mk_dir}/local-storage.yaml"
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
   kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
-#  msg "patching ingress ports..."
-#  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
-#  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-#  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
+  msg "patching ingress ports..."
+  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     kubectl delete secret ${sec} &>/dev/null
@@ -310,32 +302,30 @@ check_stack_solr() {
 add_stack_volumes() {
   local stack=$1
   for svc in "${svcs[@]}"; do
-    echo "creating docker data and log volumes for $stack-${svc}..."
-    docker volume remove $stack-${svc}-data $stack-${svc}-logs &>/dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data --name=$stack-${svc}-data; then
-      error_exit "${_0}: error creating volume $stack-${svc}-data"
-    fi
-    if ! docker volume create -d local-persist -o mountpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs --name=$stack-${svc}-logs; then
-      error_exit "${_0}: error creating volume $stack-${svc}-logs"
-    fi
+    echo "creating data and log volumes for $stack-${svc}..."
+    mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
+    mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
+    mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
-  kubectl apply -f mk/lockss-persistent-volumes.yaml
+  kubectl apply -f mk/lockss-persistent-volumes.yaml -n lockss
 }
 
 add_additional_stack_volumes() {
   local stack=$1
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  count=1
+  len=${#datadirs[@]}
+  start=1
   msg "creating additional data volumes for $stack-repository-service..."
-  while count < "${#datadirs[@]}"; do
-    mtpoint=${datadirs[$count]}/$stack-repo-data
-    mtname=$stack-repo-data${count}
-    docker volume remove mtname &>/dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${mtpont} --name=${mtname}; then
-      error_exit "${_0}: error creating volume ${mtname}"
-    fi
-    count++
+  for (( cnt=$start; cnt<$len; cnt++ )); do
+    mtpoint=${datadirs[$cnt]}/$stack-repo-data
+    mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    mtname=$stack-repo-data${cnt}
+#    docker volume remove mtname &>/dev/null
+#    if ! docker volume create -d local-persist -o mountpoint=${mtpont} --name=${mtname}; then
+#      error_exit "${_0}: error creating volume ${mtname}"
+#    fi
   done
 }
 
@@ -401,8 +391,6 @@ fi
 # Sanity checks
 #Check_Runnable
 #Check_Physical_Volumes
-echo "configuring local minikube..."
-configure_minikube
 echo "starting local minikube..."
 start_minikube
 

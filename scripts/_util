@@ -51,8 +51,6 @@ msg() {
 #{
 #  Check_Installed 'docker'
 #  Check_Docker
-#  Check_Swarm
-#  Check_LocalPersistPlugin
 #}
 Check_Runnable() {
   Check_Installed 'minikube'

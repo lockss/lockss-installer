@@ -109,9 +109,6 @@ spec:
       volumes:
       - name: lockss-auth
         secret:
-          items:
-          - key: lockss-auth
-            path: lockss-auth
           secretName: lockss-auth
       - name: lockss-pywb-data
         persistentVolumeClaim:

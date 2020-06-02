@@ -135,40 +135,22 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
-          items:
-          - key: lockss-bootstrap
-            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
-          items:
-          - key: mdq-service
-            path: lockss-service
           name: mdq-service
         name: mdq-service
       - configMap:
-          items:
-          - key: mdq-service-opt
-            path: lockss-service-opt
           name: mdq-service-opt
         name: mdq-service-opt
       - name: lockss-postgres-pass
         secret:
-          items:
-          - key: lockss-postgres-pass
-            path: lockss-postgres-pass
           secretName: lockss-postgres-pass
       - name: lockss-ui-pass
         secret:
-          items:
-          - key: lockss-ui-pass
-            path: lockss-ui-pass
           secretName: lockss-ui-pass
       - name: lockss-auth
         secret:
-          items:
-          - key: lockss-auth
-            path: lockss-auth
           secretName: lockss-auth
       - name: lockss-mdq-data
         persistentVolumeClaim:

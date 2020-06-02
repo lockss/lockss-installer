@@ -153,34 +153,19 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
-          items:
-          - key: lockss-bootstrap
-            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
-          items:
-          - key: pol-service
-            path: lockss_service
           name: pol-service
         name: pol-service
       - configMap:
-          items:
-          - key: pol-service-opt
-            path: lockss-service-opt
           name: pol-service-opt
         name: pol-service-opt
       - name: lockss-ui-pass
         secret:
-          items:
-          - key: lockss-ui-pass
-            path: lockss-ui-pass
           secretName: lockss-ui-pass
       - name: lockss-auth
         secret:
-          items:
-          - key: lockss-auth
-            path: lockss-auth
           secretName: lockss-auth
       - name: lockss-pol-data
         persistentVolumeClaim:

@@ -104,9 +104,6 @@ spec:
       - name: lockss-auth
         secret:
           secretName: lockss-auth
-          items:
-          - key: lockss-auth
-            path: lockss-auth
       - name: lockss-solr-data
         persistentVolumeClaim:
           claimName: lockss-solr-data-pvc

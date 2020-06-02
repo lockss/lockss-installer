@@ -126,11 +126,9 @@ spec:
           subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss_ui_pass
           name: lockss-ui-pass
-          subPath: lockss-ui-pass
           readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
-          subPath: lockss-auth
           readOnly: true
 {{#REPO_NUMS}}
         - mountPath: /data{{.}}
@@ -141,40 +139,22 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
-          items:
-          - key: repo-properties
-            path: lockss.properties
           name: repo-properties
         name: repo-properties
       - configMap:
-          items:
-          - key: lockss-bootstrap
-            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
-          items:
-          - key: repo-service
-            path: lockss_service
           name: repo-service
         name: repo-service
       - configMap:
-          items:
-          - key: repo-service-opt
-            path: lockss_service_opt
           name: repo-service-opt
         name: repo-service-opt
       - name: lockss-ui-pass
         secret:
-          items:
-          - key: lockss-ui-pass
-            path: lockss-ui-pass
           secretName: lockss-ui-pass
       - name: lockss-auth
         secret:
-          items:
-          - key: lockss-auth
-            path: lockss-auth
           secretName: lockss-auth
 {{#REPO_NUMS}}
       - name: lockss-repo-data{{.}}

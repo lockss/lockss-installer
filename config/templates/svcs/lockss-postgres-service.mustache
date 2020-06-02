@@ -111,9 +111,6 @@ spec:
       volumes:
       - name: lockss-postgres-pass
         secret:
-          items:
-          - key: lockss-postgres-pass
-            path: lockss-postgres-pass
           secretName: lockss-postgres-pass
       - name: lockss-postgres-data
         persistentVolumeClaim:

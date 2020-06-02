@@ -141,52 +141,28 @@ spec:
       restartPolicy: Always
       volumes:
       - configMap:
-          items:
-          - key: lockss-bootstrap
-            path: lockss_bootstrap
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
-          items:
-          - key: cfg-service
-            path: lockss_service
           name: cfg-service
         name: cfg-service
       - configMap:
-          items:
-          - key: cfg-service-opt
-            path: lockss_service-opt
           name: cfg-service-opt
         name: cfg-service-opt
       - configMap:
-          items:
-          - key: lockss-cluster
-            path: lockss_cluster
           name: lockss-cluster
         name: lockss-cluster
       - configMap:
-          items:
-          - key: lockss-cluster-opt
-            path: lockss_cluster-opt
           name: lockss-cluster-opt
         name: lockss-cluster-opt
       - name: lockss-postgres-pass
         secret:
-          items:
-          - key: lockss-postgres-pass
-            path: lockss-postgres-pass
           secretName: lockss-postgres-pass
       - name: lockss-ui-pass
         secret:
-          items:
-          - key: lockss-ui-pass
-            path: lockss-ui-pass
           secretName: lockss-ui-pass
       - name: lockss-auth
         secret:
-          items:
-          - key: lockss-auth
-            path: lockss-auth
           secretName: lockss-auth
       - name: lockss-cfg-data
         persistentVolumeClaim:
