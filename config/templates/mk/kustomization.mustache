@@ -1,0 +1,16 @@
+resources:
+- ../svc/lockss-configuration-service.yaml
+- ../svc/lockss-metadata-service.yaml
+- ../svc/lockss-poller-service.yaml
+- ../svc/lockss-postgres-service.yaml
+- ../svc/lockss-pywb-service.yaml
+- ../svc/lockss-repository-service.yaml
+- ../svc/lockss-solr-service.yaml
+
+# namespace to deploy all Resources to
+namespace: lockss
+
+# labels added to all Resources
+commonLabels:
+app: lockss
+lockss-stack-id: {{STACK}}

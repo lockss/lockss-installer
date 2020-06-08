@@ -212,7 +212,7 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  #add the minikube custom elements
+  #add the microk8s custom elements
   mk_dst="${STACK_CONFIG_DIR}/mk"
   mkdir "${mk_dst}"
   cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"

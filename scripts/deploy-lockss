@@ -72,6 +72,7 @@ declare -a deploy_service_names
 declare -a svcs
 declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
+alias kubectl="microk8s kubectl"
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -212,6 +213,7 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yaml"
+
 #    echo "Opening local access for ${svc_port_map[${svc}]}"
 #    kubectl port-forward --address localhost,${LOCKSS_IPADDR} "deploy/${svc}"" ${svc_port_map[${svc}]"}
   done

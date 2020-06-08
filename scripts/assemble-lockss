@@ -77,6 +77,8 @@ declare -a arr svcs
 declare -a arr svcs_confs
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
+alias kubectl='microk8s kubectl'
+
 STACK_PREFIX="lockss-stack"
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
@@ -149,20 +151,7 @@ Check_Physical_Volumes() {
 }
 
 start_minikube() {
-  LOCKSS_UID=$(id -u ${LOCKSS_USER})
-  LOCKSS_GID=$(id -g ${LOCKSS_USER})
-  msg "Preparing mounts for ip:${LOCKSS_IPADDR} gid:${LOCKSS_GID} uid:${LOCKSS_UID}..."
-  minikube start --vm \
-    --extra-config=apiserver.service-node-port-range=1-65535
-  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_DATA_DIR}:/data/lockss/data" &
-  minikube mount --ip ${LOCKSS_IPADDR} --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${LOCKSS_LOGS_DIR}:/data/lockss/logs" &
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  len=${#datadirs[@]}
-  start=1
-  for (( cnt=$start; cnt<$len; cnt++ )); do
-    path="${datadirs[$cnt]}"
-    minikube mount --gid ${LOCKSS_GID} --uid ${LOCKSS_UID} "${path}:${MK_DATA_ROOT}$cnt" &
-  done
+  microk8s enable dashboard dns ingress storage
   if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
@@ -250,8 +239,8 @@ add_stack_shared() {
   msg "clearing old deployments and configmaps..."
   kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
   kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
-  msg "adding global customizaiont"
-  kubectl apply -k "${mk_dir}/customization.yaml"
+  msg "adding global kustomization file"
+  kubectl kustomize "${mk_dir}"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   kubectl apply -f "${mk_dir}/local-storage.yaml"
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
@@ -259,7 +248,7 @@ add_stack_shared() {
   msg "patching ingress ports..."
   kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
   kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-  kubectl patch deployment nginx-ingress-controller --patch "$(cat "${mk_dir}/${INGRESS_PATCH_FILE}")"
+  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     kubectl delete secret ${sec} &>/dev/null
@@ -286,7 +275,7 @@ check_stack_solr() {
   fi
   msg "Checking solr installation for ${SOLR_FILE} and ${CORE_PATH}..."
   [ ! -f "${SOLR_FILE}" ] && msg "Unable to find file ${SOLR_FILE}."
-  [ ! -d "${CORE_PATH}" ] && msg "Unbalbe to find ${CORE_PATH}"
+  [ ! -d "${CORE_PATH}" ] && msg "Unable to find ${CORE_PATH}"
   if [ ! -f "${SOLR_FILE}" ] && [ ! -d "${CORE_PATH}" ]; then
     msg "Preparing solr for new install to ${SOLR_HOME_PATH}..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
@@ -322,10 +311,6 @@ add_additional_stack_volumes() {
     mtpoint=${datadirs[$cnt]}/$stack-repo-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
     mtname=$stack-repo-data${cnt}
-#    docker volume remove mtname &>/dev/null
-#    if ! docker volume create -d local-persist -o mountpoint=${mtpont} --name=${mtname}; then
-#      error_exit "${_0}: error creating volume ${mtname}"
-#    fi
   done
 }
 
@@ -391,7 +376,7 @@ fi
 # Sanity checks
 #Check_Runnable
 #Check_Physical_Volumes
-echo "starting local minikube..."
+echo "starting local microk8s..."
 start_minikube
 
 init_service_arrays

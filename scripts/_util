@@ -53,9 +53,9 @@ msg() {
 #  Check_Docker
 #}
 Check_Runnable() {
-  Check_Installed 'minikube'
-  if ! minikube status | grep "Running"; then
-    err_exit "minikube is not running.Please run $(minikube start)"
+  Check_Installed 'microk8s'
+  if ! microk8s status | grep "microk8s is running"; then
+    err_exit "microk8s is not running.Please run $(microk8s start)"
   fi
 }
 
