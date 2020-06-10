@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-ingress-microk8s-controller
+  namespace: ingress
+spec:
+  template:
+    spec:
+      containers:
+      - name: nginx-ingress-microk8s
+        ports:
+        - containerPort: {{CFG_DEFAULT_REST_PORT}}
+          hostPort: {{CFG_REST_PORT}}
+        - containerPort: {{CFG_DEFAULT_UI_PORT}}
+          hostPort: {{CFG_UI_PORT}}
+        - containerPort: {{JMS_DEFAULT_PORT}}
+          hostPort: {{JMS_PORT}}
+        - containerPort: {{CFG_DEFAULT_UI_PORT}}
+          hostPort: {{LOCKSS_UI_PORT}}
+        - containerPort: {{MDQ_DEFAULT_REST_PORT}}
+          hostPort: {{MDQ_REST_PORT}}
+        - containerPort: {{MDQ_DEFAULT_UI_PORT}}
+          hostPort: {{MDQ_UI_PORT}}
+        - containerPort: {{MDX_DEFAULT_REST_PORT}}
+          hostPort: {{MDX_REST_PORT}}
+        - containerPort: {{MDX_DEFAULT_UI_PORT}}
+          hostPort: {{MDX_UI_PORT}}
+        - containerPort: {{POL_DEFAULT_REST_PORT}}
+          hostPort: {{POL_REST_PORT}}
+        - containerPort: {{POL_DEFAULT_UI_PORT}}
+          hostPort: {{POL_UI_PORT}}
+        - containerPort: {{LOCKSS_LCAP_PORT}}
+          hostPort: {{LOCKSS_LCAP_PORT}}
+          protocol: TCP
+        - containerPort: {{SERV_DEFAULT_PORT}}
+          hostPort: {{SERV_PORT}}
+        - containerPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
+          hostPort: {{LOCKSS_PROXY_PORT}}
+        - containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
+          hostPort: {{LOCKSS_AUDIT_PORT}}
+          protocol: UDP
+        - containerPort: {{REPO_DEFAULT_REST_PORT}}
+          hostPort: {{REPO_REST_PORT}}
+        - containerPort: {{POSTGRES_DEFAULT_PORT}}
+          hostPort: {{POSTGRES_PORT}}
+        - containerPort: {{SOLR_DEFAULT_PORT}}
+          hostPort: {{SOLR_PORT}}
+        - containerPort: {{PYWB_DEFAULT_PORT}}
+          hostPort: {{PYWB_PORT}}

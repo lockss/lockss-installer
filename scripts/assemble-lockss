@@ -245,10 +245,10 @@ add_stack_shared() {
   kubectl apply -f "${mk_dir}/local-storage.yaml"
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
   kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
-  msg "patching ingress ports..."
-  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
-  kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
+#  msg "adding ingress support..."
+#  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+# kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+#  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     kubectl delete secret ${sec} &>/dev/null
@@ -280,10 +280,13 @@ check_stack_solr() {
     msg "Preparing solr for new install to ${SOLR_HOME_PATH}..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
-    cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
-      error_exit "Unable to install LOCKSS solr configuration files, exiting..."
-    chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
+    sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
       error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
+  fi
+  if [ ! -d "${SOLR_CONFIG_PATH}/v3" ]; then
+    msg "Adding cofigsets..."
+    sudo cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
+      error_exit "Unable to install LOCKSS solr configuration files, exiting..."
   fi
 }
 

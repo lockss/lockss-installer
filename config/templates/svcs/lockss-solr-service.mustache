@@ -94,6 +94,7 @@ spec:
         volumeMounts:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
+          subPath: lockss-auth
           readOnly: true
         - mountPath: /opt/solr/server/solr
           name: lockss-solr-data
