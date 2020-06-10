@@ -167,9 +167,15 @@ spec:
       - name: lockss-ui-pass
         secret:
           secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
       - name: lockss-auth
         secret:
           secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
 {{#REPO_NUMS}}
       - name: lockss-repo-data{{.}}
         persistentVolumeClaim:

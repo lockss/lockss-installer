@@ -124,6 +124,10 @@ spec:
           name: lockss-ui-pass
           subPath: lockss_ui_pass
           readOnly: true
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+          readOnly: true
         - mountPath: /data
           name: lockss-mdx-data
         - mountPath: /var/log/lockss
@@ -151,9 +155,21 @@ spec:
       - name: lockss-postgres-pass
         secret:
           secretName: lockss-postgres-pass
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
       - name: lockss-ui-pass
         secret:
           secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
       - name: lockss-mdx-data
         persistentVolumeClaim:
           claimName: lockss-mdx-data-pvc
