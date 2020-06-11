@@ -36,7 +36,6 @@ spec:
   selector:
     matchLabels:
       owner: "lockss-pywb-data"
-status: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -56,7 +55,6 @@ spec:
   selector:
     matchLabels:
       owner: "lockss-pywb-logs"
-status: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -86,13 +84,13 @@ spec:
         - name: ARGS_ADDITIONAL
           value: $(ARGS_ADDITIONAL)
         - name: LOCKSS_WAIT_FOR_200
-          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
         - name: REPO_HOST
           value: {{REPO_HOST}}
         - name: REPO_REST_PORT
-          value: '{{REPO_DEFAULT_REST_PORT}}'
+          value: '{{REPO_REST_PORT}}'
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{PYWB_IMG}}:{{PYWB_VERSION}}
@@ -115,4 +113,6 @@ spec:
       - name: lockss-pywb-data
         persistentVolumeClaim:
           claimName: lockss-pywb-data-pvc
-status: {}
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

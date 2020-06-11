@@ -243,8 +243,8 @@ add_stack_shared() {
   kubectl kustomize "${mk_dir}"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   kubectl apply -f "${mk_dir}/local-storage.yaml"
-  msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
-  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
+#  msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
+#  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
 #  msg "adding ingress support..."
 #  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
 # kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
@@ -287,6 +287,8 @@ check_stack_solr() {
     msg "Adding cofigsets..."
     sudo cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
       error_exit "Unable to install LOCKSS solr configuration files, exiting..."
+    sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
+      error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
   fi
 }
 

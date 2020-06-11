@@ -24,8 +24,6 @@ spec:
     io.kompose.service: lockss-configuration-service
   externalTrafficPolicy: Local
   type: NodePort
-status:
-  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -100,7 +98,7 @@ spec:
         - name: LOCKSS_PROPS_URL
           value: {{LOCKSS_PROPS_URL}}
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}}
+          value: {{POSTGRES_HOST}}:{{POSTGRES_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         volumeMounts:
@@ -187,4 +185,6 @@ spec:
       - name: lockss-cfg-logs
         persistentVolumeClaim:
           claimName: lockss-cfg-logs-pvc
-status: {}
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

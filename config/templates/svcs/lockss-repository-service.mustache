@@ -15,8 +15,6 @@ spec:
     io.kompose.service: lockss-repository-service
   externalTrafficPolicy: Local
   type: NodePort
-status:
-  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -102,9 +100,9 @@ spec:
         - name: LOCKSS_SOLR_HOST
           value: {{SOLR_HOST}}
         - name: LOCKSS_SOLR_PORT
-          value: "{{SOLR_DEFAULT_PORT}}"
+          value: "{{SOLR_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}
+          value: {{SOLR_HOST}}:{{SOLR_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{REPO_IMG}}:{{REPO_VERSION}}
@@ -184,4 +182,6 @@ spec:
       - name: lockss-repo-logs
         persistentVolumeClaim:
           claimName: lockss-repo-logs-pvc
-status: {}
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

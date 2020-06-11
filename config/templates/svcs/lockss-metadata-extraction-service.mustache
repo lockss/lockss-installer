@@ -18,8 +18,6 @@ spec:
     io.kompose.service: lockss-metadata-extraction-service
   externalTrafficPolicy: Local
   type: NodePort
-status:
-  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -39,7 +37,6 @@ spec:
   selector:
     matchLabels:
       owner: "lockss-mdx-data"
-status: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -59,7 +56,6 @@ spec:
   selector:
     matchLabels:
       owner: "lockss-mdx-logs"
-status: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -95,9 +91,9 @@ spec:
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_WAIT_FOR_200
-          value: "{{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: "{{MDX_IMG}}:{{MDX_VERSION}}"
@@ -176,4 +172,6 @@ spec:
       - name: lockss-mdx-logs
         persistentVolumeClaim:
           claimName: lockss-mdx-logs-pvc
-status: {}
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}
