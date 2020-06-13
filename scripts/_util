@@ -60,16 +60,6 @@ Check_Runnable() {
 }
 
 ##
-## function Check_Swarm
-##
-
-Check_Swarm() {
-  if ! docker stack ls &>/dev/null; then
-    err_exit "${_0}: Docker Swarm is not inited"
-  fi
-}
-
-##
 ## function Check_Docker
 ##
 
@@ -79,15 +69,6 @@ Check_Docker() {
   fi
 }
 
-##
-## function Check_Docker
-##
-
-Check_LocalPersistPlugin() {
-  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &>/dev/null; then
-    err_exit "${_0}: The local-persist volume plugin is not available. See readme for instructions."
-  fi
-}
 
 ##
 ## Check For installed secret

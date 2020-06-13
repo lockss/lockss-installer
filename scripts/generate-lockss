@@ -204,46 +204,46 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
   export REPO_NUMS
   #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
-  #add the service deployments
+  msg "${PROGNAME}: add the service deployments..."
   mkdir "${STACK_CONFIG_DIR}/svcs"
   for f in ${SERVICES_DIR}/*.mustache; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
-    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    msg "     Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  #add the microk8s custom elements
+  msg "${PROGNAME}: Adding the microk8s elements..."
   mk_dst="${STACK_CONFIG_DIR}/mk"
   mkdir "${mk_dst}"
   cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
   for f in ${MK_DIR}/*.mustache; do
     src="${f}"
     dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
-    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    msg "     Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  #add the lockss config file templates
+  msg "${PROGNAME}: Adding the lockss config files..."
   for f in ${TEMPLATES_DIR}/*.mustache; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
-    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+    msg "     Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  #add the user config file templates
+  msg "${PROGNAME}:  Adding the user config files..."
   for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
-      msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
+      msg "     Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     fi
   done
-  #add any remaining user opt files
+  msg "${PROGNAME}: Copying user opts..."
   for f in ${USEROPTS_DIR}/*_opt; do
     if [[ -f "${f}" ]]; then
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
-      msg "${PROGNAME}:  Copying ${src} to ${dst}..."
+      msg "     Copying ${src} to ${dst}..."
       cp "${src}" "${dst}"
     fi
   done

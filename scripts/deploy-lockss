@@ -191,7 +191,7 @@ check_installed_volumes() {
   for svc in "${svcs[@]}"; do
     echo "checking docker mountpoints for $stack-${svc}..."
     Check_Volume "$stack-${svc}-data"
-    Check_Volume "$stack-${svc}-logs"
+    Check_Volume "$stack-${svc}-logs  "
   done
 }
 
@@ -209,13 +209,16 @@ deploy_stack() {
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   pushd . &>/dev/null
+  echo "#!/usr/bin/env bash" > "${COMPOSE_DIR}/expose.sh"
+
   cd "${DOCKER_CONFIGS_DIR}/$stack/svcs"
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
-    kubectl apply -f "${svc}.yaml"
-#    echo "Opening local access for ${svc_port_map[${svc}]}"
-#    kubectl port-forward --address localhost,${LOCKSS_IPADDR} "deploy/${svc}" ${svc_port_map[${svc}]}
+    kubectl apply -f "${svc}.yaml" --namespace=${LOCKSS_NAMESPACE}
+    #    echo "Opening local access for ${svc_port_map[${svc}]}"
+    echo kubectl port-forward --address localhost,${LOCKSS_IPADDR} "deploy/${svc}" ${svc_port_map[${svc}]} >> "${COMPOSE_DIR}/expose.sh"
   done
+  chmod +x "${COMPOSE_DIR}/expose.sh"
   popd &>/dev/null
 }
 

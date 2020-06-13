@@ -186,6 +186,3 @@ spec:
       - name: lockss-pol-logs
         persistentVolumeClaim:
           claimName: lockss-pol-logs-pvc
-      securityContext:
-        runAsUser: {{LOCKSS_UID}}
-        fsGroup: {{LOCKSS_GID}}

@@ -302,10 +302,6 @@ done
 
 echo "${_0}: Checking for Docker..."
 ensure_docker
-echo "${_0}: Checking for Docker local-persist plugin..."
-ensure_persistent_plugin
-echo "${_0}: Checking docker swarm is running..."
-ensure_docker_swarm
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
 echo "${_0}: Checking for java install..."

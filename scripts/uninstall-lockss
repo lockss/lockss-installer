@@ -130,8 +130,8 @@ fi
 
 if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks
-  kubectl delete deployments -n "lockss" --all
-  kubectl delete pvc,pv,configmaps,secrets -n "lockss" --all
+  kubectl delete deployments -n "$LOCKSS_NAMESPACE" --all
+  kubectl delete pvc,configmaps,secrets,pv -n "$LOCKSS_NAMESPACE" --all
   echo ""
   echo "Successfully undeployed all stacks and removed all installed stack info."
   echo "You will need to rerun install-lockss and deploy-lockss to run again."

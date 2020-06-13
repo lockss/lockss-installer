@@ -173,11 +173,21 @@ spec:
       - name: lockss-postgres-pass
         secret:
           secretName: lockss-postgres-pass
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
       - name: lockss-ui-pass
         secret:
           secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
       - name: lockss-auth
         secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
           secretName: lockss-auth
       - name: lockss-cfg-data
         persistentVolumeClaim:
@@ -185,6 +195,3 @@ spec:
       - name: lockss-cfg-logs
         persistentVolumeClaim:
           claimName: lockss-cfg-logs-pvc
-      securityContext:
-        runAsUser: {{LOCKSS_UID}}
-        fsGroup: {{LOCKSS_GID}}

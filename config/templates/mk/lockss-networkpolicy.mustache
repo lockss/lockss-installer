@@ -14,12 +14,6 @@ spec:
   - Ingress
   - Egress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          io.kompose.network/{{STACK}}-network: "true"
+  - {}
   egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          io.kompose.network/{{STACK}}-network: "true"
+  - {}

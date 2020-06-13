@@ -56,7 +56,7 @@ _D0=$(dirname "${0}")
 
 # Directories
 COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "Setting Compose Dir: ${COMPOSE_DIR}"
+echo "Setting Install Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
 SECRETS_DIR="${CONFIG_DIR}/useropts"
@@ -470,8 +470,6 @@ build_config_file() {
         SHA256=$(echo ${SHA256} | sed 's/ .*$//')
         LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
         UI_PASS=${P1}
-#        Add_Secret "lockss-ui-pass" "${UI_PASS}"
-#        Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
         echo -n "${UI_PASS}"| base64 > "${SECRETS_DIR}"/lockss-ui-pass
         echo -n "${LOCKSS_ADMIN_USER}:${UI_PASS}" | base64 > "${SECRETS_DIR}"/lockss-auth
       fi

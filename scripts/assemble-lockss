@@ -58,7 +58,7 @@ _D0=$(dirname "${0}")
 
 # Directories
 COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "Setting Compose Dir: ${COMPOSE_DIR}"
+echo "Setting Install Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
@@ -150,13 +150,12 @@ Check_Physical_Volumes() {
   fi
 }
 
-start_minikube() {
-  microk8s enable dashboard dns ingress storage
+start_microk8s() {
+  microk8s enable dashboard dns storage
   if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
-  kubectl config set-context --current --namespace="lockss"
-
+  kubectl config set-context --current --namespace=${LOCKSS_NAMESPACE}
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -207,11 +206,11 @@ add_stack_configs() {
   msg "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    kubectl delete configmap ${key} &>/dev/null
+    kubectl delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
     if ! kubectl create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    kubectl delete configmap ${key}-opt &>/dev/null
+    kubectl delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
     if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
@@ -221,12 +220,12 @@ add_stack_configs() {
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     echo "adding service config ${key}..."
-    kubectl delete configmap ${key} &>/dev/null
-    if ! kubectl create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
+    kubectl delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! kubectl create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
       error_exit "${_0}: error creating config ${key}"
     fi
-    kubectl delete configmap ${key}-opt &>/dev/null
-    if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
+    kubectl delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! kubectl create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
@@ -240,20 +239,19 @@ add_stack_shared() {
   kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
   kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
   msg "adding global kustomization file"
-  kubectl kustomize "${mk_dir}"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  kubectl apply -f "${mk_dir}/local-storage.yaml"
-#  msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
-#  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml"
-#  msg "adding ingress support..."
-#  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
-# kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-#  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
+  kubectl apply -f "${mk_dir}/local-storage.yaml" --namespace=${LOCKSS_NAMESPACE}
+  msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
+  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml" --namespace=${LOCKSS_NAMESPACE}
+  #  msg "adding ingress support..."
+  #  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+  # kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+  #  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
-    kubectl delete secret ${sec} &>/dev/null
+    kubectl delete secret ${sec} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
     msg "adding ${sec}"
-    kubectl create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"
+    kubectl create secret generic ${sec} --namespace=${LOCKSS_NAMESPACE} --from-file "${USEROPTS_DIR}/${sec}"
   done
 }
 
@@ -273,20 +271,11 @@ check_stack_solr() {
   if [ -d "${OLD_REPO}" ]; then
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
-  msg "Checking solr installation for ${SOLR_FILE} and ${CORE_PATH}..."
-  [ ! -f "${SOLR_FILE}" ] && msg "Unable to find file ${SOLR_FILE}."
-  [ ! -d "${CORE_PATH}" ] && msg "Unable to find ${CORE_PATH}"
-  if [ ! -f "${SOLR_FILE}" ] && [ ! -d "${CORE_PATH}" ]; then
-    msg "Preparing solr for new install to ${SOLR_HOME_PATH}..."
+  msg "Checking solr installation for essential files..."
+  if [ ! -f "${SOLR_FILE}" ] || [ ! -d "${CORE_PATH}" ] || [ ! -d "${SOLR_CONFIG_PATH}/v3" ]; then
+    msg "Preparing solr home '${SOLR_HOME_PATH}' for new install..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
-    sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
-      error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
-  fi
-  if [ ! -d "${SOLR_CONFIG_PATH}/v3" ]; then
-    msg "Adding cofigsets..."
-    sudo cp -r "${UPDATES_DIR}/configsets" ${SOLR_CONFIG_PATH} ||
-      error_exit "Unable to install LOCKSS solr configuration files, exiting..."
     sudo chown -R "${SOLR_OWNER}" "${SOLR_HOME_PATH}" ||
       error_exit "Attempt to change ownership to ${SOLR_OWNER} on ${SOLR_HOME_PATH} failed."
   fi
@@ -312,7 +301,7 @@ add_additional_stack_volumes() {
   len=${#datadirs[@]}
   start=1
   msg "creating additional data volumes for $stack-repository-service..."
-  for (( cnt=$start; cnt<$len; cnt++ )); do
+  for ((cnt = $start; cnt < $len; cnt++)); do
     mtpoint=${datadirs[$cnt]}/$stack-repo-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
     mtname=$stack-repo-data${cnt}
@@ -328,10 +317,10 @@ assemble_stack() {
   set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack" || error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
-  add_stack_shared $stack
-  add_stack_volumes $stack
+  add_stack_shared ${stack}
+  add_stack_volumes ${stack}
   add_stack_configs ${stack}
-  check_stack_solr $stack
+  check_stack_solr ${stack}
   popd &>/dev/null
 }
 
@@ -382,7 +371,7 @@ fi
 #Check_Runnable
 #Check_Physical_Volumes
 echo "starting local microk8s..."
-start_minikube
+start_microk8s
 
 init_service_arrays
 

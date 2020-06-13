@@ -136,14 +136,15 @@ undeploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
+  kubectl config set-context --current --namespace=$LOCKSS_NAMESPACE
   echo "Removing all servcices for $stack."
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs"  -n lockss &>/dev/null
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs" -l lockss-stack-id=${stack} -n "$LOCKSS_NAMESPACE" &>/dev/null
 
   echo "Removing all configmaps and secrets for $stack."
-  kubectl delete configmaps,secrets -l lockss-stack-id=${stack}  -n lockss &>/dev/null
+  kubectl delete configmaps,secrets -l lockss-stack-id=${stack} -n "$LOCKSS_NAMESPACE" &>/dev/null
 
   echo "Removing all remaining customizations for $stack."
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk" -n lockss &>/dev/null
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk" -n  "$LOCKSS_NAMESPACE" &>/dev/null
 }
 
 # Sanity checks
