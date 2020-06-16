@@ -197,6 +197,19 @@ init_service_arrays() {
   fi
 }
 
+
+ensure_writable_dir() {
+  local DIR="$1"
+  USER=$(stat -c '%u' ${DIR})
+  GROUP=$(stat -c '%g' ${DIR})
+  if [ $USER -eq ${LOCKSS_UID} ]; then
+     return 0
+  else
+    msg "${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}"
+  fi
+}
+
 # Create configs for each stack
 add_stack_configs() {
   local stack=$1
@@ -238,7 +251,6 @@ add_stack_shared() {
   msg "clearing old deployments and configmaps..."
   $KUBECTL delete deployments -l lockss-stack-id=${stack}  --namespace=${LOCKSS_NAMESPACE} &>/dev/null
   $KUBECTL delete configmaps,secrets,pvc -l lockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-  msg "adding global kustomization file"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   $KUBECTL apply -f "${mk_dir}/local-storage.yaml" --namespace=${LOCKSS_NAMESPACE}
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
@@ -260,7 +272,6 @@ check_stack_solr() {
   SOLR_FILE="${SOLR_HOME_PATH}/solr.xml"
   OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
   SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
-  SOLR_OWNER="${LOCKSS_UID}:${LOCKSS_GID}"
 
   msg "Checking solr installation at ${SOLR_HOME_PATH}..."
 
@@ -271,8 +282,10 @@ check_stack_solr() {
 
   if [ ! -e "${SOLR_FILE}" ] || [ ! -e "${CORE_PATH}" ] || [ ! -e "${SOLR_CONFIG_PATH}/v3" ]; then
     msg "Preparing solr home '${SOLR_HOME_PATH}' for new install..."
-    tar -xkzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
+    sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
+    ensure_writable_dir ${SOLR_HOME_PATH} ||
+      error_exit "Unable to write to ${SOLR_HOME_PATH}"
   fi
 }
 
@@ -283,8 +296,10 @@ add_stack_volumes() {
     echo "creating data and log volumes for $stack-${svc}..."
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    ensure_writable_dir ${mtpoint} || error_exit "unable to get write permission for ${mtpoint}"
     mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    ensure_writable_dir ${mtpoint} || error_exit "unable to get write permission for ${mtpoint}"
   done
   add_additional_stack_volumes $stack
   $KUBECTL apply -f mk/lockss-persistent-volumes.yaml -n lockss
@@ -299,6 +314,7 @@ add_additional_stack_volumes() {
   for ((cnt = $start; cnt < $len; cnt++)); do
     mtpoint=${datadirs[$cnt]}/$stack-repo-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    ensure_writable_dir ${mtpoint} || error_exit "unable to get write permission for ${mtpoint}"
     mtname=$stack-repo-data${cnt}
   done
 }
