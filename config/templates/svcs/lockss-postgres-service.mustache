@@ -116,3 +116,6 @@ spec:
       - name: lockss-postgres-logs
         persistentVolumeClaim:
           claimName: lockss-postgres-logs-pvc
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

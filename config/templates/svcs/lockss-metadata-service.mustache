@@ -171,3 +171,6 @@ spec:
       - name: lockss-mdq-logs
         persistentVolumeClaim:
           claimName: lockss-mdq-logs-pvc
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

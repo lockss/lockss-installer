@@ -182,3 +182,6 @@ spec:
       - name: lockss-repo-logs
         persistentVolumeClaim:
           claimName: lockss-repo-logs-pvc
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}

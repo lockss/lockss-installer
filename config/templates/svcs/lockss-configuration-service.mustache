@@ -195,3 +195,6 @@ spec:
       - name: lockss-cfg-logs
         persistentVolumeClaim:
           claimName: lockss-cfg-logs-pvc
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        fsGroup: {{LOCKSS_GID}}
