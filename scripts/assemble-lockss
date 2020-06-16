@@ -77,7 +77,7 @@ declare -a arr svcs
 declare -a arr svcs_confs
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
-alias kubectl='microk8s kubectl'
+KUBECTL='microk8s kubectl'
 
 STACK_PREFIX="lockss-stack"
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
@@ -152,10 +152,10 @@ Check_Physical_Volumes() {
 
 start_microk8s() {
   microk8s enable dashboard dns
-  if ! kubectl get namespace lockss &>/dev/null; then
-    kubectl create namespace lockss
+  if ! $KUBECTL get namespace lockss &>/dev/null; then
+    $KUBECTL create namespace lockss
   fi
-  kubectl config set-context --current --namespace=${LOCKSS_NAMESPACE}
+  $KUBECTL config set-context --current --namespace=${LOCKSS_NAMESPACE}
 }
 
 #initialize the service arrays based on system.cfg info.
@@ -206,12 +206,12 @@ add_stack_configs() {
   msg "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    kubectl delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
+    $KUBECTL delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    kubectl delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
+    $KUBECTL delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -220,12 +220,12 @@ add_stack_configs() {
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     echo "adding service config ${key}..."
-    kubectl delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
+    $KUBECTL delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
       error_exit "${_0}: error creating config ${key}"
     fi
-    kubectl delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
+    $KUBECTL delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
@@ -236,18 +236,18 @@ add_stack_shared() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   msg "clearing old deployments and configmaps..."
-  kubectl delete deployments -l lockss-stack-id=${stack}  --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-  kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+  $KUBECTL delete deployments -l lockss-stack-id=${stack}  --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+  $KUBECTL delete configmaps,secrets,pvc -l lockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
   msg "adding global kustomization file"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  kubectl apply -f "${mk_dir}/local-storage.yaml" --namespace=${LOCKSS_NAMESPACE}
+  $KUBECTL apply -f "${mk_dir}/local-storage.yaml" --namespace=${LOCKSS_NAMESPACE}
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
-  kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml" --namespace=${LOCKSS_NAMESPACE}
+  $KUBECTL apply -f "${mk_dir}/lockss-networkpolicy.yaml" --namespace=${LOCKSS_NAMESPACE}
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
-    kubectl delete secret ${sec} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+    $KUBECTL delete secret ${sec} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
     msg "adding ${sec}"
-    kubectl create secret generic ${sec} --namespace=${LOCKSS_NAMESPACE} --from-file "${USEROPTS_DIR}/${sec}"
+    $KUBECTL create secret generic ${sec} --namespace=${LOCKSS_NAMESPACE} --from-file "${USEROPTS_DIR}/${sec}"
   done
 }
 
@@ -287,7 +287,7 @@ add_stack_volumes() {
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
-  kubectl apply -f mk/lockss-persistent-volumes.yaml -n lockss
+  $KUBECTL apply -f mk/lockss-persistent-volumes.yaml -n lockss
 }
 
 add_additional_stack_volumes() {

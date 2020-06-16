@@ -72,7 +72,7 @@ declare -a deploy_service_names
 declare -a svcs
 declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
-alias kubectl="microk8s kubectl"
+KUBECTL="microk8s kubectl"
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -214,7 +214,7 @@ deploy_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack/svcs"
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
-    kubectl apply -f "${svc}.yaml" --namespace=${LOCKSS_NAMESPACE}
+    $KUBECTL apply -f "${svc}.yaml" --namespace=${LOCKSS_NAMESPACE}
   done
   chmod +x "${COMPOSE_DIR}/expose.sh"
   popd &>/dev/null
