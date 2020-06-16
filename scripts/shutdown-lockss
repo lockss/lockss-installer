@@ -42,7 +42,7 @@ VERSION="1.0"
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
-COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
@@ -51,38 +51,41 @@ STACK_PREFIX="lockss-stack"
 alias kubectl='microk8s kubectl'
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  return
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
   Stop LOCKSS stack and containers.
 
@@ -110,22 +113,27 @@ _EOF_
 ##
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
 STACK_NUM=0
 
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-       STACK_NUM=$1;;
-    -*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  [1-9])
+    STACK_NUM=$1
+    ;;
+  -*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
@@ -136,15 +144,12 @@ undeploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  kubectl config set-context --current --namespace=$LOCKSS_NAMESPACE
+  kubectl config set-context --current --namespace=${LOCKSS_NAMESPACE}
   echo "Removing all servcices for $stack."
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs" -l lockss-stack-id=${stack} -n "$LOCKSS_NAMESPACE" &>/dev/null
+  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs" -llockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
 
   echo "Removing all configmaps and secrets for $stack."
-  kubectl delete configmaps,secrets -l lockss-stack-id=${stack} -n "$LOCKSS_NAMESPACE" &>/dev/null
-
-  echo "Removing all remaining customizations for $stack."
-  kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/mk" -n  "$LOCKSS_NAMESPACE" &>/dev/null
+  kubectl delete configmaps,secrets -llockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE}--namespace=${LOCKSS_NAMESPACE} &>/dev/null
 }
 
 # Sanity checks

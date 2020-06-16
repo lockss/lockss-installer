@@ -215,8 +215,6 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     kubectl apply -f "${svc}.yaml" --namespace=${LOCKSS_NAMESPACE}
-    #    echo "Opening local access for ${svc_port_map[${svc}]}"
-    echo kubectl port-forward --address localhost,${LOCKSS_IPADDR} "deploy/${svc}" ${svc_port_map[${svc}]} >> "${COMPOSE_DIR}/expose.sh"
   done
   chmod +x "${COMPOSE_DIR}/expose.sh"
   popd &>/dev/null

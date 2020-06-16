@@ -151,7 +151,7 @@ Check_Physical_Volumes() {
 }
 
 start_microk8s() {
-  microk8s enable dashboard dns storage
+  microk8s enable dashboard dns
   if ! kubectl get namespace lockss &>/dev/null; then
     kubectl create namespace lockss
   fi
@@ -207,11 +207,11 @@ add_stack_configs() {
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
     kubectl delete configmap ${key} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
+    if ! kubectl create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
     kubectl delete configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-    if ! kubectl create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
+    if ! kubectl create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -236,17 +236,13 @@ add_stack_shared() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   msg "clearing old deployments and configmaps..."
-  kubectl delete deployments -l lockss-stack-id=${stack} &>/dev/null
-  kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} &>/dev/null
+  kubectl delete deployments -l lockss-stack-id=${stack}  --namespace=${LOCKSS_NAMESPACE} &>/dev/null
+  kubectl delete configmaps,secrets,pvc -l lockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
   msg "adding global kustomization file"
   msg "adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   kubectl apply -f "${mk_dir}/local-storage.yaml" --namespace=${LOCKSS_NAMESPACE}
   msg "adding network policy from ${mk_dir}/lockss-networkpolicy.yaml"
   kubectl apply -f "${mk_dir}/lockss-networkpolicy.yaml" --namespace=${LOCKSS_NAMESPACE}
-  #  msg "adding ingress support..."
-  #  kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
-  # kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
-  #  kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
   msg "adding secrets..."
   for sec in "${secrets[@]}"; do
     kubectl delete secret ${sec} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
@@ -272,7 +268,8 @@ check_stack_solr() {
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
   msg "Checking solr installation for essential files..."
-  if [ ! -f "${SOLR_FILE}" ] || [ ! -d "${CORE_PATH}" ] || [ ! -d "${SOLR_CONFIG_PATH}/v3" ]; then
+
+  if [ ! -e "${SOLR_FILE}" ] || [ ! -e "${CORE_PATH}" ] || [ ! -e "${SOLR_CONFIG_PATH}/v3" ]; then
     msg "Preparing solr home '${SOLR_HOME_PATH}' for new install..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
