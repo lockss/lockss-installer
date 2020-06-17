@@ -197,4 +197,5 @@ spec:
           claimName: lockss-cfg-logs-pvc
       securityContext:
         runAsUser: {{LOCKSS_UID}}
+        runAsGroup {{LOCKSS_GID}}
         fsGroup: {{LOCKSS_GID}}
