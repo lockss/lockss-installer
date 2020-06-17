@@ -210,7 +210,7 @@ read_config() {
 }
 
 ask_for_input() {
-  echo "$1: [$2] "
+  echo -n "$1: [$2] "
   read ANS
   if [ "X${ANS}" = "X" ]; then
     ANS=$2
@@ -218,7 +218,7 @@ ask_for_input() {
 }
 
 ask_for_input_shadow() {
-  echo "$1: [$2] "
+  echo -n "$1: [$2] "
   local STTY_ORIG=$(stty -g)
   stty -echo
   read ANS
