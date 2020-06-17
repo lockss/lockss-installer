@@ -113,7 +113,3 @@ spec:
       - name: lockss-pywb-data
         persistentVolumeClaim:
           claimName: lockss-pywb-data-pvc
-      securityContext:
-        runAsUser: {{LOCKSS_UID}}
-        runAsGroup: {{LOCKSS_GID}}
-        fsGroup: {{LOCKSS_GID}}
