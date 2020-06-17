@@ -188,7 +188,6 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
-          secretName: lockss-auth
       - name: lockss-cfg-data
         persistentVolumeClaim:
           claimName: lockss-cfg-data-pvc
@@ -197,5 +196,5 @@ spec:
           claimName: lockss-cfg-logs-pvc
       securityContext:
         runAsUser: {{LOCKSS_UID}}
-        runAsGroup {{LOCKSS_GID}}
+        runAsGroup: {{LOCKSS_GID}}
         fsGroup: {{LOCKSS_GID}}
