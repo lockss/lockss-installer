@@ -509,7 +509,7 @@ build_config_file() {
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-        echo "Sending mail failed. Please check mail configuration."
+        echo "Sending mail failed.  Please check mail configuration."
         UNSENT_FILE=/tmp/unsent-lockss-config
         cp ${FILT_CONFIG} ${UNSENT_FILE}
         echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
@@ -529,7 +529,7 @@ LOCKSS_TEAM=lockssdiag@lockss.org
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(uname -n)
 
-echo "$(date) Checking system state..Plese run check_sys as root if needed."
+echo "$(date) Checking system state.  Please run scripts/check_sys as root if needed."
 # Sanity checks
 Check_Runnable
 
@@ -537,13 +537,11 @@ case ${OS_TYPE} in
 Linux)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
   LOCKSS_TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 Darwin)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
   LOCKSS_TIMEZONE=$(readlink /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 *)
@@ -551,6 +549,8 @@ Darwin)
   exit 1
   ;;
 esac
+
+LOCAL_IPADDR=$(guess_ip_address)
 
 declare -i CONFIG_COUNT
 
@@ -571,4 +571,4 @@ esac
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-echo "$(date) Call start-lockss to launch the LOCKSS stack 'lockss-stack'..."
+echo "$(date) Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."

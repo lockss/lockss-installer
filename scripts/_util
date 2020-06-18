@@ -55,7 +55,7 @@ msg() {
 Check_Runnable() {
   Check_Installed 'microk8s'
   if ! microk8s status | grep "microk8s is running"; then
-    err_exit "microk8s is not running.Please run $(microk8s start)"
+    err_exit "microk8s is not running. Please run $(microk8s start)"
   fi
 }
 
@@ -337,6 +337,26 @@ parse_ip_address() {
   else
     echo ${IPADDR}
   fi
+}
+
+
+guess_ip_address() {
+  local all_ips=
+  case $(uname -s) in
+    Linux)
+      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
+      # remove IPv6 addresses
+      all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
+
+      if [ -n "${all_ips}" ] ; then
+	  echo "${all_ips}" | sed 's/ .*//'
+      fi
+      ;;
+    Darwin)
+      ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/' 2>/dev/null
+      ;;
+    *)
+  esac
 }
 
 # read_config file
