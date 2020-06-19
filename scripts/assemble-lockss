@@ -243,10 +243,14 @@ add_stack_shared() {
   for sec in "${secrets[@]}"; do
     $KUBECTL delete secret ${sec}
   done
+  msg "${PROGNAME}: adding ingress support..."
+  microk8s kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+  microk8s kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+  microk8s kubectl apply -f "${mk_dir}/nginx-ingress-service.yaml"
 
   msg "${PROGNAME}:  adding storage class: local-storage from ${mk_dir}/local-storage.yaml"
   microk8s kubectl apply -f "${mk_dir}/local-storage.yaml"
-  msg "${PROGNAME}:  adding secrets..."
+  msg "${PROGNAME}: adding secrets..."
   for sec in "${secrets[@]}"; do
     $KUBECTL create secret generic ${sec} --from-file "${USEROPTS_DIR}/${sec}"
   done

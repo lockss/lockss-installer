@@ -4,7 +4,10 @@ metadata:
   name: nginx-ingress-microk8s-controller
   namespace: ingress
 spec:
-  template:
+  selector:
+    matchLabels:
+      name: nginx-ingress-microk8s
+   template:
     spec:
       containers:
       - name: nginx-ingress-microk8s
