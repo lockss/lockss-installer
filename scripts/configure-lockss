@@ -426,7 +426,7 @@ build_config_file() {
         fi
       done
       new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "Run repo cache updater."
+      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
       LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
       LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
     else
@@ -437,8 +437,13 @@ build_config_file() {
       LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
+    if [ -n "${LOCKSS_LOGS_DIR}" ]; then
+      log_dir_default="${LOCKSS_LOGS_DIR}"
+    else
+      log_dir_default="${LOCKSS_DATA_DIR}"
+    fi
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Service logs directory" ${LOCKSS_LOGS_DIR}
+      ask_for_input "Service logs directory" ${log_dir_default}
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="${ANS}"
         LOG_PATHS_OK=Y
@@ -489,20 +494,17 @@ build_config_file() {
         echo "Config not installed, left in ${TMP_CONFIG}"
         exit 1
       fi
-      echo "Checking content storage directory"
-      if ! init_one_dir ${LOCKSS_DATA_DIR} $2; then
-        exit 1
-      fi
-      if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
-        exit 1
-      fi
-      echo "Checking additional content storage directories..."
-      for dir in "${curPaths[@]}"
-      do
+      echo "Checking content storage directory(s)"
+      for dir in "${curPaths[@]}"; do
         if ! init_one_dir ${dir} $2; then
           err "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       done
+      if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
+          exit 1
+        fi
+      fi
       rm -f ${TMP_CONFIG}
       echo Done
       CONFIG_OK=Y
@@ -525,13 +527,18 @@ build_config_file() {
 ###
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
-LOCKSS_TEAM=lockssdiag@lockss.org
+if [ -z "${LOCKSS_TEAM}" ]; then
+  LOCKSS_TEAM=lockssdiag@lockss.org
+fi
 LOCKSS_USER="lockss"
-LOCAL_HOSTNAME=$(uname -n)
+LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 
-echo "$(date) Checking system state.  Please run scripts/check_sys as root if needed."
+echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks
-Check_Runnable
+echo "BYPASS_CHECK_RUNNABLE=${BYPASS_CHECK_RUNNABLE}"
+if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
+  Check_Runnable
+fi
 
 case ${OS_TYPE} in
 Linux)
