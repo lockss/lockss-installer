@@ -112,7 +112,7 @@ usage() {
 }
 
 help_message() {
-  cat <<-_EOF_
+  cat <<-EOF
   $PROGNAME ver. $VERSION
   Generate files needed to run a LOCKSS stack.
 
@@ -122,7 +122,7 @@ help_message() {
   -h, --help  Display this help message and exit.
   <num stacks> Optional number of stacks to run on this host.
 
-_EOF_
+EOF
   return
 }
 
@@ -164,6 +164,9 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
+msg "${PROGNAME}:  Checking install..."
+Check_Runnable
+
 msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
@@ -190,6 +193,8 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
   . "${stack_env_file}"
   set +a
 
+  msg "${PROGNAME}: Getting node hostname..."
+  export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
   export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
 
   declare -a REPO_NUMS
@@ -222,7 +227,7 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     msg "     Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
   done
-  msg "${PROGNAME}: Adding the lockss config files..."
+  msg "${PROGNAME}: Generating lockss config files..."
   for f in ${TEMPLATES_DIR}/*.mustache; do
     src="${f}"
     dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
@@ -238,17 +243,11 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
       mo "${src}" >"${dst}"
     fi
   done
-  msg "${PROGNAME}: Copying user opts..."
-  for f in ${USEROPTS_DIR}/*_opt; do
-    if [[ -f "${f}" ]]; then
-      src="${f}"
-      dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
-      msg "     Copying ${src} to ${dst}..."
-      cp "${src}" "${dst}"
-    fi
-  done
 done
 
-msg "${PROGNAME}:  Done updating configs."
+msg "--------------------------------------------------------------------"
+msg "${PROGNAME}:  Successfully regenerated stack components."
+msg "${PROGNAME}:  Run assemble-lockss to install regenerated components."
+msg "--------------------------------------------------------------------"
 
 graceful_exit

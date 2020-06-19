@@ -14,9 +14,9 @@ spec:
   selector:
     io.kompose.service: lockss-pywb-service
   externalTrafficPolicy: Local
+  externalIPs:
+  - {{LOCKSS_IPADDR}}
   type: NodePort
-status:
-  loadBalancer: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

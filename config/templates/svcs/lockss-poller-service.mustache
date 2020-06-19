@@ -32,6 +32,8 @@ spec:
   selector:
     io.kompose.service: lockss-poller-service
   externalTrafficPolicy: Local
+  externalIPs:
+  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

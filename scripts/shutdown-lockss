@@ -48,7 +48,7 @@ CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 
 STACK_PREFIX="lockss-stack"
-KUBECTL='microk8s kubectl'
+KUBECTL='microk8s kubectl -n lockss'
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -145,12 +145,14 @@ undeploy_stack() {
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   
-  echo "Removing all services for $stack."
-  microk8s kubectl delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs" -llockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-
+  echo "Removing all servcices for $stack."
+  $KUBECTL delete -f "${DOCKER_CONFIGS_DIR}/$stack/svcs"
   echo "Removing all configmaps and secrets for $stack."
-  microk8s kubectl delete configmaps,secrets -llockss-stack-id=${stack} --namespace=${LOCKSS_NAMESPACE} &>/dev/null
-  microk8s kubectl delete pv -llockss-stack-id=${stack}
+  microk8s kubectl delete -l lockss-stack-id=${stack} pv
+  $KUBECTL delete configmaps --all
+  for sec in "${secrets[@]}"; do
+    $KUBECTL delete secret ${sec}
+  done
 }
 
 # Sanity checks
