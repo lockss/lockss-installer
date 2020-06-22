@@ -151,7 +151,7 @@ configure_services() {
       LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
       POSTGRES_PASS=${P1}
 #      Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
-      echo -n '${POSTGRES_PASS}' | base64 > "${SECRETS_DIR}"/lockss-postgres-pass
+      echo -n "${POSTGRES_PASS}"| base64 > "${SECRETS_DIR}"/lockss-postgres-pass
     fi
   done
 
