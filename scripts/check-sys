@@ -301,10 +301,10 @@ until is_yes ${IP_OK}; do
 done
 
 echo "${_0}: Checking for Docker..."
-ensure_docker
-echo "${_0}: Checking for lockss user..."
+#ensure_docker
+#echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
 echo "${_0}: Checking for java install..."
-ensure_java
-echo "${_0}: Essential compoments have been sucessfully installed."
+#ensure_java
+#echo "${_0}: Essential compoments have been sucessfully installed."
 graceful_exit

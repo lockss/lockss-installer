@@ -15,8 +15,8 @@ spec:
     port: {{POL_UI_PORT}}
     targetPort: {{POL_DEFAULT_UI_PORT}}
   - name: "lockss-lcap-port"
-    port: {{LOCKSS_LCAP_PORT}}
-    targetPort: {{LOCKSS_LCAP_PORT}}
+    port: {{POL_LCAP_PORT}}
+    targetPort: {{POL_DEFAULT_LCAP_PORT}}
   - name: "lockss-servecontent-port"
     port: {{SERV_PORT}}
     targetPort: {{SERV_DEFAULT_PORT}}
@@ -32,8 +32,6 @@ spec:
   selector:
     io.kompose.service: lockss-poller-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

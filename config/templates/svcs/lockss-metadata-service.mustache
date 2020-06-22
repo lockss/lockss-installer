@@ -17,8 +17,6 @@ spec:
   selector:
     io.kompose.service: lockss-metadata-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

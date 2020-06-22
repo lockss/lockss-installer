@@ -14,8 +14,6 @@ spec:
   selector:
     io.kompose.service: lockss-solr-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

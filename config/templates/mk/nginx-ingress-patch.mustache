@@ -1,37 +1,14 @@
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: nginx-ingress-microk8s-controller
-  namespace: ingress
 spec:
-  selector:
-    matchLabels:
-      name: nginx-ingress-microk8s
   template:
-    metadata:
-      labels:
-        name: nginix-ingress-microk8s
     spec:
       containers:
       - name: nginx-ingress-microk8s
         ports:
-        - hostPort: 80
-          containerPort: 80
-          protocol: TCP
-        - hostPort: 443
-          containerPort: 443
-          protocol: TCP
         - containerPort: {{CFG_DEFAULT_REST_PORT}}
           hostPort: {{CFG_REST_PORT}}
           protocol: TCP
         - containerPort: {{CFG_DEFAULT_UI_PORT}}
           hostPort: {{CFG_UI_PORT}}
-          protocol: TCP
-        - containerPort: {{JMS_DEFAULT_PORT}}
-          hostPort: {{JMS_PORT}}
-          protocol: TCP
-        - containerPort: {{CFG_DEFAULT_UI_PORT}}
-          hostPort: {{LOCKSS_UI_PORT}}
           protocol: TCP
         - containerPort: {{MDQ_DEFAULT_REST_PORT}}
           hostPort: {{MDQ_REST_PORT}}
