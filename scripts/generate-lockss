@@ -195,8 +195,7 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
 
   msg "${PROGNAME}: Getting node hostname..."
   export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
-  export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
-
+  export POSTGRES_PASSWD="$(cat "${USEROPTS_DIR}/lockss-postgres-pass")"
   declare -a REPO_NUMS
   REPO_NUMS[0]=""
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
