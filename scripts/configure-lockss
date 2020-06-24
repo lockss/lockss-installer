@@ -150,8 +150,7 @@ configure_services() {
       SHA256=$(echo ${SHA256} | sed 's/ .*$//')
       LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
       POSTGRES_PASS=${P1}
-#      Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
-      echo -n "${POSTGRES_PASS}"| base64 > "${SECRETS_DIR}"/lockss-postgres-pass
+      echo -n "${POSTGRES_PASS}" > "${SECRETS_DIR}"/lockss-postgres-pass
     fi
   done
 
@@ -475,8 +474,8 @@ build_config_file() {
         SHA256=$(echo ${SHA256} | sed 's/ .*$//')
         LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
         UI_PASS=${P1}
-        echo -n "${UI_PASS}"| base64 > "${SECRETS_DIR}"/lockss-ui-pass
-        echo -n "${LOCKSS_ADMIN_USER}:${UI_PASS}" | base64 > "${SECRETS_DIR}"/lockss-auth
+        echo -n "${UI_PASS}"> "${SECRETS_DIR}"/lockss-ui-pass
+        echo -n "${LOCKSS_ADMIN_USER}:${UI_PASS}" > "${SECRETS_DIR}"/lockss-auth
       fi
     done
     configure_services
