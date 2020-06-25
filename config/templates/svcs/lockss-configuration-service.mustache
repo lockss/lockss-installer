@@ -23,6 +23,8 @@ spec:
   selector:
     io.kompose.service: lockss-configuration-service
   externalTrafficPolicy: Local
+  externalIPs:
+    {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1
