@@ -15,7 +15,7 @@ spec:
     io.kompose.service: lockss-pywb-service
   externalTrafficPolicy: Local
   externalIPs:
-    {{LOCKSS_IPADDR}}
+  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1
