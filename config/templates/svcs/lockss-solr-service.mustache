@@ -16,7 +16,7 @@ spec:
   externalTrafficPolicy: Local
   externalIPs:
   - {{LOCKSS_IPADDR}}
-  type: NodePort
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

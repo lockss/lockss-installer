@@ -31,12 +31,12 @@
 # Edit the corresponding file with the "opt" suffix instead.
 
 # Use a REST repository
-org.lockss.repository.v2Repository=rest:lockss:http://{{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}
+org.lockss.repository.v2Repository=rest:lockss:http://{{REPO_HOST}}:{{REPO_REST_PORT}}
 
 # JMS connection
 org.lockss.plugin.jms.enable=true
 #org.lockss.jms.connect.uri=tcp://{{JMS_HOST}}:{{JMS_DEFAULT_PORT}}
-org.lockss.jms.broker.uri=tcp://{{JMS_HOST}}:{{JMS_DEFAULT_PORT}}
+org.lockss.jms.broker.uri=tcp://{{JMS_HOST}}:{{JMS_PORT}}
 
 org.lockss.db.databaseNamePrefix={{LOCKSS_DBNAME_PREFIX}}
 
