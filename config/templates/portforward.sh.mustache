@@ -1,34 +1,37 @@
 #!/usr/bin/env bash
 
-if microk8s kubectl get -n lockss service/lockss-configuration-service ; then
-  microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-configuration-service \
-{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}  {{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}} {{LOCKSS_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}}
+if microk8s kubectl d -n lockss service/lockss-configuration-service ; then
+  microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} deployment/lockss-configuration-service \
+{{CFG_REST_PORT}}:{{CFG_DEFAULT_REST_PORT}}  {{CFG_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}} {{LOCKSS_UI_PORT}}:{{CFG_DEFAULT_UI_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-metadata-extraction-service ; then
+if microk8s kubectl get -n lockss service/lockss-metadata-extraction-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-metadata-extraction-service \
-{{MDX_REST_PORT}}:{{MDX_DEFAULT_REST_PORT}} {{MDX_UI_PORT}}:{{MDX_DEFAULT_UI_PORT}}
+{{MDX_REST_PORT}}:{{MDX_DEFAULT_REST_PORT}} {{MDX_UI_PORT}}:{{MDX_DEFAULT_UI_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-metadata-service ; then
+if microk8s kubectl get -n lockss service/lockss-metadata-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-metadata-service \
-{{MDQ_REST_PORT}}:{{MDQ_DEFAULT_REST_PORT}} {{MDQ_UI_PORT}}:{{MDQ_DEFAULT_UI_PORT}}
+{{MDQ_REST_PORT}}:{{MDQ_DEFAULT_REST_PORT}} {{MDQ_UI_PORT}}:{{MDQ_DEFAULT_UI_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-poller-service ; then
+if microk8s kubectl get -n lockss service/lockss-poller-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-poller-service \
-{{POL_REST_PORT}}:{{POL_DEFAULT_REST_PORT}} {{POL_UI_PORT}}:{{POL_DEFAULT_UI_PORT}} {{POL_LCAP_PORT}}:{{POL_DEFAULT_LCAP_PORT}} {{SERV_PORT}}:{{SERV_DEFAULT_PORT}} {{LOCKSS_PROXY_PORT}}:{{LOCKSS_DEFAULT_PROXY_PORT}} {{LOCKSS_AUDIT_PORT}}:{{LOCKSS_DEFAULT_AUDIT_PORT}} {{LOCKSS_ICP_PORT}}:{{LOCKSS_DEFAULT_ICP_PORT}}
+{{POL_REST_PORT}}:{{POL_DEFAULT_REST_PORT}} {{POL_UI_PORT}}:{{POL_DEFAULT_UI_PORT}} \
+{{POL_LCAP_PORT}}:{{POL_DEFAULT_LCAP_PORT}} {{SERV_PORT}}:{{SERV_DEFAULT_PORT}} \
+{{LOCKSS_PROXY_PORT}}:{{LOCKSS_DEFAULT_PROXY_PORT}} {{LOCKSS_AUDIT_PORT}}:{{LOCKSS_DEFAULT_AUDIT_PORT}} \
+{{LOCKSS_ICP_PORT}}:{{LOCKSS_DEFAULT_ICP_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-postgres-service ; then
+if microk8s kubectl get -n lockss service/lockss-postgres-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-postgres-service \
-{{POSTGRES_PORT}}:{{POSTGRES_DEFAULT_PORT}}
+{{POSTGRES_PORT}}:{{POSTGRES_DEFAULT_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-repository-service ; then
+if microk8s kubectl get -n lockss service/lockss-repository-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-repository-service \
-{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}}
+{{REPO_REST_PORT}}:{{REPO_DEFAULT_REST_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-solr-service ; then
+if microk8s kubectl get -n lockss service/lockss-solr-service ; then
   microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-solr-service \
-{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}}
+{{SOLR_PORT}}:{{SOLR_DEFAULT_PORT}} &
 fi
-&& if microk8s kubectl get -n lockss service/lockss-pywb-service ; then
+if microk8s kubectl get -n lockss service/lockss-pywb-service ; then
 microk8s kubectl port-forward -n lockss --address localhost,{{LOCKSS_IPADDR}} service/lockss-pywb-service \
-{{PYWB_PORT}}:{{PYWB_DEFAULT_PORT}}
+{{PYWB_PORT}}:{{PYWB_DEFAULT_PORT}} &
 fi

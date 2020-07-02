@@ -57,6 +57,9 @@ Check_Runnable() {
   if ! microk8s status | grep "microk8s is running"; then
     err_exit "microk8s is not running. Please run $(microk8s start)"
   fi
+  if ! microk8s kubectl get namespace "lockss"; then
+    microk8s kubectl create namespace "lockss"
+  fi
 }
 
 ##

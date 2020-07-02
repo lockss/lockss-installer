@@ -8,14 +8,12 @@ metadata:
   name: lockss-postgres-service
 spec:
   ports:
-  - name: "lockss-postgres-port"
+  - name: "postgres-port"
     port: {{POSTGRES_PORT}}
     targetPort: {{POSTGRES_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-postgres-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

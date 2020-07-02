@@ -8,17 +8,15 @@ metadata:
   name: lockss-metadata-extraction-service
 spec:
   ports:
-  - name: "lockss-mdx-service-rest-port"
+  - name: "mdx-service-rest-port"
     port: {{MDX_REST_PORT}}
     targetPort: {{MDX_DEFAULT_REST_PORT}}
-  - name: "lockss-mdx-service-ui-port"
+  - name: "mdx-service-ui-port"
     port: {{MDX_UI_PORT}}
     targetPort: {{MDX_DEFAULT_UI_PORT}}
   selector:
     io.kompose.service: lockss-metadata-extraction-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

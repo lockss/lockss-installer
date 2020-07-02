@@ -8,32 +8,30 @@ metadata:
   name: lockss-poller-service
 spec:
   ports:
-  - name: "lockss-pol-service-rest-port"
+  - name: "pol-service-rest-port"
     port: {{POL_REST_PORT}}
     targetPort: {{POL_DEFAULT_REST_PORT}}
-  - name: "lockss-pol-service-ui-port"
+  - name: "pol-service-ui-port"
     port: {{POL_UI_PORT}}
     targetPort: {{POL_DEFAULT_UI_PORT}}
-  - name: "lockss-lcap-port"
+  - name: "lcap-port"
     port: {{POL_LCAP_PORT}}
     targetPort: {{POL_DEFAULT_LCAP_PORT}}
-  - name: "lockss-servecontent-port"
+  - name: "servecontent-port"
     port: {{SERV_PORT}}
     targetPort: {{SERV_DEFAULT_PORT}}
-  - name: "lockss-proxy-port"
+  - name: "proxy-port"
     port: {{LOCKSS_PROXY_PORT}}
     targetPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
-  - name: "lockss-audit-port"
+  - name: "audit-port"
     port: {{LOCKSS_AUDIT_PORT}}
     targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
-  - name: "lockss-icp-port"
+  - name: "icp-port"
     port: {{LOCKSS_ICP_PORT}}
     targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
   selector:
     io.kompose.service: lockss-poller-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

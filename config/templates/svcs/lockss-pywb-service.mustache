@@ -8,14 +8,12 @@ metadata:
   name: lockss-pywb-service
 spec:
   ports:
-  - name: "lockss-pywb-port"
+  - name: "pywb-port"
     port: {{PYWB_PORT}}
     targetPort: {{PYWB_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-pywb-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1

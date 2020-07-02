@@ -8,15 +8,13 @@ metadata:
   name: lockss-solr-service
 spec:
   ports:
-  - name: "lockss-solr-port"
+  - name: "solr-port"
     port: {{SOLR_PORT}}
     targetPort: {{SOLR_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-solr-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
-  type: LoadBalancer
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

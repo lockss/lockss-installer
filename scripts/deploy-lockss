@@ -215,7 +215,12 @@ deploy_stack() {
     echo "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
   done
-#  chmod +x "${COMPOSE_DIR}/expose.sh"
+#  msg "${PROGNAME}: opening ingress support..."
+#  microk8s kubectl apply -f "${mk_dir}/nginx-ingress-tcp-config.yaml"
+#  microk8s kubectl apply -f "${mk_dir}/nginx-ingress-udp-config.yaml"
+#  microk8s kubectl patch daemonset nginx-ingress-microk8s-controller -n ingress --patch "$(cat ${mk_dir}/nginx-ingress-patch.yaml)"
+  cp  "${DOCKER_CONFIGS_DIR}/$stack/portforward.sh" "${COMPOSE_DIR}/$stack-portforward.sh"
+  chmod +x "${COMPOSE_DIR}/$stack-portforward.sh"
   popd &>/dev/null
 }
 

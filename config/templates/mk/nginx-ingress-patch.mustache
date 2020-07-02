@@ -3,52 +3,69 @@ spec:
     spec:
       containers:
       - name: nginx-ingress-microk8s
+        externalTrafficPolicy: Local
         ports:
-        - containerPort: {{CFG_DEFAULT_REST_PORT}}
+        - name: "cfg-rest-port"
+          containerPort: {{CFG_DEFAULT_REST_PORT}}
           hostPort: {{CFG_REST_PORT}}
           protocol: TCP
-        - containerPort: {{CFG_DEFAULT_UI_PORT}}
+        - name: "cfg-ui-port"
+          containerPort: {{CFG_DEFAULT_UI_PORT}}
           hostPort: {{CFG_UI_PORT}}
           protocol: TCP
-        - containerPort: {{MDQ_DEFAULT_REST_PORT}}
+        - name: "mdq-rest-port"
+          containerPort: {{MDQ_DEFAULT_REST_PORT}}
           hostPort: {{MDQ_REST_PORT}}
           protocol: TCP
-        - containerPort: {{MDQ_DEFAULT_UI_PORT}}
+        - name: "mdq-ui-port"
+          containerPort: {{MDQ_DEFAULT_UI_PORT}}
           hostPort: {{MDQ_UI_PORT}}
           protocol: TCP
-        - containerPort: {{MDX_DEFAULT_REST_PORT}}
+        - name: "mdx-rest-port"
+          containerPort: {{MDX_DEFAULT_REST_PORT}}
           hostPort: {{MDX_REST_PORT}}
           protocol: TCP
-        - containerPort: {{MDX_DEFAULT_UI_PORT}}
+        - name: "mdx-ui-port"
+          containerPort: {{MDX_DEFAULT_UI_PORT}}
           hostPort: {{MDX_UI_PORT}}
           protocol: TCP
-        - containerPort: {{POL_DEFAULT_REST_PORT}}
+        - name: "pol-rest-port"
+          containerPort: {{POL_DEFAULT_REST_PORT}}
           hostPort: {{POL_REST_PORT}}
           protocol: TCP
-        - containerPort: {{POL_DEFAULT_UI_PORT}}
+        - name: "pol-ui-port"
+          containerPort: {{POL_DEFAULT_UI_PORT}}
           hostPort: {{POL_UI_PORT}}
           protocol: TCP
-        - containerPort: {{LOCKSS_LCAP_PORT}}
+        - name: "lcap-port"
+          containerPort: {{LOCKSS_LCAP_PORT}}
           hostPort: {{LOCKSS_LCAP_PORT}}
           protocol: TCP
-        - containerPort: {{SERV_DEFAULT_PORT}}
+        - name: "srvcontent-port"
+          containerPort: {{SERV_DEFAULT_PORT}}
           hostPort: {{SERV_PORT}}
           protocol: TCP
-        - containerPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
+        - name: "proxy-port"
+          containerPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
           hostPort: {{LOCKSS_PROXY_PORT}}
           protocol: TCP
-        - containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
+        - name: "audit-port"
+          containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
           hostPort: {{LOCKSS_AUDIT_PORT}}
           protocol: UDP
-        - containerPort: {{REPO_DEFAULT_REST_PORT}}
+        - name: "repo-rest-port"
+          containerPort: {{REPO_DEFAULT_REST_PORT}}
           hostPort: {{REPO_REST_PORT}}
           protocol: TCP
-        - containerPort: {{POSTGRES_DEFAULT_PORT}}
+        - name: "postgres-port"
+          containerPort: {{POSTGRES_DEFAULT_PORT}}
           hostPort: {{POSTGRES_PORT}}
           protocol: TCP
-        - containerPort: {{SOLR_DEFAULT_PORT}}
+        - name: "solr-port"
+          containerPort: {{SOLR_DEFAULT_PORT}}
           hostPort: {{SOLR_PORT}}
           protocol: TCP
-        - containerPort: {{PYWB_DEFAULT_PORT}}
+        - name: "pywb-port"
+          containerPort: {{PYWB_DEFAULT_PORT}}
           hostPort: {{PYWB_PORT}}
           protocol: TCP

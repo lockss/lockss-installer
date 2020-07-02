@@ -8,23 +8,21 @@ metadata:
   name: lockss-configuration-service
 spec:
   ports:
-  - name: "lockss-cfg-rest-port"
+  - name: "cfg-rest-port"
     port: {{CFG_REST_PORT}}
     targetPort: {{CFG_DEFAULT_REST_PORT}}
-  - name: "lockss-cfg-ui-port"
+  - name: "cfg-ui-port"
     port: {{CFG_UI_PORT}}
     targetPort: {{CFG_DEFAULT_UI_PORT}}
-  - name: "lockss-jms-port"
+  - name: "jms-port"
     port: {{JMS_PORT}}
     targetPort: {{JMS_DEFAULT_PORT}}
-  - name: "lockss-ui-port"
+  - name: "ui-port"
     port: {{LOCKSS_UI_PORT}}
     targetPort: {{CFG_DEFAULT_UI_PORT}}
   selector:
     io.kompose.service: lockss-configuration-service
   externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
   type: NodePort
 ---
 apiVersion: v1
