@@ -69,6 +69,10 @@ spec:
         - name: "audit-port"
           containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
           hostPort: {{LOCKSS_AUDIT_PORT}}
+          protocol: TCP
+        - name: "icp-port"
+          port: {{LOCKSS_ICP_PORT}}
+          targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
           protocol: UDP
         - name: "repo-rest-port"
           containerPort: {{REPO_DEFAULT_REST_PORT}}

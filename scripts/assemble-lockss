@@ -271,7 +271,7 @@ check_stack_solr() {
   fi
   msg "${PROGNAME}:  Checking solr installation for essential files..."
 
-  if [ ! -e "${SOLR_FILE}"  -o ! -e "${CORE_PATH}" -o ! -e "${SOLR_CONFIG_PATH}/v3" ]; then
+  if [ ! -e "${SOLR_FILE}"  -o ! -e "${CORE_PATH}" ]; then
     msg "${PROGNAME}:  Preparing solr home '${SOLR_HOME_PATH}' for new install..."
     sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."

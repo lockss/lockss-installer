@@ -1,23 +1,23 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-pywb-service
-  name: lockss-pywb-service
-spec:
-  ports:
-  - name: "pywb-port"
-    port: {{PYWB_PORT}}
-    targetPort: {{PYWB_DEFAULT_PORT}}
-  selector:
-    io.kompose.service: lockss-pywb-service
-  externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
-  type: NodePort
----
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: lockss
+#     lockss-stack-id: {{STACK}}
+#     io.kompose.service: lockss-pywb-service
+#   name: lockss-pywb-service
+# spec:
+#   ports:
+#   - name: "pywb-port"
+#     port: {{PYWB_PORT}}
+#     targetPort: {{PYWB_DEFAULT_PORT}}
+#   selector:
+#     io.kompose.service: lockss-pywb-service
+#   externalTrafficPolicy: Local
+#   externalIPs:
+#   - {{LOCKSS_IPADDR}}
+#   type: NodePort
+# ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -96,7 +96,10 @@ spec:
         image: {{PYWB_IMG}}:{{PYWB_VERSION}}
         name: lockss-pywb-service
         ports:
-        - containerPort: {{PYWB_DEFAULT_PORT}}
+        - name: "pywb-port"
+          containerPort: {{PYWB_DEFAULT_PORT}}
+          hostPort: {{PYWB_PORT}}
+          protocol: TCP
         resources: {}
         volumeMounts:
         - mountPath: /run/secrets/lockss-auth

@@ -1,23 +1,21 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-solr-service
-  name: lockss-solr-service
-spec:
-  ports:
-  - name: "solr-port"
-    port: {{SOLR_PORT}}
-    targetPort: {{SOLR_DEFAULT_PORT}}
-  selector:
-    io.kompose.service: lockss-solr-service
-  externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
-  type: NodePort
----
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: lockss
+#     lockss-stack-id: {{STACK}}
+#     io.kompose.service: lockss-solr-service
+#   name: lockss-solr-service
+# spec:
+#   ports:
+#   - name: "solr-port"
+#     port: {{SOLR_PORT}}
+#     targetPort: {{SOLR_DEFAULT_PORT}}
+#   selector:
+#     io.kompose.service: lockss-solr-service
+#   externalTrafficPolicy: Local
+#   type: NodePort
+# ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -87,7 +85,10 @@ spec:
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
         name: lockss-solr-service
         ports:
-        - containerPort: {{SOLR_DEFAULT_PORT}}
+        - name: "solr-port"
+          containerPort: {{SOLR_DEFAULT_PORT}}
+          hostPort: {{SOLR_PORT}}
+          protocol: TCP
         resources: {}
         volumeMounts:
         - mountPath: /run/secrets/lockss-auth

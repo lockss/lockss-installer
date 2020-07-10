@@ -3,7 +3,6 @@ spec:
     spec:
       containers:
       - name: nginx-ingress-microk8s
-        externalTrafficPolicy: Local
         ports:
         - name: "cfg-rest-port"
           containerPort: {{CFG_DEFAULT_REST_PORT}}
@@ -52,6 +51,10 @@ spec:
         - name: "audit-port"
           containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
           hostPort: {{LOCKSS_AUDIT_PORT}}
+          protocol: TCP
+        - name: "icp-port"
+          hostPort: {{LOCKSS_ICP_PORT}}
+          containerPort: {{LOCKSS_DEFAULT_ICP_PORT}}
           protocol: UDP
         - name: "repo-rest-port"
           containerPort: {{REPO_DEFAULT_REST_PORT}}

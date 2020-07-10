@@ -1,41 +1,39 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-poller-service
-  name: lockss-poller-service
-spec:
-  ports:
-  - name: "pol-service-rest-port"
-    port: {{POL_REST_PORT}}
-    targetPort: {{POL_DEFAULT_REST_PORT}}
-  - name: "pol-service-ui-port"
-    port: {{POL_UI_PORT}}
-    targetPort: {{POL_DEFAULT_UI_PORT}}
-  - name: "lcap-port"
-    port: {{POL_LCAP_PORT}}
-    targetPort: {{POL_DEFAULT_LCAP_PORT}}
-  - name: "servecontent-port"
-    port: {{SERV_PORT}}
-    targetPort: {{SERV_DEFAULT_PORT}}
-  - name: "proxy-port"
-    port: {{LOCKSS_PROXY_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
-  - name: "audit-port"
-    port: {{LOCKSS_AUDIT_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
-  - name: "icp-port"
-    port: {{LOCKSS_ICP_PORT}}
-    targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
-  selector:
-    io.kompose.service: lockss-poller-service
-  externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
-  type: NodePort
----
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: lockss
+#     lockss-stack-id: {{STACK}}
+#     io.kompose.service: lockss-poller-service
+#   name: lockss-poller-service
+# spec:
+#   ports:
+#   - name: "pol-service-rest-port"
+#     port: {{POL_REST_PORT}}
+#     targetPort: {{POL_DEFAULT_REST_PORT}}
+#   - name: "pol-service-ui-port"
+#     port: {{POL_UI_PORT}}
+#     targetPort: {{POL_DEFAULT_UI_PORT}}
+#   - name: "lcap-port"
+#     port: {{POL_LCAP_PORT}}
+#     targetPort: {{POL_DEFAULT_LCAP_PORT}}
+#   - name: "servecontent-port"
+#     port: {{SERV_PORT}}
+#     targetPort: {{SERV_DEFAULT_PORT}}
+#   - name: "proxy-port"
+#     port: {{LOCKSS_PROXY_PORT}}
+#     targetPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
+#   - name: "audit-port"
+#     port: {{LOCKSS_AUDIT_PORT}}
+#     targetPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
+#   - name: "icp-port"
+#     port: {{LOCKSS_ICP_PORT}}
+#     targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
+#   selector:
+#     io.kompose.service: lockss-poller-service
+#   externalTrafficPolicy: Local
+#   type: NodePort
+# ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -119,13 +117,33 @@ spec:
         imagePullPolicy: ""
         name: lockss-poller-service
         ports:
-        - containerPort: {{POL_DEFAULT_REST_PORT}}
-        - containerPort: {{POL_DEFAULT_UI_PORT}}
-        - containerPort: {{LOCKSS_LCAP_PORT}}
-        - containerPort: {{SERV_DEFAULT_PORT}}
-        - containerPort: {{LOCKSS_PROXY_PORT}}
-        - containerPort: {{LOCKSS_AUDIT_PORT}}
-        - containerPort: {{LOCKSS_ICP_PORT}}
+        - name: "pol-rest-port"
+          containerPort: {{POL_DEFAULT_REST_PORT}}
+          hostPort: {{POL_REST_PORT}}
+          protocol: TCP
+        - name: "pol-ui-port"
+          containerPort: {{POL_DEFAULT_UI_PORT}}
+          hostPort: {{POL_UI_PORT}}
+          protocol: TCP
+        - name: "lcap-port"
+          containerPort: {{LOCKSS_LCAP_PORT}}
+          hostPort: {{LOCKSS_LCAP_PORT}}
+          protocol: TCP
+        - name: "srvcontent-port"
+          containerPort: {{SERV_DEFAULT_PORT}}
+          hostPort: {{SERV_PORT}}
+          protocol: TCP
+        - name: "proxy-port"
+          containerPort: {{LOCKSS_DEFAULT_PROXY_PORT}}
+          hostPort: {{LOCKSS_PROXY_PORT}}
+          protocol: TCP
+        - name: "audit-port"
+          containerPort: {{LOCKSS_DEFAULT_AUDIT_PORT}}
+          hostPort: {{LOCKSS_AUDIT_PORT}}
+          protocol: TCP
+        - name: "icp-port"
+          containerPort: {{LOCKSS_DEFAULT_ICP_PORT}}
+          hostPort: {{LOCKSS_ICP_PORT}}
           protocol: UDP
         resources: {}
         volumeMounts:

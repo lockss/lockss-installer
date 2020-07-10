@@ -1,23 +1,21 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-repository-service
-  name: lockss-repository-service
-spec:
-  ports:
-  - name: "repo-rest-port"
-    port: {{REPO_REST_PORT}}
-    targetPort: {{REPO_DEFAULT_REST_PORT}}
-  selector:
-    io.kompose.service: lockss-repository-service
-  externalTrafficPolicy: Local
-  externalIPs:
-  - {{LOCKSS_IPADDR}}
-  type: NodePort
----
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: lockss
+#     lockss-stack-id: {{STACK}}
+#     io.kompose.service: lockss-repository-service
+#   name: lockss-repository-service
+# spec:
+#   ports:
+#   - name: "repo-rest-port"
+#     port: {{REPO_REST_PORT}}
+#     targetPort: {{REPO_DEFAULT_REST_PORT}}
+#   selector:
+#     io.kompose.service: lockss-repository-service
+#   externalTrafficPolicy: Local
+#   type: NodePort
+# ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -110,7 +108,10 @@ spec:
         image: {{REPO_IMG}}:{{REPO_VERSION}}
         name: lockss-repository-service
         ports:
-        - containerPort: {{REPO_DEFAULT_REST_PORT}}
+        - name: "repo-rest-port"
+          containerPort: {{REPO_DEFAULT_REST_PORT}}
+          hostPort: {{REPO_REST_PORT}}
+          protocol: TCP
         volumeMounts:
         - mountPath: /run/configs/lockss.properties
           name: repo-properties
