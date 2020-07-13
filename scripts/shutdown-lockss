@@ -46,6 +46,7 @@ COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 STACK_PREFIX="lockss-stack"
 KUBECTL='microk8s kubectl -n lockss'
@@ -146,7 +147,7 @@ undeploy_stack() {
   set +a
   
   echo "Removing all services for $stack."
-  $KUBECTL delete -n lockss  -l lockss-stack-id=${stack} services,deployments,pvc
+  $KUBECTL delete -n lockss  -l lockss-stack-id=${stack} services,deployments,pvc,pods
   echo "Removing all configmaps and secrets for $stack."
   $KUBECTL delete configmaps --all
   for sec in "${secrets[@]}"; do
