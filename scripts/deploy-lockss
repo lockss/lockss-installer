@@ -214,8 +214,8 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-    $KUBECTL expose deployment $svc --type=NodePort --external-ip=$LOCKSS_IPADDR
-    $KUBECTL patch svc $svc -p '{"spec":{"externalTrafficPolicy":"Local"}}'
+    $KUBECTL expose deployment $svc
+#    $KUBECTL patch svc $svc -p '{"spec":{"externalTrafficPolicy":"Local"}}'
   done
 #  msg "${PROGNAME}: opening ingress support..."
 #  mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
@@ -224,7 +224,7 @@ deploy_stack() {
 #  microk8s kubectl patch daemonset nginx-ingress-microk8s-controller -n ingress --patch "$(cat ${mk_dir}/nginx-ingress-patch.yaml)"
 # cp  "${DOCKER_CONFIGS_DIR}/$stack/portforward.sh" "${COMPOSE_DIR}/$stack-portforward.sh"
   chmod +x "${DOCKER_CONFIGS_DIR}/$stack/portforward.sh"
-#  "${DOCKER_CONFIGS_DIR}/$stack/$stack-portforward.sh"
+#  "${DOCKER_CONFIGS_DIR}/$stack/portforward.sh"
   popd &>/dev/null
 }
 
