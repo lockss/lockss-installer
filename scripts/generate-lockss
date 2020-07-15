@@ -72,6 +72,7 @@ STORAGE_CLASS_FILE="local-storage.yaml"
 
 STACK_PREFIX="lockss-stack"
 PORT_BASE=245
+PULL_POLICY="IfNotPresent"
 
 # Variables
 declare -i STACK_COUNT=1
@@ -120,6 +121,7 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
+  -u, --update  force update of LOCKSS docker images
   <num stacks> Optional number of stacks to run on this host.
 
 EOF
@@ -140,6 +142,10 @@ while [[ -n $1 ]]; do
   -h | --help)
     help_message
     graceful_exit
+    ;;
+  -u | --update)
+    PULL_POLICY="Always"
+    msg "${PROGNAME}:  Forcing update of LOCKSS docker images"
     ;;
   [1-9])
     STACK_COUNT=$1

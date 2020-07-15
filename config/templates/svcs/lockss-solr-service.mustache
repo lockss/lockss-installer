@@ -83,6 +83,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-solr-service
         ports:
         - name: "solr-port"

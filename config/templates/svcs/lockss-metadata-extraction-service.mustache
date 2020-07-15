@@ -97,6 +97,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: "{{MDX_IMG}}:{{MDX_VERSION}}"
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-metadata-extraction-service
         ports:
         - name: "mdx-rest-port"

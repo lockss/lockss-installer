@@ -114,7 +114,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{POL_IMG}}:{{POL_VERSION}}
-        imagePullPolicy: ""
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
         ports:
         - name: "pol-rest-port"

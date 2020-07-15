@@ -123,6 +123,7 @@ spec:
         - mountPath: /var/log/lockss
           name: lockss-mdq-logs
         image: "{{MDQ_IMG}}:{{MDQ_VERSION}}"
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-metadata-service
         ports:
         - name: "mdq-rest-port"

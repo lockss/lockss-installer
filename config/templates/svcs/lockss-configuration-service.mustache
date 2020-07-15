@@ -133,6 +133,7 @@ spec:
         - mountPath: /var/log/lockss
           name: lockss-cfg-logs
         image: {{CFG_IMG}}:{{CFG_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-configuration-service
         ports:
         - name: "cfg-rest-port"

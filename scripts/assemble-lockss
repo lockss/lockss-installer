@@ -127,7 +127,6 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -u, --update  force update of LOCKSS docker images
 
 _EOF_
   return
@@ -337,10 +336,6 @@ while [[ -n $1 ]]; do
   -h | --help)
     help_message
     graceful_exit
-    ;;
-  -u | --update)
-    UPDATE_IMAGES=1
-    msg "${PROGNAME}:  Forcing update of LOCKSS docker images"
     ;;
   [1-9])
     STACK_NUM=$1

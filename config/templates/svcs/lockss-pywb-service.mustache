@@ -94,6 +94,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{PYWB_IMG}}:{{PYWB_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-pywb-service
         ports:
         - name: "pywb-port"

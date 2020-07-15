@@ -151,8 +151,8 @@ fi
 
 echo "Scripts dir ${SCRIPTS_DIR}"
 
-"${SCRIPTS_DIR}"/generate-lockss &&
-"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
+"${SCRIPTS_DIR}"/generate-lockss ${UPDATE_ARG} &&
+"${SCRIPTS_DIR}"/assemble-lockss &&
 "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 
 

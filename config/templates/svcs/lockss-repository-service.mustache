@@ -106,6 +106,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{REPO_IMG}}:{{REPO_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-repository-service
         ports:
         - name: "repo-rest-port"

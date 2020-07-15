@@ -92,6 +92,7 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
         name: lockss-postgres-service
         ports:
         - name: "postgres-port"
