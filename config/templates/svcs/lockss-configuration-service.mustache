@@ -149,6 +149,10 @@ spec:
           hostPort: {{JMS_PORT}}
           protocol: TCP
       restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
       volumes:
       - configMap:
           items:

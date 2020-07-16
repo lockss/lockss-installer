@@ -110,6 +110,10 @@ spec:
         - mountPath: /data
           name: lockss-pywb-data
       restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
       volumes:
       - name: lockss-auth
         secret:

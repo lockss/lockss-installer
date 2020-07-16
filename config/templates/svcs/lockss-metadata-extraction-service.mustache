@@ -136,6 +136,10 @@ spec:
         - mountPath: /var/log/lockss
           name: lockss-mdx-logs
       restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
       volumes:
       - configMap:
           items:

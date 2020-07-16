@@ -101,6 +101,10 @@ spec:
         - mountPath: /opt/solr/server/logs
           name: lockss-solr-logs
       restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
       volumes:
       - name: lockss-auth
         secret:

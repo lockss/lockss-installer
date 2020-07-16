@@ -141,6 +141,10 @@ spec:
         - mountPath: /var/log/lockss
           name: lockss-repo-logs
       restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
       volumes:
       - configMap:
           items:
