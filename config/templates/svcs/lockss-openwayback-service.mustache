@@ -1,0 +1,129 @@
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: lockss
+#     lockss-stack-id: {{STACK}}
+#     io.kompose.service: lockss-openwayback-service
+#   name: lockss-openwayback-service
+# spec:
+#   ports:
+#   - name: "openwayback-port"
+#     port: {{OPENWB_PORT}}
+#     targetPort: {{OPENWB_DEFAULT_PORT}}
+#   selector:
+#     io.kompose.service: lockss-openwayback-service
+#   externalTrafficPolicy: Local
+#   externalIPs:
+#   - {{LOCKSS_IPADDR}}
+#   type: NodePort
+# ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-openwayback-service
+  name: lockss-openwayback-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-openwayback-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-openwayback-service
+  name: lockss-openwayback-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-openwayback-logs"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-openwayback-service
+  name: lockss-openwayback-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-openwayback-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-openwayback-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_WAIT_FOR_200
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+        - name: REPO_HOST
+          value: {{REPO_HOST}}
+        - name: REPO_REST_PORT
+          value: '{{REPO_REST_PORT}}'
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        - name: WAYBACK_URL_HOST
+          value: {{OPENWB_HOST}}
+        - name: WAYBACK_URL_PREFIX
+          value: http://{{OPENWB_HOST}}:{{OPENWB_PORT}}
+        - name: WAYBACK_BASEDIR
+          value: /data
+        image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-openwayback-service
+        ports:
+        - name: "openwb-port"
+          containerPort: {{OPENWB_DEFAULT_PORT}}
+          hostPort: {{OPENWB_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+          readOnly: true
+        - mountPath: /data
+          name: lockss-openwayback-data
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+      - name: lockss-openwayback-data
+        persistentVolumeClaim:
+          claimName: lockss-openwayback-data-pvc

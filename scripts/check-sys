@@ -117,14 +117,14 @@ get_next_daemon_uid() {
 ensure_lockss_user() {
   case ${OS_TYPE} in
   Linux)
-    if [ $(id "lockss" >/dev/null 2>&1) ]; then
+    if ! id "lockss" &>/dev/null; then
       echo "${_0}: There is no 'lockss' user account."
       ask_for_input "OK to create account for 'lockss' user?" Y
       if is_yes "${ANS}"; then
         if useradd -s /bin/false lockss; then
           echo "Created user 'lockss'"
         else
-          err_exit "Can't create user lockss"
+          error_exit "Can't create user lockss"
         fi
       fi
     fi
@@ -161,75 +161,26 @@ ensure_lockss_user() {
   esac
 }
 
-ensure_docker() {
-  if ! command -v "docker" &>/dev/null; then
-    echo "${_0}: Docker does not appear to be on the path."
-    ask_for_input "OK to install Docker?" Y
-    if is_yes "${ANS}"; then
-      case ${OS_TYPE} in
-      Linux)
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        $(sh get-docker.sh)
-        sudo usermod -G docker -a lockss
-        ;;
-      Darwin)
-        err "Docker Mac must be downloaded and installed manually."
-        error_exit "Instructions: https://docs.docker.com/docker-for-mac/install/."
-        ;;
-      *)
-        error_exit "Unsupported system, install docker manually."
-        ;;
-      esac
-    fi
+ensure_snap() {
+  if ! which snap &> /dev/null; then
+      err "${_0}: Snap not found on path."
+      err "${_0}: Snap is used to install microk8s."
+      error_exit "See instructions: https://snapcraft.io/docs/installing-snapd"
   fi
 }
-
-ensure_persistent_plugin() {
-  if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &>/dev/null; then
-    echo "${_0}: The local-persist volume plugin is not installed."
-    ask_for_input "OK to install local persist plugin?" Y
-    if is_yes "${ANS}"; then
-      case $OS_TYPE in
-      Linux)
-        curl -fsSL https://raw.githubusercontent.com/CWSpear/local-persist/master/scripts/install.sh | bash
-        ;;
-      Darwin)
-        local PLUGIN_DATA_PATH
-        local DATA_VOLUME_PATH
-
-        ask_for_input "Path to store plugin data" "${PLUGIN_DATA_PATH}"
-        PLUGIN_DATA_PATH=${ANS}
-        init_one_dir ${PLUGIN_DATA_PATH}
-        ask_for_input "Path to store persistant data" "${DATA_VOLUME_PATH}"
-        DATA_VOLUME_PATH=${ANS}
-        init_one_dir ${DATA_VOLUME_PATH}
-        docker run -d \
-          -v /run/docker/plugins/:/run/docker/plugins/ \
-          -v $PLUGIN_DATA_PATH:/var/lib/docker/plugin-data/ \
-          -v $DATA_VOLUME_PATH:$DATA_VOLUME_PATH \
-          cwspear/docker-local-persist-volume-plugin
-        if ! docker volume create -d local-persist -o mountpoint=.config/lptest --name=lptest &>/dev/null; then
-          echo "Attempt to install local persistant plugin failed. See documentation."
-        fi
-        ;;
-      esac
-    else
-      error_exit "Unable to run without local-persisist plugin."
-    fi
-  fi
-}
-
-ensure_docker_swarm() {
-  if ! docker stack ls &>/dev/null; then
-    echo "${_0}: Docker Swarm is not inited"
-    ask_for_input "OK to init swarm on this machine?" Y
-    if is_yes "${ANS}"; then
-      if ! docker swarm init --advertise-addr ${LOCKSS_IPADDR}; then
-        error_exit "attempt install swarm failed."
+ensure_microk8s() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/microk8s"
+  if ! which microk8s &> /dev/null; then
+      err "${_0}: Mircok8s not found on the PATH (${PATH})"
+      err "${_0}: LOCKSS requires Microk8s to run."
+      ask_for_input "OK to install Microk8s?" Y
+      if is_yes "${ANS}"; then
+        snap install microk8s --classic --channel=1.18/stable
+        echo "To complete your install see: ${instr_link}"
+      else
+        echo "Microk8s is needed to install LOCKSS."
+        error_exit "See instructions: ${instr_link}"
       fi
-    else
-      error_exit "Docker swarm must be running to run lockss."
-    fi
   fi
 }
 
@@ -276,35 +227,16 @@ if ! am_i_root; then
   error_exit "this script must be run as root."
 fi
 
-case ${OS_TYPE} in
-Linux)
-  LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
-  ;;
-Darwin)
-  LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
-  ;;
-*)
-  echo "${OS_TYPE} not supported"
-  exit 1
-  ;;
-esac
-if [ "X${LOCKSS_IPADDR}" = X ]; then
-  LOCKSS_IPADDR=${LOCAL_IPADDR}
-fi
-IP_OK=N
-until is_yes ${IP_OK}; do
-  ask_for_input "IP address of this machine?" ${LOCKSS_IPADDR}
-  if valid_ip_address "${ANS}"; then
-    LOCKSS_IPADDR="${ANS}"
-    IP_OK=Y
-  fi
-done
-
-echo "${_0}: Checking for Docker..."
-#ensure_docker
-#echo "${_0}: Checking for lockss user..."
+echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
-echo "${_0}: Checking for java install..."
+echo "${_0}: User lockss exists."
+echo "${_0}: Checking snapd install..."
+ensure_snap
+echo "${_0}: snapd is installed."
+echo "${_0}: Checking for microk8s..."
+ensure_microk8s
+echo "${_0}: microk8s is installed."
+#echo "${_0}: Checking for java install..."
 #ensure_java
 #echo "${_0}: Essential compoments have been sucessfully installed."
 graceful_exit
