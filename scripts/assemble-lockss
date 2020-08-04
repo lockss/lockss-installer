@@ -271,10 +271,10 @@ check_stack_solr() {
 
   if [ ! -e "${SOLR_FILE}"  -o ! -e "${CORE_PATH}" ]; then
     msg "${PROGNAME}:  Preparing solr home '${SOLR_HOME_PATH}' for new install..."
-    sudo tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
-      error_exit "Unable to install LOCKSS solr files, exiting..."
     ensure_writable_dir ${SOLR_HOME_PATH} ||
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
+    tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}" >/dev/null ||
+      error_exit "Unable to install LOCKSS solr files, exiting..."
   fi
 }
 
