@@ -84,9 +84,9 @@ spec:
         - name: ARGS_ADDITIONAL
           value: $(ARGS_ADDITIONAL)
         - name: LOCKSS_WAIT_FOR_200
-          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+          value: {{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+          value: {{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}
         - name: REPO_HOST
           value: {{REPO_HOST}}
         - name: REPO_REST_PORT

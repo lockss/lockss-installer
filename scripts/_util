@@ -212,7 +212,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(docker stack ls | grep 'lockss-stack')" ]
+  [ "$(microk8s kubectl get pods -n 'lockss' | grep 'lockss-configuration-service')" ]
 }
 
 #

@@ -92,17 +92,17 @@ spec:
         - name: LOCKSS_IS_REPO
           value: "true"
         - name: LOCKSS_JMS_HOST
-          value: "{{JMS_HOST}}"
+          value: "{{LOCKSS_HOSTNAME}}"
         - name: LOCKSS_JMS_PORT
-          value: "{{JMS_DEFAULT_PORT}}"
+          value: "{{JMS_PORT}}"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_SOLR_HOST
-          value: {{SOLR_HOST}}
+          value: {{LOCKSS_HOSTNAME}}
         - name: LOCKSS_SOLR_PORT
-          value: "{{SOLR_DEFAULT_PORT}}"
+          value: "{{SOLR_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}
+          value: {{LOCKSS_HOSTNAME}}:{{SOLR_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{REPO_IMG}}:{{REPO_VERSION}}

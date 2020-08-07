@@ -91,9 +91,9 @@ spec:
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_WAIT_FOR_200
-          value: "{{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
+          value: "{{LOCKSS_HOSTNAME}}:{{CFG_REST_PORT}} {{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
+          value: "{{LOCKSS_HOSTNAME}}:{{POSTGRES_PORT}} {{LOCKSS_HOSTNAME}}:{{CFG_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         volumeMounts:
