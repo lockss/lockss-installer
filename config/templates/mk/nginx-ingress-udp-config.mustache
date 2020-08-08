@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-ingress-udp-microk8s-conf
-  namespace: ingress
-data:
-  {{LOCKSS_ICP_PORT}}: "lockss/{{POL_HOST}}:{{LOCKSS_DEFAULT_ICP_PORT}}"
