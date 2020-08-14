@@ -204,12 +204,18 @@ configure_services() {
     USE_LOCKSS_OPENWB=false
   else
     USE_LOCKSS_PYWB=false
-    #        ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
-    #        if is_yes "${ANS}"; then
-    #          USE_LOCKSS_OPENWB=true
-    #        else
-    #          USE_LOCKSS_OPENWB=false
-    #        fi
+    ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+    if is_yes "${ANS}"; then
+      echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to accept insecure connections."
+      echo "Okay to turn of authentication for LOCKSS Repository Service?"$(to_yes_no ${USE_LOCKSS_OPENWB})
+      if is_yes "${ANS}"; then
+        USE_LOCKSS_OPENWB=true
+      else
+        USE_LOCKSS_OPENWB=false
+      fi
+    else
+      USE_LOCKSS_OPENWB=false
+    fi
   fi
 }
 
@@ -510,7 +516,7 @@ build_config_file() {
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-        echo "Sending mail failed.  Please check mail configuration."
+        echo "The attempt to mail configuration failed.  Please check your mail configuration."
         UNSENT_FILE=/tmp/unsent-lockss-config
         cp ${FILT_CONFIG} ${UNSENT_FILE}
         echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
