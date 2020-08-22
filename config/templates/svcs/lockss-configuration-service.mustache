@@ -1,30 +1,29 @@
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   labels:
-#     app: lockss
-#     lockss-stack-id: {{STACK}}
-#     io.kompose.service: lockss-configuration-service
-#   name: lockss-configuration-service
-# spec:
-#   ports:
-#   - name: "cfg-rest-port"
-#     port: {{CFG_REST_PORT}}
-#     targetPort: {{CFG_DEFAULT_REST_PORT}}
-#   - name: "cfg-ui-port"
-#     port: {{CFG_UI_PORT}}
-#     targetPort: {{CFG_DEFAULT_UI_PORT}}
-#   - name: "jms-port"
-#     port: {{JMS_PORT}}
-#     targetPort: {{JMS_DEFAULT_PORT}}
-#   - name: "ui-port"
-#     port: {{LOCKSS_UI_PORT}}
-#     targetPort: {{CFG_DEFAULT_UI_PORT}}
-#   selector:
-#     io.kompose.service: lockss-configuration-service
-#   externalTrafficPolicy: Local
-#   type: NodePort
-# ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-configuration-service
+spec:
+  ports:
+  - name: "cfg-rest-port"
+    port: {{CFG_REST_PORT}}
+    targetPort: {{CFG_DEFAULT_REST_PORT}}
+  - name: "cfg-ui-port"
+    port: {{CFG_UI_PORT}}
+    targetPort: {{CFG_DEFAULT_UI_PORT}}
+  - name: "jms-port"
+    port: {{JMS_PORT}}
+    targetPort: {{JMS_DEFAULT_PORT}}
+  - name: "ui-port"
+    port: {{LOCKSS_UI_PORT}}
+    targetPort: {{CFG_DEFAULT_UI_PORT}}
+  selector:
+    io.kompose.service: lockss-configuration-service
+  type: ClusterIP
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -98,7 +97,7 @@ spec:
         - name: LOCKSS_PROPS_URL
           value: {{LOCKSS_PROPS_URL}}
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{LOCKSS_HOSTNAME}}:{{POSTGRES_PORT}}
+          value: {{POSTGRES_HOST}}:{{POSTGRES_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         volumeMounts:

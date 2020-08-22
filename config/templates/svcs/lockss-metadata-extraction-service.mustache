@@ -1,24 +1,23 @@
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   labels:
-#     app: lockss
-#     lockss-stack-id: {{STACK}}
-#     io.kompose.service: lockss-metadata-extraction-service
-#   name: lockss-metadata-extraction-service
-# spec:
-#   ports:
-#   - name: "mdx-service-rest-port"
-#     port: {{MDX_REST_PORT}}
-#     targetPort: {{MDX_DEFAULT_REST_PORT}}
-#   - name: "mdx-service-ui-port"
-#     port: {{MDX_UI_PORT}}
-#     targetPort: {{MDX_DEFAULT_UI_PORT}}
-#   selector:
-#     io.kompose.service: lockss-metadata-extraction-service
-#   externalTrafficPolicy: Local
-#   type: NodePort
-# ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-metadata-extraction-service
+spec:
+  ports:
+  - name: "mdx-service-rest-port"
+    port: {{MDX_REST_PORT}}
+    targetPort: {{MDX_DEFAULT_REST_PORT}}
+  - name: "mdx-service-ui-port"
+    port: {{MDX_UI_PORT}}
+    targetPort: {{MDX_DEFAULT_UI_PORT}}
+  selector:
+    io.kompose.service: lockss-metadata-extraction-service
+  type: ClusterIP
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -91,9 +90,9 @@ spec:
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_WAIT_FOR_200
-          value: "{{LOCKSS_HOSTNAME}}:{{CFG_REST_PORT}} {{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}"
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{LOCKSS_HOSTNAME}}:{{POSTGRES_PORT}} {{LOCKSS_HOSTNAME}}:{{CFG_REST_PORT}} {{LOCKSS_HOSTNAME}}:{{REPO_REST_PORT}}"
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: "{{MDX_IMG}}:{{MDX_VERSION}}"

@@ -31,7 +31,7 @@
 # Edit the corresponding file with the "opt" suffix instead.
 
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.metadataDbManager.datasource.serverName={{LOCKSS_HOSTNAME}}
+org.lockss.metadataDbManager.datasource.serverName={{POSTGRES_HOST}}
 org.lockss.metadataDbManager.datasource.portNumber={{POSTGRES_PORT}}
 org.lockss.metadataDbManager.datasource.user={{POSTGRES_USER}}
 org.lockss.metadataDbManager.datasource.password={{POSTGRES_PASSWD}}
@@ -39,7 +39,7 @@ org.lockss.metadataDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
 
 # Needed for now to prevent a Derby thread
 org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
-org.lockss.jobDbManager.datasource.serverName={{LOCKSS_HOSTNAME}}
+org.lockss.jobDbManager.datasource.serverName={{POSTGRES_HOST}}
 org.lockss.jobDbManager.datasource.portNumber={{POSTGRES_PORT}}
 org.lockss.jobDbManager.datasource.user={{POSTGRES_USER}}
 org.lockss.jobDbManager.datasource.password={{POSTGRES_PASSWD}}

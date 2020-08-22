@@ -212,7 +212,7 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     echo "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-    $KUBECTL expose deployment $svc
+#ß    $KUBECTL expose deployment $svc
   done
   popd &>/dev/null
 }

@@ -1,21 +1,20 @@
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   labels:
-#     app: lockss
-#     lockss-stack-id: {{STACK}}
-#     io.kompose.service: lockss-postgres-service
-#   name: lockss-postgres-service
-# spec:
-#   ports:
-#   - name: "postgres-port"
-#     port: {{POSTGRES_PORT}}
-#     targetPort: {{POSTGRES_DEFAULT_PORT}}
-#   selector:
-#     io.kompose.service: lockss-postgres-service
-#   externalTrafficPolicy: Local
-#   type: NodePort
-# ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-service
+spec:
+  ports:
+  - name: "postgres-port"
+    port: {{POSTGRES_PORT}}
+    targetPort: {{POSTGRES_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-postgres-service
+  type: ClusterIP
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
