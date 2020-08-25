@@ -66,7 +66,7 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
   echo ""
-  echo "configuring installed service..."
+  echo "Configuring installed services..."
   echo ""
   USE_LOCKSS_CFG=true
   #check metadata service
@@ -136,23 +136,12 @@ configure_services() {
     ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}"
     LOCKSS_DBNAME_PREFIX=${ANS}
   fi
-  LOCKSS_DB_PASSWD=""
-  POSTGRES_PASS=""
-  while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
-    P1=
-    while [ "X${P1}" = X ]; do
-      ask_for_input_shadow "Password for database" ""
-      P1="${ANS}"
-    done
-    ask_for_input_shadow "Password for database (again)" ""
-    if [ "X${ANS}" = "X${P1}" ]; then
-      SHA256=$(echo -n "${P1}" | ${SHA256SUM})
-      SHA256=$(echo ${SHA256} | sed 's/ .*$//')
-      LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-      POSTGRES_PASS=${P1}
-      echo -n "${POSTGRES_PASS}" > "${SECRETS_DIR}"/lockss-postgres-pass
-    fi
-  done
+
+  ask_for_password "Password for database" "${LOCKSS_DB_PASSWD}" ""
+  LOCKSS_DB_PASSWD="${PASSWD_HASH}"
+  if [ -n "${PASSWD_CLEAR}" ]; then
+      echo -n "${PASSWD_CLEAR}" > "${SECRETS_DIR}"/lockss-postgres-pass
+  fi
 
   #check Solr service
   if [ "X${USE_LOCKSS_SOLR}" = X ]; then
@@ -345,18 +334,8 @@ build_config_file() {
     fi
     ask_for_input "Does mail relay ${LOCKSS_MAILHUB} need user & password" ${NEED_USER}
     if is_yes "${ANS}"; then
-      ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
-      LOCKSS_MAILHUB_USER="${ANS}"
-      MAILHUB_PASSWORD=
-      while [ "X${MAILHUB_PASSWORD}" = X ]; do
-        ask_for_input_shadow "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" ""
-        P1=${ANS}
-        ask_for_input_shadow "Again" ""
-        if [ "X${ANS}" = "X${P1}" ]; then
-          MAILHUB_PASSWORD="${ANS}"
-        fi
-      done
-      LOCKSS_MAILHUB_PASSWORD="\"${MAILHUB_PASSWORD}\""
+      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}"
+      LOCKSS_MAILHUB_PASSWORD="\"${PASSWD_CLEAR}"\"
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
@@ -467,23 +446,13 @@ build_config_file() {
         USER_OK=Y
       fi
     done
-    LOCKSS_ADMIN_PASSWD=""
-    while [ "X${LOCKSS_ADMIN_PASSWD}" = X ]; do
-      P1=
-      while [ "X${P1}" = X ]; do
-        ask_for_input_shadow "Password for web UI administration user ${LOCKSS_ADMIN_USER}" ""
-        P1="${ANS}"
-      done
-      ask_for_input_shadow "Password for web UI administration (again)" ""
-      if [ "X${ANS}" = "X${P1}" ]; then
-        SHA256=$(echo -n "${P1}" | ${SHA256SUM})
-        SHA256=$(echo ${SHA256} | sed 's/ .*$//')
-        LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
-        UI_PASS=${P1}
-        echo -n "${UI_PASS}"> "${SECRETS_DIR}"/lockss-ui-pass
-        echo -n "${LOCKSS_ADMIN_USER}:${UI_PASS}" > "${SECRETS_DIR}"/lockss-auth
-      fi
-    done
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" ""
+    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
+    if [ -n "${PASSWD_CLEAR}" ]; then
+      echo -n "${PASSWD_CLEAR}"> "${SECRETS_DIR}"/lockss-ui-pass
+      echo -n "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}" > "${SECRETS_DIR}"/lockss-auth
+    fi
+
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
     export LOCKSS_CONFIG_VERSION=2
@@ -540,9 +509,10 @@ LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 
 echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks
-echo "BYPASS_CHECK_RUNNABLE=${BYPASS_CHECK_RUNNABLE}"
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
   Check_Runnable
+else
+  echo "Bypassing Check_Runnable"
 fi
 
 case ${OS_TYPE} in
