@@ -260,8 +260,8 @@ ask_for_password() {
   while [ -z "${PASSWD_HASH}" ]; do
     local p1=
     while [ -z "${p1}" ]; do
-      if [ -n "${old_pass_hash}" ]; then
-	ask_for_input_shadow "${prompt_msg} (<enter> to leave unchanged)" ""
+      if [ -n "${old_pass_hash}" -o -n "${old_pass_clear}" ]; then
+	ask_for_input_shadow "${prompt_msg} (<enter> to leave unchanged)"
 	if [ -z "${ANS}" ]; then
 	  PASSWD_HASH="${old_pass_hash}"
 	  PASSWD_CLEAR="${old_pass_clear}"
@@ -271,16 +271,18 @@ ask_for_password() {
 	  p1="${ANS}"
 	fi
       else
-	ask_for_input_shadow "${prompt_msg}" ""
+	ask_for_input_shadow "${prompt_msg}"
 	p1="${ANS}"
       fi
     done
-    ask_for_input_shadow "${prompt_msg} (again)" ""
+    ask_for_input_shadow "${prompt_msg} (again)"
     if [ "X${ANS}" = "X${p1}" ]; then
       sha256=$(echo -n "${p1}" | ${SHA256SUM})
       sha256=$(echo ${sha256} | sed 's/ .*$//')
       PASSWD_HASH="SHA-256:${sha256}"
       PASSWD_CLEAR="${p1}"
+    else
+      echo "Passwords don't match"
     fi
   done
 }

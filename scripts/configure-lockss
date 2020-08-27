@@ -137,7 +137,7 @@ configure_services() {
     LOCKSS_DBNAME_PREFIX=${ANS}
   fi
 
-  ask_for_password "Password for database" "${LOCKSS_DB_PASSWD}" ""
+  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" ""
   LOCKSS_DB_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
       echo -n "${PASSWD_CLEAR}" > "${SECRETS_DIR}"/lockss-postgres-pass
@@ -334,8 +334,13 @@ build_config_file() {
     fi
     ask_for_input "Does mail relay ${LOCKSS_MAILHUB} need user & password" ${NEED_USER}
     if is_yes "${ANS}"; then
+      ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
+      LOCKSS_MAILHUB_USER="${ANS}"
       ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}"
-      LOCKSS_MAILHUB_PASSWORD="\"${PASSWD_CLEAR}"\"
+      LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
+    else
+      LOCKSS_MAILHUB_USER=
+      LOCKSS_MAILHUB_PASSWORD=
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
