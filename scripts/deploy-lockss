@@ -195,11 +195,6 @@ check_installed_volumes() {
   done
 }
 
-check_installed_network() {
-  local stack=$1
-  Check_Network "$stack-network"
-}
-
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
@@ -263,7 +258,7 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-#Check_Runnable
+Check_Runnable
 
 init_service_arrays
 

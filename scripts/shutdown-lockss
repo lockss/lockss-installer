@@ -148,11 +148,8 @@ undeploy_stack() {
   
   echo "Removing all services for $stack."
   $KUBECTL delete -n lockss  -l lockss-stack-id=${stack} services,deployments,pvc,pods
-  echo "Removing all configmaps and secrets for $stack."
+  echo "Removing all configmaps $stack."
   $KUBECTL delete configmaps --all
-  for sec in "${secrets[@]}"; do
-    $KUBECTL delete secret ${sec}
-  done
   microk8s kubectl delete -l lockss-stack-id=${stack} pv
 }
 

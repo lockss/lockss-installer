@@ -202,7 +202,9 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
 
   msg "${PROGNAME}: Getting node hostname..."
   export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
-  export POSTGRES_PASSWD="$(cat "${USEROPTS_DIR}/lockss-postgres-pass")"
+  msg "${PROGNAME}: Getting postgres password..."
+  export POSTGRES_PASSWD=$(microk8s kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
+
   declare -a REPO_NUMS
   REPO_NUMS[0]=""
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
@@ -213,7 +215,6 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     export REPO_DATA_MAP_${count}="/data${datadirs[$count]}"
   done
   export REPO_NUMS
-  #mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
   msg "${PROGNAME}: add the service deployments..."
   mkdir "${STACK_CONFIG_DIR}/svcs"

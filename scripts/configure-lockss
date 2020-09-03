@@ -245,7 +245,7 @@ LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
-LOCKSS_CONTAINER_SUBNET="${LOCKSS_CONTAINER_SUBNET}"
+LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -307,6 +307,19 @@ build_config_file() {
         SUBNET_OK=Y
       fi
     done
+  LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a,"/");print a[1]}')
+  if [ "X${LOCKSS_CONTAINER_SUBNETS}" = "X" ]; then
+      LOCKSS_CONTAINER_SUBNETS=$(echo ${LOCKSS_CONTAINER_SUBNET} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+    fi
+    SUBNET_OK=N
+    until is_yes ${SUBNET_OK}; do
+      ask_for_input "LOCKSS subnet for container access" ${LOCKSS_CONTAINER_SUBNETS}
+      if valid_subnet "${ANS}"; then
+        LOCKSS_CONTAINER_SUBNETS="${ANS}"
+        SUBNET_OK=Y
+      fi
+    done
+
     if [ "X${LOCKSS_V3_PORT}" = X ]; then
       LOCKSS_V3_PORT=9729
     fi
@@ -527,8 +540,6 @@ else
   echo "Bypassing Check_Runnable"
 fi
 
-LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a," "); print a[1]}')
-echo "$(date) : setting container subnet to $LOCKSS_CONTAINER_SUBNET"
 
 case ${OS_TYPE} in
 Linux)
