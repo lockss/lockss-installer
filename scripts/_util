@@ -49,8 +49,8 @@ msg() {
 
 #Check_Runnable()
 #{
-#  Check_Installed 'docker'
-#  Check_Docker
+#  Check_Installed 'microk8s'
+#  Create Namespace
 #}
 Check_Runnable() {
   Check_LOCKSS_User
@@ -64,7 +64,7 @@ Check_Runnable() {
 }
 
 Check_LOCKSS_User() {
-  if ! id "lockss" &>/dev/null; then
+  if ! id "lockss" >/dev/null; then
     err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
   fi
 }
@@ -74,20 +74,19 @@ Check_LOCKSS_User() {
 ##
 
 Check_Docker() {
-  if ! docker info &>/dev/null; then
+  if ! docker info >/dev/null; then
     err_exit "${_0}: Docker is not running"
   fi
 }
-
 
 ##
 ## Check For installed secret
 ##
 
 Check_Secret() {
-  if ! docker secret inspect ${1} &>/dev/null; then
-    err "${1}: Docker Secret has not been installed."
-    err_exit "     Run configure and install scripts."
+  if ! microk8s kubectl get secret ${1} &>/dev/null; then
+    err "${1}: Kubernetes Secret does not exist"
+    err_exit "     Run scripts/configure-lockss."
   fi
 
 }
@@ -96,13 +95,10 @@ Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
 
-  if docker secret inspect "${NAME}" &>/dev/null; then
-    echo "removing stored password for ${NAME}"
-    docker secret rm "${NAME}"
-  fi
+  microk8s kubectl delete secret "${NAME}" -n lockss &>/dev/null
   echo "Storing ${NAME} as a docker secret .."
-  if ! echo -n "${VALUE}" | docker secret create "${NAME}" -; then
-    err "Docker secret creation failed for ${NAME}"
+  if ! microk8s kubectl create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
+    err "Kubernetes secret creation failed for ${NAME}"
     return 1
   else
     return 0
@@ -111,7 +107,7 @@ Add_Secret() {
 
 Check_Volume() {
   #    if ! docker volume inspect ${1} &> /dev/null; then
-  if ! kubectl get pv ${1} &>/dev/null; then
+  if ! microk8s kubectl get pv ${1} &>/dev/null; then
     err "${1}: Docker Volume has not been installed."
     err "${1}: Run lockss-install script."
     exit 1
@@ -120,7 +116,7 @@ Check_Volume() {
 
 Check_Config() {
   #    if ! docker config inspect ${1} &> /dev/null; then
-  if ! kubectl get config ${1} &>/dev/null; then
+  if ! microk8s kubectl get config ${1} &>/dev/null; then
     err "${1}: Config file is missing. Run configure and install scripts.."
     err "${1}: Run lockss-install script."
     exit 1
@@ -397,23 +393,22 @@ parse_ip_address() {
   fi
 }
 
-
 guess_ip_address() {
   local all_ips=
   case $(uname -s) in
-    Linux)
-      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
-      # remove IPv6 addresses
-      all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
+  Linux)
+    all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
+    # remove IPv6 addresses
+    all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
 
-      if [ -n "${all_ips}" ] ; then
-	  echo "${all_ips}" | sed 's/ .*//'
-      fi
-      ;;
-    Darwin)
-      ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/' 2>/dev/null
-      ;;
-    *)
+    if [ -n "${all_ips}" ]; then
+      echo "${all_ips}" | sed 's/ .*//'
+    fi
+    ;;
+  Darwin)
+    ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/' 2>/dev/null
+    ;;
+  *) ;;
   esac
 }
 

@@ -140,7 +140,7 @@ configure_services() {
   ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" ""
   LOCKSS_DB_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
-      echo -n "${PASSWD_CLEAR}" > "${SECRETS_DIR}"/lockss-postgres-pass
+      Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
   #check Solr service
@@ -245,6 +245,7 @@ LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
+LOCKSS_CONTAINER_SUBNET="${LOCKSS_CONTAINER_SUBNET}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -336,11 +337,16 @@ build_config_file() {
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
       LOCKSS_MAILHUB_USER="${ANS}"
-      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}"
-      LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
-    else
-      LOCKSS_MAILHUB_USER=
-      LOCKSS_MAILHUB_PASSWORD=
+      MAILHUB_PASSWORD=
+      while [ "X${MAILHUB_PASSWORD}" = X ]; do
+        ask_for_input_shadow "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" ""
+        P1=${ANS}
+        ask_for_input_shadow "Again" ""
+        if [ "X${ANS}" = "X${P1}" ]; then
+          MAILHUB_PASSWORD="${ANS}"
+        fi
+      done
+      LOCKSS_MAILHUB_PASSWORD="\"${MAILHUB_PASSWORD}\""
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
@@ -454,8 +460,8 @@ build_config_file() {
     ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" ""
     LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
     if [ -n "${PASSWD_CLEAR}" ]; then
-      echo -n "${PASSWD_CLEAR}"> "${SECRETS_DIR}"/lockss-ui-pass
-      echo -n "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}" > "${SECRETS_DIR}"/lockss-auth
+      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
+      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
 
     configure_services
@@ -514,11 +520,15 @@ LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 
 echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks
+echo "BYPASS_CHECK_RUNNABLE=${BYPASS_CHECK_RUNNABLE}"
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
   Check_Runnable
 else
   echo "Bypassing Check_Runnable"
 fi
+
+LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a," "); print a[1]}')
+echo "$(date) : setting container subnet to $LOCKSS_CONTAINER_SUBNET"
 
 case ${OS_TYPE} in
 Linux)

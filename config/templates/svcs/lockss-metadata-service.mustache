@@ -108,15 +108,12 @@ spec:
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
           subPath: lockss-postgres-pass
-          readOnly: true
         - mountPath: /run/secrets/lockss_ui_pass
           name: lockss-ui-pass
           subPath: lockss_ui_pass
-          readOnly: true
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
-          readOnly: true
         - mountPath: /data
           name: lockss-mdq-data
         - mountPath: /var/log/lockss
