@@ -82,23 +82,36 @@ Check_Docker() {
 ##
 ## Check For installed secret
 ##
-
 Check_Secret() {
-  if ! microk8s kubectl get secret ${1} &>/dev/null; then
+  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
     err "${1}: Kubernetes Secret does not exist"
     err_exit "     Run scripts/configure-lockss."
   fi
 
 }
 
+##
+## Add a kubernetes secret, deleting existing secret if it exists.
+##
 Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
 
   microk8s kubectl delete secret "${NAME}" -n lockss &>/dev/null
-  echo "Storing ${NAME} as a docker secret .."
+  echo "Storing ${NAME} as a kubernetes secret .."
   if ! microk8s kubectl create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
     err "Kubernetes secret creation failed for ${NAME}"
+    return 1
+  else
+    return 0
+  fi
+}
+
+##
+## Check for an installed lockss secret, return 0 if found 1 otherwise.
+##
+Installed_Secret() {
+  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
     return 1
   else
     return 0
@@ -393,22 +406,23 @@ parse_ip_address() {
   fi
 }
 
+
 guess_ip_address() {
   local all_ips=
   case $(uname -s) in
-  Linux)
-    all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
-    # remove IPv6 addresses
-    all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
+    Linux)
+      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
+      # remove IPv6 addresses
+      all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
 
-    if [ -n "${all_ips}" ]; then
-      echo "${all_ips}" | sed 's/ .*//'
-    fi
-    ;;
-  Darwin)
-    ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/' 2>/dev/null
-    ;;
-  *) ;;
+      if [ -n "${all_ips}" ] ; then
+	  echo "${all_ips}" | sed 's/ .*//'
+      fi
+      ;;
+    Darwin)
+      ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/' 2>/dev/null
+      ;;
+    *)
   esac
 }
 

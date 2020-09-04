@@ -350,16 +350,11 @@ build_config_file() {
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
       LOCKSS_MAILHUB_USER="${ANS}"
-      MAILHUB_PASSWORD=
-      while [ "X${MAILHUB_PASSWORD}" = X ]; do
-        ask_for_input_shadow "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" ""
-        P1=${ANS}
-        ask_for_input_shadow "Again" ""
-        if [ "X${ANS}" = "X${P1}" ]; then
-          MAILHUB_PASSWORD="${ANS}"
-        fi
-      done
-      LOCKSS_MAILHUB_PASSWORD="\"${MAILHUB_PASSWORD}\""
+      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}"
+      LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
+    else
+      LOCKSS_MAILHUB_USER=
+      LOCKSS_MAILHUB_PASSWORD=
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
