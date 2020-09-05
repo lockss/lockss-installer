@@ -528,13 +528,11 @@ LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 
 echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks
-echo "BYPASS_CHECK_RUNNABLE=${BYPASS_CHECK_RUNNABLE}"
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
   Check_Runnable
 else
   echo "Bypassing Check_Runnable"
 fi
-
 
 case ${OS_TYPE} in
 Linux)
