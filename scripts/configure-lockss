@@ -422,7 +422,7 @@ build_config_file() {
         ask_for_input "Enter path to additional content storage directory $count (q to quit)" ${prevPaths[count]}
         if [ "X${ANS}" = Xq ]; then
           done=Y
-        else
+        elif [ -n "${ANS}" ]; then
           curPaths[count]=${ANS}
           repoDirs[count]="/data$count"
           count=$((count+1))
