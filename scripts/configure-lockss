@@ -531,7 +531,11 @@ echo "$(date) Checking system state.  Please run scripts/check-sys as root if ne
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
   Check_Runnable
 else
-  echo "Bypassing Check_Runnable"
+  echo "Bypassing Check_Runnable and microk8s commands"
+  microk8s() {
+    echo "Returning 0 from microk8s $*"
+    return 0
+  }
 fi
 
 case ${OS_TYPE} in
