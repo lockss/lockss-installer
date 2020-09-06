@@ -110,12 +110,24 @@ Add_Secret() {
 ##
 ## Check for an installed lockss secret, return 0 if found 1 otherwise.
 ##
-Installed_Secret() {
+Is_Secret_Installed() {
   if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
     return 1
   else
     return 0
   fi
+}
+
+##
+## Return 0 iff all secrets in arglist are installed.
+##
+Are_Secrets_Installed() {
+  for s in $@; do
+    if ! Is_Secret_Installed "${s}"; then
+      return 1
+    fi
+  done
+  return 0
 }
 
 Check_Volume() {
@@ -164,7 +176,7 @@ ensure_lockss_user() {
 Check_Installed() {
   while [ "X${1}" != "X" ]; do
     if ! which "${1}" &>/dev/null; then
-      err "${_0}: ${1} not on the PATH (${PATH})"
+      err "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
       exit 1
     fi
     shift
@@ -263,13 +275,30 @@ ask_for_password() {
   local prompt_msg="${1}"
   local old_pass_hash="${2}"
   local old_pass_clear="${3}"
+  local secrets="${4}"
   local sha256
   PASSWD_HASH=
   PASSWD_CLEAR=
+
+  local have_existing_password=
+  if [ -n "${old_pass_hash}" -o -n "${old_pass_clear}" ]; then
+    have_existing_password=1
+  fi
+
+  # If this password has associated secrets, check whether they're already
+  # present
+  if [ -n "${have_existing_password}" -a -n "${secrets}" ]; then
+    if ! Are_Secrets_Installed ${secrets}; then
+      have_existing_password=
+    fi
+  fi
+
   while [ -z "${PASSWD_HASH}" ]; do
     local p1=
     while [ -z "${p1}" ]; do
-      if [ -n "${old_pass_hash}" -o -n "${old_pass_clear}" ]; then
+      # if we have an existing password, and any required secrets are
+      # present, don't require reentering the password
+      if [ -n "${have_existing_password}" ]; then
 	ask_for_input_shadow "${prompt_msg} (<enter> to leave unchanged)"
 	if [ -z "${ANS}" ]; then
 	  PASSWD_HASH="${old_pass_hash}"

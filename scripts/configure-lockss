@@ -59,7 +59,6 @@ COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Install Dir: ${COMPOSE_DIR}"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-SECRETS_DIR="${CONFIG_DIR}/useropts"
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
@@ -137,7 +136,7 @@ configure_services() {
     LOCKSS_DBNAME_PREFIX=${ANS}
   fi
 
-  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" ""
+  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
   LOCKSS_DB_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
       Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
@@ -350,7 +349,7 @@ build_config_file() {
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
       LOCKSS_MAILHUB_USER="${ANS}"
-      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}"
+      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}" ""
       LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
     else
       LOCKSS_MAILHUB_USER=
@@ -465,7 +464,7 @@ build_config_file() {
         USER_OK=Y
       fi
     done
-    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" ""
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
     LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
     if [ -n "${PASSWD_CLEAR}" ]; then
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
