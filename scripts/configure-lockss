@@ -532,7 +532,8 @@ if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
 else
   echo "Bypassing Check_Runnable and microk8s commands"
   microk8s() {
-    echo "Returning 0 from microk8s $*"
+    echo "Bypassing microk8s, simulating success of"
+    echo "microk8s $*"
     return 0
   }
 fi
