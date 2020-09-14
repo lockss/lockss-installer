@@ -194,11 +194,12 @@ configure_services() {
     USE_LOCKSS_PYWB=false
     ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
     if is_yes "${ANS}"; then
-      echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to accept insecure connections."
-      echo "Okay to turn of authentication for LOCKSS Repository Service?"$(to_yes_no ${USE_LOCKSS_OPENWB})
+      echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to permit insecure read request."
+      echo "Okay to turn off authentication for read-only requests for LOCKSS Repository Service?"$(to_yes_no ${USE_LOCKSS_OPENWB})
       if is_yes "${ANS}"; then
         USE_LOCKSS_OPENWB=true
       else
+        echo "Not enabling OpenWayback Service."
         USE_LOCKSS_OPENWB=false
       fi
     else
@@ -309,7 +310,7 @@ build_config_file() {
   LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a,"/");print a[1]}')
   if [ "X${LOCKSS_CONTAINER_SUBNETS}" = "X" ]; then
       LOCKSS_CONTAINER_SUBNETS=$(echo ${LOCKSS_CONTAINER_SUBNET} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-    fi
+  else
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
       ask_for_input "LOCKSS subnet for container access" ${LOCKSS_CONTAINER_SUBNETS}
@@ -318,7 +319,7 @@ build_config_file() {
         SUBNET_OK=Y
       fi
     done
-
+  fi
     if [ "X${LOCKSS_V3_PORT}" = X ]; then
       LOCKSS_V3_PORT=9729
     fi
