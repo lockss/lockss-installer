@@ -41,19 +41,14 @@ VERSION="1.0"
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
-COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
-echo "Setting Compose Dir: ${COMPOSE_DIR}"
-CONFIG_DIR="${COMPOSE_DIR}/config"
-SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-
-UPDATE_ARG=""
-
 
 ##
 ## Load _util
 ##
 
 . "${_D0}/_util"
+
+UPDATE_ARG=""
 
 clean_up() { # Perform pre-exit housekeeping
 	return

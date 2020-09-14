@@ -56,15 +56,6 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Directories
-COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "Setting Install Dir: ${COMPOSE_DIR}"
-CONFIG_DIR="${COMPOSE_DIR}/config"
-SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
-TEMPLATES_DIR="${CONFIG_DIR}/templates"
-UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
-USEROPTS_DIR="${CONFIG_DIR}/useropts"
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"

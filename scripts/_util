@@ -34,6 +34,18 @@
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
+##
+## Regularized Common Paths
+##
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+LIB_DIR="${SCRIPTS_DIR}/lib"
+UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
+
 err() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
 }

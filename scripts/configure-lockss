@@ -54,12 +54,6 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Directories
-COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "Setting Install Dir: ${COMPOSE_DIR}"
-CONFIG_DIR="${COMPOSE_DIR}/config"
-SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
