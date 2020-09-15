@@ -1,0 +1,242 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# check-sys - Check the host system for all necessary components for running LOCKSS stack.
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# Usage: check-sys [-h|--help]
+
+# Revision history:
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+OS_TYPE=$(uname -s)
+LOCKSS_USER=lockss
+SOLR_USER=solr
+LOCAL_HOSTNAME=$(uname -n)
+
+clean_up() { # Perform pre-exit housekeeping
+  return
+}
+
+error_exit() {
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<-_EOF_
+  $PROGNAME ver. $VERSION
+  Check the host system for all necessary components for running LOCKSS stack.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+  NOTE: You must be the superuser to run this script.
+
+_EOF_
+  return
+}
+
+get_next_daemon_uid() {
+  all_uids=$(dscl . -list /Users UniqueID | grep -o '[0-9]\+' | sort -nr)
+  for uid in $all_uids; do
+    if ((uid < 500)); then
+      echo "$(((uid + 1)))"
+      exit 0
+    fi
+  done
+  exit 1
+}
+
+ensure_lockss_user() {
+  case ${OS_TYPE} in
+  Linux)
+    if ! id "lockss" &>/dev/null; then
+      echo "${_0}: There is no 'lockss' user account."
+      ask_for_input "OK to create account for 'lockss' user?" Y
+      if is_yes "${ANS}"; then
+        if useradd -s /bin/false lockss; then
+          echo "Created user 'lockss'"
+        else
+          error_exit "Can't create user lockss"
+        fi
+      fi
+    fi
+    ;;
+  Darwin)
+    if [ $(dscl . -list /Users | grep "lockss" | wc -l) = 0 ]; then
+      new_uid=$(get_next_daemon_uid)
+      username="lockss"
+      realname="Lockss Daemon"
+
+      echo "Creating group ${username} with gid: ${new_uid}"
+      dscl . -create "/Groups/${username}"
+      dscl . -create "/Groups/${username}" PrimaryGroupID "${new_uid}"
+      dscl . -create "/Groups/${username}" RecordName "${username}" "${username}"
+      dscl . -create "/Groups/${username}" RealName "${realname}"
+      dscl . -create "/Groups/${username}" Password \*
+
+      echo "Creating user ${username} with uid: ${new_uid}"
+      dscl . -create "/Users/$username"
+      dscl . -create "/Users/$username" NFSHomeDirectory /var/empty
+      dscl . -create "/Users/$username" Password \*
+      dscl . -create "/Users/$username" PrimaryGroupID "${new_uid}"
+      dscl . -create "/Users/$username" RealName "$realname"
+      dscl . -create "/Users/$username" RecordName "${username}" "${username}"
+      dscl . -create "/Users/$username" UniqueID "${new_uid}"
+      dscl . -create "/Users/$username" UserShell /usr/bin/false
+      dscl . -delete "/Users/$username" PasswordPolicyOptions
+      dscl . -delete "/Users/$username" AuthenticationAuthority
+    fi
+    ;;
+  *)
+    error_exit "Unsupported system, create the user lockss in group lockss manually."
+    ;;
+  esac
+}
+
+ensure_snap() {
+  if ! which snap &> /dev/null; then
+      err "${_0}: Snap not found on path."
+      err "${_0}: Snap is used to install microk8s."
+      error_exit "See instructions: https://snapcraft.io/docs/installing-snapd"
+  fi
+}
+ensure_microk8s() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/microk8s"
+  if ! which microk8s &> /dev/null; then
+      err "${_0}: Mircok8s not found on the PATH (${PATH})"
+      err "${_0}: LOCKSS requires Microk8s to run."
+      ask_for_input "OK to install Microk8s?" Y
+      if is_yes "${ANS}"; then
+        snap install microk8s --classic --channel=1.18/stable
+        echo "To complete your install see: ${instr_link}"
+      else
+        echo "Microk8s is needed to install LOCKSS."
+        error_exit "See instructions: ${instr_link}"
+      fi
+  fi
+}
+
+ensure_java() {
+    if ! which java &> /dev/null; then
+      err "${_0}: Java not found on the PATH (${PATH})"
+      err "${_0}: LOCKSS requires java versions greater than 8 to be installed."
+      error_exit "See instructions: https://openjdk.java.net/install/"
+    else
+      jver=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+      if [ ${jver} -ge 8 ]; then
+        echo "Found java version ${jver}."
+      else
+        err "Java version is too old. LOCKSS requires versions greater than 8, your version is java ${jver}."
+        error_exit "See instructions: https://openjdk.java.net/install/"
+      fi
+    fi
+}
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
+  esac
+  shift
+done
+
+# Main logic
+if ! am_i_root; then
+  error_exit "this script must be run as root."
+fi
+
+echo "${_0}: Checking for lockss user..."
+ensure_lockss_user
+echo "${_0}: User lockss exists."
+echo "${_0}: Checking snapd install..."
+ensure_snap
+echo "${_0}: snapd is installed."
+echo "${_0}: Checking for microk8s..."
+ensure_microk8s
+echo "${_0}: microk8s is installed."
+#echo "${_0}: Checking for java install..."
+#ensure_java
+#echo "${_0}: Essential compoments have been sucessfully installed."
+graceful_exit

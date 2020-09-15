@@ -1,0 +1,207 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-configuration-service
+spec:
+  ports:
+  - name: "cfg-rest-port"
+    port: {{CFG_REST_PORT}}
+    targetPort: {{CFG_DEFAULT_REST_PORT}}
+  - name: "cfg-ui-port"
+    port: {{CFG_UI_PORT}}
+    targetPort: {{CFG_DEFAULT_UI_PORT}}
+  - name: "jms-port"
+    port: {{JMS_PORT}}
+    targetPort: {{JMS_DEFAULT_PORT}}
+  - name: "ui-port"
+    port: {{LOCKSS_UI_PORT}}
+    targetPort: {{CFG_DEFAULT_UI_PORT}}
+  selector:
+    io.kompose.service: lockss-configuration-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-cfg-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-cfg-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-cfg-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-cfg-data"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-configuration-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-configuration-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-configuration-service
+        lockss-stack-id: {{STACK}}
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: $(ARGS_ADDITIONAL)
+        - name: LOCKSS_IS_CONFIG
+          value: "true"
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_PROPS_URL
+          value: {{LOCKSS_PROPS_URL}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{POSTGRES_HOST}}:{{POSTGRES_PORT}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: cfg-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: cfg-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/configs/lockss_cluster
+          name: lockss-cluster
+          subPath: lockss_cluster
+        - mountPath: /run/configs/lockss_cluster_opt
+          name: lockss-cluster-opt
+          subPath: lockss_cluster_opt
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
+        - mountPath: /run/secrets/lockss_ui_pass
+          name: lockss-ui-pass
+          subPath: lockss_ui_pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /data
+          name: lockss-cfg-data
+        - mountPath: /var/log/lockss
+          name: lockss-cfg-logs
+        image: {{CFG_IMG}}:{{CFG_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-configuration-service
+        ports:
+        - name: "cfg-rest-port"
+          containerPort: {{CFG_DEFAULT_REST_PORT}}
+          hostPort: {{CFG_REST_PORT}}
+          protocol: TCP
+        - name: "cfg-ui-port"
+          containerPort: {{CFG_DEFAULT_UI_PORT}}
+          hostPort: {{CFG_UI_PORT}}
+          protocol: TCP
+        - name: "jms-port"
+          containerPort: {{JMS_DEFAULT_PORT}}
+          hostPort: {{JMS_PORT}}
+          protocol: TCP
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: cfg-service
+            path: lockss_service
+          name: cfg-service
+        name: cfg-service
+      - configMap:
+          items:
+          - key: cfg-service-opt
+            path: lockss_service_opt
+          name: cfg-service-opt
+        name: cfg-service-opt
+      - configMap:
+          items:
+          - key: lockss-cluster
+            path: lockss_cluster
+          name: lockss-cluster
+        name: lockss-cluster
+      - configMap:
+          items:
+          - key: lockss-cluster-opt
+            path: lockss_cluster_opt
+          name: lockss-cluster-opt
+        name: lockss-cluster-opt
+      - name: lockss-postgres-pass
+        secret:
+          secretName: lockss-postgres-pass
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
+      - name: lockss-ui-pass
+        secret:
+          secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+      - name: lockss-cfg-data
+        persistentVolumeClaim:
+          claimName: lockss-cfg-data-pvc
+      - name: lockss-cfg-logs
+        persistentVolumeClaim:
+          claimName: lockss-cfg-logs-pvc

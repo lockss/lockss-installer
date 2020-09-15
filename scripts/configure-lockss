@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #---------------------------------------------------------------------------
 # configure-lockss - Collect host system information needed to run LOCKSS stack(s).
 
@@ -54,18 +54,12 @@ _D0=$(dirname "${0}")
 ## Definitions
 ##
 
-# Directories
-COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "Setting Compose Dir: ${COMPOSE_DIR}"
-CONFIG_DIR="${COMPOSE_DIR}/config"
-SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
-
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 configure_services() {
   echo ""
-  echo "configuring installed service..."
+  echo "Configuring installed services..."
   echo ""
   USE_LOCKSS_CFG=true
   #check metadata service
@@ -97,7 +91,7 @@ configure_services() {
   ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
   if is_yes "${ANS}"; then
     USE_LOCKSS_POSTGRES=true
-    LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
+    LOCKSS_POSTGRES_HOST='lockss-postgres-service'
     LOCKSS_POSTGRES_PORT=5432
     LOCKSS_POSTGRES_USER="LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${LOCKSS_POSTGRES_USER}
@@ -108,62 +102,51 @@ configure_services() {
     if [ "X${LOCKSS_POSTGRES_HOST}" = X ]; then
       LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
     fi
-    ask_for_input "Fully qualified hostname (FQDN) of PostgresSQL host" "${LOCKSS_POSTGRES_HOST}"
+    ask_for_input "Fully qualified hostname (FQDN) of PostgreSQL host" "${LOCKSS_POSTGRES_HOST}"
     LOCKSS_POSTGRES_HOST=${ANS}
 
     if [ "X${LOCKSS_POSTGRES_PORT}" = X ]; then
       LOCKSS_POSTGRES_PORT=5432
     fi
-    ask_for_input "Port used by PostgresSQL host" "${LOCKSS_POSTGRES_PORT}"
+    ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}"
     LOCKSS_POSTGRES_PORT=${ANS}
 
     if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
       LOCKSS_POSTGRES_USER="LOCKSS"
     fi
-    ask_for_input "Login name for PostgresSQL service" "${LOCKSS_POSTGRES_USER}"
+    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}"
     LOCKSS_POSTGRES_USER=${ANS}
 
     if [ "X${LOCKSS_POSTGRES_SCHEMA}" = X ]; then
       LOCKSS_POSTGRES_SCHEMA="$LOCKSS_POSTGRES_USER"
     fi
-    ask_for_input "Schema for PostgresSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
+    ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
     LOCKSS_POSTGRES_SCHEMA=${ANS}
 
     if [ "X${LOCKSS_DBNAME_PREFIX}" = X ]; then
       LOCKSS_DBNAME_PREFIX="Lockss"
     fi
-    ask_for_input "Database name prefix for PostgresSQL service" "${LOCKSS_DBNAME_PREFIX}"
+    ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}"
     LOCKSS_DBNAME_PREFIX=${ANS}
   fi
-  LOCKSS_DB_PASSWD=""
-  POSTGRES_PASS=""
-  while [ "X${LOCKSS_DB_PASSWD}" = X ]; do
-    P1=
-    while [ "X${P1}" = X ]; do
-      ask_for_input_shadow "Password for database" ""
-      P1="${ANS}"
-    done
-    ask_for_input_shadow "Password for database (again)" ""
-    if [ "X${ANS}" = "X${P1}" ]; then
-      SHA256=$(echo -n "${P1}" | ${SHA256SUM})
-      SHA256=$(echo ${SHA256} | sed 's/ .*$//')
-      LOCKSS_DB_PASSWD="SHA-256:${SHA256}"
-      POSTGRES_PASS=${P1}
-      Add_Secret "lockss-postgres-pass" "${POSTGRES_PASS}"
-    fi
-  done
+
+  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
+  LOCKSS_DB_PASSWD="${PASSWD_HASH}"
+  if [ -n "${PASSWD_CLEAR}" ]; then
+      Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
+  fi
 
   #check Solr service
   if [ "X${USE_LOCKSS_SOLR}" = X ]; then
     USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+    LOCKSS_SOLR_HOST='lockss-solr'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO="lockss-repo"
   fi
   ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
   if is_yes "${ANS}"; then
     USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST=${LOCKSS_HOSTNAME}
+    LOCKSS_SOLR_HOST='lockss-solr-service'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO="lockss-repo"
   else
@@ -203,12 +186,19 @@ configure_services() {
     USE_LOCKSS_OPENWB=false
   else
     USE_LOCKSS_PYWB=false
-    #        ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
-    #        if is_yes "${ANS}"; then
-    #          USE_LOCKSS_OPENWB=true
-    #        else
-    #          USE_LOCKSS_OPENWB=false
-    #        fi
+    ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+    if is_yes "${ANS}"; then
+      echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to permit insecure read request."
+      echo "Okay to turn off authentication for read-only requests for LOCKSS Repository Service?"$(to_yes_no ${USE_LOCKSS_OPENWB})
+      if is_yes "${ANS}"; then
+        USE_LOCKSS_OPENWB=true
+      else
+        echo "Not enabling OpenWayback Service."
+        USE_LOCKSS_OPENWB=false
+      fi
+    else
+      USE_LOCKSS_OPENWB=false
+    fi
   fi
 }
 
@@ -216,7 +206,7 @@ configure_services() {
 write_config_file() {
   cat >"${1}" <<EOF
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
-LOCKSS_USER="${2}"
+LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
 LOCKSS_IPADDR="${LOCKSS_IPADDR}"
 LOCKSS_EXTERNAL_IPADDR="${LOCKSS_EXTERNAL_IPADDR}"
@@ -248,6 +238,8 @@ LOCKSS_SOLR_HOST="${LOCKSS_SOLR_HOST}"
 LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
+LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
+LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -309,6 +301,19 @@ build_config_file() {
         SUBNET_OK=Y
       fi
     done
+  LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a,"/");print a[1]}')
+  if [ "X${LOCKSS_CONTAINER_SUBNETS}" = "X" ]; then
+      LOCKSS_CONTAINER_SUBNETS=$(echo ${LOCKSS_CONTAINER_SUBNET} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+  else
+    SUBNET_OK=N
+    until is_yes ${SUBNET_OK}; do
+      ask_for_input "LOCKSS subnet for container access" ${LOCKSS_CONTAINER_SUBNETS}
+      if valid_subnet "${ANS}"; then
+        LOCKSS_CONTAINER_SUBNETS="${ANS}"
+        SUBNET_OK=Y
+      fi
+    done
+  fi
     if [ "X${LOCKSS_V3_PORT}" = X ]; then
       LOCKSS_V3_PORT=9729
     fi
@@ -339,16 +344,11 @@ build_config_file() {
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
       LOCKSS_MAILHUB_USER="${ANS}"
-      MAILHUB_PASSWORD=
-      while [ "X${MAILHUB_PASSWORD}" = X ]; do
-        ask_for_input_shadow "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" ""
-        P1=${ANS}
-        ask_for_input_shadow "Again" ""
-        if [ "X${ANS}" = "X${P1}" ]; then
-          MAILHUB_PASSWORD="${ANS}"
-        fi
-      done
-      LOCKSS_MAILHUB_PASSWORD="\"${MAILHUB_PASSWORD}\""
+      ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}" ""
+      LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
+    else
+      LOCKSS_MAILHUB_USER=
+      LOCKSS_MAILHUB_PASSWORD=
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
@@ -416,14 +416,14 @@ build_config_file() {
         ask_for_input "Enter path to additional content storage directory $count (q to quit)" ${prevPaths[count]}
         if [ "X${ANS}" = Xq ]; then
           done=Y
-        else
+        elif [ -n "${ANS}" ]; then
           curPaths[count]=${ANS}
           repoDirs[count]="/data$count"
           count=$((count+1))
         fi
       done
       new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "Run repo cache updater."
+      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
       LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
       LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
     else
@@ -434,8 +434,13 @@ build_config_file() {
       LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
+    if [ -n "${LOCKSS_LOGS_DIR}" ]; then
+      log_dir_default="${LOCKSS_LOGS_DIR}"
+    else
+      log_dir_default="${LOCKSS_DATA_DIR}"
+    fi
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Service logs directory" ${LOCKSS_LOGS_DIR}
+      ask_for_input "Service logs directory" ${log_dir_default}
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="${ANS}"
         LOG_PATHS_OK=Y
@@ -454,27 +459,18 @@ build_config_file() {
         USER_OK=Y
       fi
     done
-    LOCKSS_ADMIN_PASSWD=""
-    while [ "X${LOCKSS_ADMIN_PASSWD}" = X ]; do
-      P1=
-      while [ "X${P1}" = X ]; do
-        ask_for_input_shadow "Password for web UI administration user ${LOCKSS_ADMIN_USER}" ""
-        P1="${ANS}"
-      done
-      ask_for_input_shadow "Password for web UI administration (again)" ""
-      if [ "X${ANS}" = "X${P1}" ]; then
-        SHA256=$(echo -n "${P1}" | ${SHA256SUM})
-        SHA256=$(echo ${SHA256} | sed 's/ .*$//')
-        LOCKSS_ADMIN_PASSWD="SHA-256:${SHA256}"
-        UI_PASS=${P1}
-        Add_Secret "lockss_ui_pass" "${UI_PASS}"
-        Add_Secret "lockss-auth" "${LOCKSS_ADMIN_USER}:${UI_PASS}"
-      fi
-    done
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
+    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
+    if [ -n "${PASSWD_CLEAR}" ]; then
+      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
+      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
+    fi
+
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
     export LOCKSS_CONFIG_VERSION=2
-    write_config_file ${TMP_CONFIG}
+    export LOCKSS_USER
+    write_config_file ${TMP_CONFIG} ${LOCKSS_USER}
     echo
     echo "Configuration:"
     cat ${TMP_CONFIG}
@@ -485,28 +481,24 @@ build_config_file() {
         echo "Config not installed, left in ${TMP_CONFIG}"
         exit 1
       fi
-      echo "Checking content storage directory..."
-
-      if ! init_one_dir ${LOCKSS_DATA_DIR} $2; then
-        exit 1
-      fi
-      if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
-        exit 1
-      fi
-      echo "Checking additional content storage directories..."
-      for dir in "${curPaths[@]}"
-      do
+      echo "Checking content storage directory(s)"
+      for dir in "${curPaths[@]}"; do
         if ! init_one_dir ${dir} $2; then
           err "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       done
+      if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
+          exit 1
+        fi
+      fi
       rm -f ${TMP_CONFIG}
       echo Done
       CONFIG_OK=Y
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-        echo "Sending mail failed. Please check mail configuration."
+        echo "The attempt to mail configuration failed.  Please check your mail configuration."
         UNSENT_FILE=/tmp/unsent-lockss-config
         cp ${FILT_CONFIG} ${UNSENT_FILE}
         echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
@@ -522,30 +514,43 @@ build_config_file() {
 ###
 CONFIG_USER=$(whoami)
 OS_TYPE=$(uname -s)
-LOCKSS_TEAM=lockssdiag@lockss.org
-LOCKSS_USER=lockss
-LOCAL_HOSTNAME=$(uname -n)
+if [ -z "${LOCKSS_TEAM}" ]; then
+  LOCKSS_TEAM=lockssdiag@lockss.org
+fi
+LOCKSS_USER="lockss"
+LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 
-echo "$(date) Checking system state..Plese run check_sys as root if needed."
+echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks
-Check_Runnable
+if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
+  Check_Runnable
+else
+  echo "Bypassing Check_Runnable and microk8s commands"
+  microk8s() {
+    echo "Bypassing microk8s, simulating success of"
+    echo "microk8s $*"
+    return 0
+  }
+fi
 
 case ${OS_TYPE} in
 Linux)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCAL_IPADDR=$(ifconfig eth0 | grep 'inet addr:' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet addr:\(.*\)  Mask.*/\1/')
+  LOCKSS_TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 Darwin)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCAL_IPADDR=$(ifconfig -a | grep 'inet ' | grep -v 127.0.0.1 | tail -1 | sed 's/.*inet \(.*\) netmask.*/\1/')
+  LOCKSS_TIMEZONE=$(readlink /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 *)
   echo "${OS_TYPE} not supported"
   exit 1
   ;;
 esac
+
+LOCAL_IPADDR=$(guess_ip_address)
 
 declare -i CONFIG_COUNT
 
@@ -558,13 +563,12 @@ fi
 
 #get the number of stacks
 case "${1}" in
-  '') CONFIG_COUNT=1 ;;
-  [1-9]) CONFIG_COUNT="${1}" ;;
+'') CONFIG_COUNT=1 ;;
+[1-9]) CONFIG_COUNT="${1}" ;;
   *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
 #build config file
 echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}
-
-echo "$(date) Call start-lockss to launch the LOCKSS stack 'lockss-stack'..."
+echo "$(date) Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."

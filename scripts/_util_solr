@@ -40,13 +40,12 @@
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
+
 ##
 ## Load _util
 ##
-
 . "${_D0}/_util"
 
-LIB_DIR="${_D0}/lib"
 SOLR_TOOLS_JAR="laaws-repository-tools.jar"
 SOLR_TOOLS_GROUPID="org.lockss.laaws"
 SOLR_TOOLS_ARTIFACTID="laaws-repository-tools"

@@ -42,41 +42,53 @@ VERSION="1.0"
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
+
+STACK_PREFIX="lockss-stack"
+KUBECTL='microk8s kubectl -n lockss'
 
 clean_up() { # Perform pre-exit housekeeping
-	unalias xargs
-	return
+  return
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
   Stop LOCKSS stack and containers.
 
@@ -90,68 +102,56 @@ _EOF_
 }
 
 ##
-## Load _util
-##
-
-. "${_D0}/_util"
-
-##
-## Definitions
-##
-
-##
 ## MAIN
 ##
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
 STACK_NUM=0
 
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-       STACK_NUM=$1;;
-    -*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  [1-9])
+    STACK_NUM=$1
+    ;;
+  -*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
 
-# Sanity checks
-Check_Runnable
+undeploy_stack() {
+  local stack=${STACK_PREFIX}$1
+  # Source config.info and env.sh
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
+  
+  echo "Removing all services for $stack."
+  $KUBECTL delete -n lockss  -l lockss-stack-id=${stack} services,deployments,pvc,pods
+  echo "Removing all configmaps $stack."
+  $KUBECTL delete configmaps --all
+  microk8s kubectl delete -l lockss-stack-id=${stack} pv
+}
 
-if which "gxargs" &> /dev/null; then
-  alias xargs='gxargs -r'
-else
-  alias xargs='xargs -r'
-fi
+# Sanity checks
+#Check_Runnable
+
 if [[ ${STACK_NUM} -eq 0 ]]; then
-  if docker stack ps 'lockss-stack' &> /dev/null; then
-    echo "Shutting down all LOCKSS stacks..."
-    docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm
-    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep 'lockss-stack' | awk '{print $1}' | xargs docker container rm
-    echo "Stopped all containers and removed containers and stacks. Run start-lockss to run again."
-  else
-    echo "The stack 'lockss-stack' is not running. Run start-lockss to run again."
-  fi
+  undeploy_stack ""
 else
-  if docker stack ps "lockss-stack${STACK_NUM}" &> /dev/null; then
-    echo "Shutting down lockss-stack${STACK_NUM}"
-    docker stack ls | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker stack rm
-    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container stop
-    docker ps -a | grep "lockss-stack${STACK_NUM}" | awk '{print $1}' | xargs docker container rm
-    echo "Stopped all containers and removed containers for lockss-stack${STACK_NUM}. Run start-lockss ${STACK_NUM} to run again."
-  else
-    echo "The stack lockss-stack${STACK_NUM} is not running. Run start-lockss ${STACK_NUM} to run again."
-  fi
+  undeploy_stack ${STACK_NUM}
 fi
 
 graceful_exit

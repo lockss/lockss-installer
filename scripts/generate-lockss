@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # generate-lockss - Generate files needed to run a LOCKSS stack
 #
@@ -55,57 +55,66 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
-COMPOSE_DIR="$( cd "${_D0}/.." >/dev/null 2>&1 && pwd )"
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
 echo "Setting Compose Dir: ${COMPOSE_DIR}"
+
 CONFIG_DIR="${COMPOSE_DIR}/config"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
+SERVICES_DIR="${TEMPLATES_DIR}/svcs"
+MK_DIR="${TEMPLATES_DIR}/mk"
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+STORAGE_CLASS_FILE="local-storage.yaml"
 
 STACK_PREFIX="lockss-stack"
 PORT_BASE=245
+PULL_POLICY="IfNotPresent"
 
 # Variables
 declare -i STACK_COUNT=1
+declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  return
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [<num stacks>]"
+  echo -e "Usage: $PROGNAME [-h|--help] [<num stacks>]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-EOF
   $PROGNAME ver. $VERSION
   Generate files needed to run a LOCKSS stack.
 
@@ -113,9 +122,10 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
+  -u, --update  force update of LOCKSS docker images
   <num stacks> Optional number of stacks to run on this host.
 
-_EOF_
+EOF
   return
 }
 
@@ -125,20 +135,29 @@ _EOF_
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    [1-9])
-      STACK_COUNT=$1;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  -u | --update)
+    PULL_POLICY="Always"
+    msg "${PROGNAME}:  Forcing update of LOCKSS docker images"
+    ;;
+  [1-9])
+    STACK_COUNT=$1
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
   shift
 done
@@ -152,11 +171,14 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
+msg "${PROGNAME}:  Checking install..."
+Check_Runnable
+
 msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
 
 msg "${PROGNAME}:  Generating config files for $STACK_COUNT stacks..."
-for (( num=1 ; num<=$STACK_COUNT ; num++)); do
+for ((num = 1; num <= $STACK_COUNT; num++)); do
   export STACK_PORT_BASE=$((${PORT_BASE} + $num))
   if [ ${STACK_COUNT} = 1 ]; then
     STACK_NAME="${STACK_PREFIX}"
@@ -164,64 +186,75 @@ for (( num=1 ; num<=$STACK_COUNT ; num++)); do
     STACK_NAME="${STACK_PREFIX}$num"
   fi
   export STACK_NAME
-  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num -1))
-  stack_config_dir="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
-  stack_env_file="${stack_config_dir}/env.sh"
-  stack_compose_file="${stack_config_dir}/docker-compose.yml"
+  export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
+  export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
+  stack_env_file="${STACK_CONFIG_DIR}/env.sh"
+  stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
 
-  echo "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
-  mkdir -p "${stack_config_dir}"
+  msg "${PROGNAME}: Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
+  mkdir -p "${STACK_CONFIG_DIR}"
 
-  echo "generate the stack env.sh file..."
-  mo "${ENV_TMPL}" > "${stack_env_file}"
+  msg "${PROGNAME}: Generating the stack env.sh file..."
+  mo "${ENV_TMPL}" >"${stack_env_file}"
   set -a
   . "${stack_env_file}"
   set +a
 
-  export POSTGRES_PASSWD="{{ secret \"lockss-postgres-pass\" }}"
-  msg "${PROGNAME}:  Generating stack docker-compose file..."
+  msg "${PROGNAME}: Getting node hostname..."
+  export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
+  msg "${PROGNAME}: Getting postgres password..."
+  export POSTGRES_PASSWD=$(microk8s kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
 
   declare -a REPO_NUMS
-  declare -a REPO_DATA_MAP
   REPO_NUMS[0]=""
-  REPO_DATA_MAP[0]="lockss-repo-data:/data"
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
   len=${#datadirs[@]}
-  for (( count=1; count<$len; count++ )); do
+  export REPO_DATA_MAP=${MK_DATA_ROOT}
+  for ((count = 1; count < $len; count++)); do
     REPO_NUMS[${count}]="$count"
-    REPO_DATA_MAP[${count}]="lockss-repo-data${count}:/data${count}"
+    export REPO_DATA_MAP_${count}="/data${datadirs[$count]}"
   done
-  export REPO_DATA_MAP
   export REPO_NUMS
-  mo -e -s="${stack_env_file}" "${COMPOSE_TMPL}" > "${stack_compose_file}"
 
-  #add the lockss config file templates
-  for f in ${CONFIG_DIR}/templates/*.mustache ; do
+  msg "${PROGNAME}: add the service deployments..."
+  mkdir "${STACK_CONFIG_DIR}/svcs"
+  for f in ${SERVICES_DIR}/*.mustache; do
     src="${f}"
-    dst="${stack_config_dir}/$(basename "${f}" .mustache)"
-    msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
+    dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
+    msg "     Rendering ${src} to ${dst}..."
+    mo "${src}" >"${dst}"
   done
-  #add the user config file templates
-  for f in ${USEROPTS_DIR}/templates/*_opt.mustache ; do
+  msg "${PROGNAME}: Adding the microk8s elements..."
+  mk_dst="${STACK_CONFIG_DIR}/mk"
+  mkdir "${mk_dst}"
+  cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+  for f in ${MK_DIR}/*.mustache; do
+    src="${f}"
+    dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
+    msg "     Rendering ${src} to ${dst}..."
+    mo "${src}" >"${dst}"
+  done
+  msg "${PROGNAME}: Generating lockss config files..."
+  for f in ${TEMPLATES_DIR}/*.mustache; do
+    src="${f}"
+    dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
+    msg "     Rendering ${src} to ${dst}..."
+    mo "${src}" >"${dst}"
+  done
+  msg "${PROGNAME}:  Adding the user config files..."
+  for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
     if [[ -f "${f}" ]]; then
       src="${f}"
-      dst="${stack_config_dir}/$(basename "${f}" .mustache)"
-      msg "${PROGNAME}:  Rendering ${src} to ${dst}..."
-      mo "${src}" > "${dst}"
-    fi
-  done
-  #add any remaining user opt files
-  for f in ${USEROPTS_DIR}/*_opt ; do
-    if [[ -f "${f}" ]]; then
-      src="${f}"
-      dst="${stack_config_dir}/$(basename "$f")"
-      msg "${PROGNAME}:  Copying ${src} to ${dst}..."
-      cp "${src}" "${dst}"
+      dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
+      msg "     Rendering ${src} to ${dst}..."
+      mo "${src}" >"${dst}"
     fi
   done
 done
 
-msg "${PROGNAME}:  Done updating configs."
+msg "--------------------------------------------------------------------"
+msg "${PROGNAME}:  Successfully regenerated stack components."
+msg "${PROGNAME}:  Run assemble-lockss to install regenerated components."
+msg "--------------------------------------------------------------------"
 
 graceful_exit
