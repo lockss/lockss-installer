@@ -73,6 +73,26 @@ spec:
     matchLabels:
       owner: "lockss-pol-data"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-poller-service
+  name: lockss-pol-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-pol-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -165,6 +185,8 @@ spec:
           name: lockss-pol-data
         - mountPath: /var/log/lockss
           name: lockss-pol-logs
+        - mountPath: /tmp/lockss
+          name: lockss-pol-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -207,3 +229,6 @@ spec:
       - name: lockss-pol-logs
         persistentVolumeClaim:
           claimName: lockss-pol-logs-pvc
+      - name: lockss-pol-tmp
+        persistentVolumeClaim:
+          claimName: lockss-pol-tmp-pvc

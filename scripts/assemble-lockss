@@ -284,7 +284,9 @@ add_stack_volumes() {
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
     mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    mkdir -p ${mtpoint} || error_exit "unable to create logs dir: ${mtpoint}"
+    mtpoint=${LOCKSS_TMP_DIR}/$stack-${svc}-tmp
+    mkdir --mode=1777 -p ${mtpoint} || error_exit "unable to create tmp dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
   $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml

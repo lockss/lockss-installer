@@ -56,6 +56,26 @@ spec:
     matchLabels:
       owner: "lockss-mdx-logs"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-mdx-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -131,6 +151,8 @@ spec:
           name: lockss-mdx-data
         - mountPath: /var/log/lockss
           name: lockss-mdx-logs
+        - mountPath: /tmp/lockss
+          name: lockss-mdx-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -179,3 +201,6 @@ spec:
       - name: lockss-mdx-logs
         persistentVolumeClaim:
           claimName: lockss-mdx-logs-pvc
+      - name: lockss-mdx-tmp
+        persistentVolumeClaim:
+          claimName: lockss-mdx-tmp-pvc

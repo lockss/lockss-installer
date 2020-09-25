@@ -53,6 +53,25 @@ spec:
     matchLabels:
       owner: "lockss-solr-logs"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-solr-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -98,6 +117,8 @@ spec:
           name: lockss-solr-data
         - mountPath: /opt/solr/server/logs
           name: lockss-solr-logs
+        - mountPath: /tmp
+          name: lockss-solr-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -113,3 +134,6 @@ spec:
       - name: lockss-solr-logs
         persistentVolumeClaim:
           claimName: lockss-solr-logs-pvc
+      - name: lockss-solr-tmp
+        persistentVolumeClaim:
+          claimName: lockss-solr-tmp-pvc

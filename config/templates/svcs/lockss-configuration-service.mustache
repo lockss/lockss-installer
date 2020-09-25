@@ -64,6 +64,26 @@ spec:
     matchLabels:
       owner: "lockss-cfg-data"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-configuration-service
+  name: lockss-cfg-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-cfg-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -129,6 +149,8 @@ spec:
           name: lockss-cfg-data
         - mountPath: /var/log/lockss
           name: lockss-cfg-logs
+        - mountPath: /tmp/lockss
+          name: lockss-cfg-tmp
         image: {{CFG_IMG}}:{{CFG_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-configuration-service
@@ -205,3 +227,7 @@ spec:
       - name: lockss-cfg-logs
         persistentVolumeClaim:
           claimName: lockss-cfg-logs-pvc
+      - name: lockss-cfg-tmp
+        persistentVolumeClaim:
+          claimName: lockss-cfg-tmp-pvc
+

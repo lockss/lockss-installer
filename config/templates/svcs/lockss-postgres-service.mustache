@@ -53,6 +53,25 @@ spec:
     matchLabels:
       owner: "lockss-postgres-logs"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-postgres-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -107,6 +126,8 @@ spec:
           name: lockss-postgres-data
         - mountPath: /var/logs/postgres
           name: lockss-postgres-logs
+        - mountPath: /tmp
+          name: lockss-postgres-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -122,3 +143,6 @@ spec:
       - name: lockss-postgres-logs
         persistentVolumeClaim:
           claimName: lockss-postgres-logs-pvc
+      - name: lockss-postgres-tmp
+        persistentVolumeClaim:
+          claimName: lockss-postgres-tmp-pvc

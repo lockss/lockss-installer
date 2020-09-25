@@ -53,6 +53,25 @@ spec:
     matchLabels:
       owner: "lockss-pywb-logs"
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-pywb-tmp"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -105,6 +124,8 @@ spec:
           subPath: lockss-auth
         - mountPath: /data
           name: lockss-pywb-data
+        - mountPath: /tmp
+          name: lockss-pywb-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -117,3 +138,6 @@ spec:
       - name: lockss-pywb-data
         persistentVolumeClaim:
           claimName: lockss-pywb-data-pvc
+      - name: lockss-pywb-tmp
+        persistentVolumeClaim:
+          claimName: lockss-pywb-tmp-pvc

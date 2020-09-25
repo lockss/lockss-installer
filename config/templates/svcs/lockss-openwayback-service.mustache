@@ -22,7 +22,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
-  name: lockss-openwayback-data-pvc
+  name: lockss-openwb-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -32,7 +32,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-openwayback-data"
+      owner: "lockss-openwb-data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -41,7 +41,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
-  name: lockss-openwayback-logs-pvc
+  name: lockss-openwb-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -51,7 +51,26 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-openwayback-logs"
+      owner: "lockss-openwb-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-openwayback-service
+  name: lockss-openwb-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-openwb-tmp"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -111,6 +130,8 @@ spec:
           subPath: lockss-auth
         - mountPath: /data
           name: lockss-openwayback-data
+        - mountPath: /tmp
+          name: lockss-openwb-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -120,6 +141,9 @@ spec:
       - name: lockss-auth
         secret:
           secretName: lockss-auth
-      - name: lockss-openwayback-data
+      - name: lockss-openwb-data
         persistentVolumeClaim:
-          claimName: lockss-openwayback-data-pvc
+          claimName: lockss-openwb-data-pvc
+      - name: lockss-openwb-tmp
+        persistentVolumeClaim:
+          claimName: lockss-openwb-tmp-pvc
