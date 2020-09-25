@@ -447,9 +447,9 @@ build_config_file() {
       fi
     done
     if [ "X${LOCKSS_TMPDIR}" = X ]; then
-      LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}/tmp
+      LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}
     fi
-    ask_for_input "Temporary storage directory" ${LOCKSS_TMPDIR}
+    ask_for_input "Temporary storage directory (local storage preferred)" ${LOCKSS_TMPDIR}
     LOCKSS_TMPDIR="${ANS}"
     USER_OK=N
     until is_yes ${USER_OK}; do
