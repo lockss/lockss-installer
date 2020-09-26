@@ -493,8 +493,8 @@ build_config_file() {
           exit 1
         fi
       fi
-      if [ "${LOCKSS_TMP_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_TMP_DIR} $2; then
+      if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
+        if ! init_one_dir ${LOCKSS_TMPDIR} $2; then
           exit 1
         fi
       fi
