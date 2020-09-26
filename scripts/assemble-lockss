@@ -132,8 +132,16 @@ Config_Or_Blank() {
 }
 
 Check_Physical_Volumes() {
-  if [ -z "${LOCKSS_DATA_DIR}" ] || [ -z "${LOCKSS_LOGS_DIR}" ]; then
-    echo "LOCKSS_DATA_DIR and LOCKSS_LOGS_DIR are not set; exiting"
+  if [ -z "${LOCKSS_DATA_DIR}" ]; then
+    echo "LOCKSS_DATA_DIR is not set; exiting"
+    exit 1
+  fi
+  if  [ -z "${LOCKSS_LOGS_DIR}" ]; then
+    echo "LOCKSS_LOGS_DIR is not set; exiting"
+    exit 1
+  fi
+  if [ -z "${LOCKSS_TMPDIR}" ]; then
+    echo "LOCKSS_TMPDIR are not set; exiting"
     exit 1
   fi
 }
@@ -219,23 +227,8 @@ add_stack_configs() {
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
-  add_additional_stack_volumes $stack
 }
 
-add_additional_stack_volumes() {
-  local stack=$1
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-  count=1
-  for count in "${!datadirs[@]}"; do
-    mtpoint=${datadirs[$count]}/$stack-repo-data
-    mtname=$stack-repo-data${count}
-    echo "creating additional docker data volumes for $stack-repo.."
-    docker volume remove $mtname &>/dev/null
-    if ! docker volume create -d local-persist -o mountpoint=${mtpoint} --name=${mtname}; then
-      error_exit "${_0}: error creating volume ${mtname} for ${mtpoint};"
-    fi
-  done
-}
 
 # Add shared stack elements
 add_stack_shared() {
@@ -279,13 +272,18 @@ check_stack_solr() {
 add_stack_volumes() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
-  for svc in "${svcs[@]}"; do
+
+  ensure_writable_dir $LOCKSS_DATA_DIR
+  ensure_writable_dir $LOCKSS_LOGS_DIR
+  ensure_writable_dir $LOCKSS_TMPDIR
+
+ for svc in "${svcs[@]}"; do
     msg "${PROGNAME}:  creating data and log volumes for $stack-${svc}..."
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
     mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
     mkdir -p ${mtpoint} || error_exit "unable to create logs dir: ${mtpoint}"
-    mtpoint=${LOCKSS_TMP_DIR}/$stack-${svc}-tmp
+    mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || error_exit "unable to create tmp dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack

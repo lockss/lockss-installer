@@ -62,6 +62,7 @@ configure_services() {
   echo "Configuring installed services..."
   echo ""
   USE_LOCKSS_CFG=true
+
   #check metadata service
   if [ "X${USE_LOCKSS_MDQ}" = X ]; then
     USE_LOCKSS_MDQ=true
@@ -492,6 +493,12 @@ build_config_file() {
           exit 1
         fi
       fi
+      if [ "${LOCKSS_TMP_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+        if ! init_one_dir ${LOCKSS_TMP_DIR} $2; then
+          exit 1
+        fi
+      fi
+
       rm -f ${TMP_CONFIG}
       echo Done
       CONFIG_OK=Y
