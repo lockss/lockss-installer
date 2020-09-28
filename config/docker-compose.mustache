@@ -79,7 +79,7 @@ services:
       - "LOCKSS_PROPS_URL={{LOCKSS_PROPS_URL}}"
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     ports:
       - mode: host
         protocol: tcp
@@ -140,7 +140,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
@@ -180,7 +180,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
@@ -241,7 +241,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss_ui_pass
       - lockss-auth
@@ -283,7 +283,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}"
       - "-Dlog4j2.debug"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     volumes:
   {{#REPO_DATA_MAP}}
       - {{.}}
@@ -320,7 +320,7 @@ services:
 #      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
     networks:
@@ -392,7 +392,7 @@ services:
       - "REPO_REST_PORT={{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     networks:
       - host-network
     secrets:
@@ -421,7 +421,7 @@ services:
       - "WAYBACK_URL_HOST={{OPENWB_HOST}}"
       - "WAYBACK_URL_PREFIX=http://{{OPENWB_HOST}}:{{OPENWB_PORT}}"
       - "WAYBACK_BASEDIR=/data"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     networks:
       - host-network
     secrets:
