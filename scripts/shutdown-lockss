@@ -138,11 +138,14 @@ undeploy_stack() {
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   
-  echo "Removing all services for $stack."
-  $KUBECTL delete -n lockss  -l lockss-stack-id=${stack} services,deployments,pvc,pods
+  echo "Removing all deployments for $stack."
+  $KUBECTL delete -l lockss-stack-id=${stack} deployments
+  echo "Removing all services and volume claims for $stack."
+  $KUBECTL delete -l lockss-stack-id=${stack} services,pvc
+  echo "Removing all persistent volumes $stack."
+  microk8s kubectl delete -l lockss-stack-id=${stack} pv
   echo "Removing all configmaps $stack."
   $KUBECTL delete configmaps --all
-  microk8s kubectl delete -l lockss-stack-id=${stack} pv
 }
 
 # Sanity checks
