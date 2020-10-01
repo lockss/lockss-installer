@@ -98,6 +98,8 @@ spec:
       containers:
       - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
         env:
+        - name: LOG4J_PROPS
+          value: /opt/solr/server/solr/log4j.properties
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
@@ -110,6 +112,8 @@ spec:
           protocol: TCP
         resources: {}
         volumeMounts:
+        - mountPath: /opt/solr/server/resource/log4j.properties
+          name: solr-log4j.properties
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
