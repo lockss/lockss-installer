@@ -99,7 +99,6 @@ else
       else
         OK_CNT=$((OK_CNT + 1))
         REPLACEMENT_STRING+=" ${ip}"
-        echo "$(OK_CNT)"
       fi
     done
     if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
