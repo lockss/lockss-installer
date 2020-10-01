@@ -45,7 +45,7 @@ SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
 RESOLV_CONF="/etc/resolv.conf"
 LOCKSS_RESOLV_CONF=${CONFIG_DIR}/lockss-resolv.conf
 LOOPBACK_REGEX="(0{0,4}:{1,2}){1,7}(0{0,3}1)|127.0.0.*|localhost"
-DEFAULT_IP_LIST="8.8.8.8 8.8.4.4"
+DEFAULT_IP_LIST="8.8.8.8;8.8.4.4"
 
 # make sure dns is enabled.
 microk8s enable dns
@@ -74,7 +74,7 @@ if grep -E "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
       USE_RESOLV_CONF=N
     fi
   else
-    USE_RESOLV_CONF=Y
+    USE_RESOLV_CONF=N
   fi
 fi
 if is_yes ${USE_RESOLV_CONF}; then
@@ -86,24 +86,28 @@ else
   msg "CoreDNS does not allow a loopback address to be assigned to pods..."
   msg "Please enter a list of downstream ip adresses to use from your etc/resolv.conf or accept microk8s defaults."
   IP_OK=N
+  REPLACEMENT_STRING=""
   until is_yes ${IP_OK}; do
     ask_for_input "Downstream IP address(s) for use by CoreDNS" ${DEFAULT_IP_LIST}
     OK_CNT=0
-    read -ra arr <<<"${ANS}"
-    for a in "${arr[@]}"; do
-      if ! valid_ip_address "${a}"; then
-        err "${a} is not a valid IP address."
+    IFS=';' read -r -a ip_arr <<<"${ANS}"
+    len=${#ip_arr[@]}
+    for ip in "${ip_arr[@]}"; do
+      if ! valid_ip_address "${ip}"; then
+        err "${ip} is not a valid IP address."
         break
       else
         OK_CNT=$((OK_CNT + 1))
+        REPLACEMENT_STRING+=" ${ip}"
+        echo "$(OK_CNT)"
       fi
     done
-    if $OK_CNT -gt 0 && $OK_CNT -eq ${#arr[@]}; then
+    if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
       IP_OK=Y
     fi
   done
-  msg "Updating  CoreDNS ConfigMap to use ${ANS}..."
-  microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|8.8.8.8 8.8.4.4|${ANS}|" | microk8s kubectl apply -n kube-system -f -
+  msg "Updating  CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
+  microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|8.8.8.8 8.8.4.4|${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
 fi
 
 msg "Successfully changed CoreDNS ConfigMap"
