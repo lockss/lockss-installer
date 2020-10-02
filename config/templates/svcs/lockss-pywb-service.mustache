@@ -98,7 +98,7 @@ spec:
       containers:
       - env:
         - name: ARGS_ADDITIONAL
-          value: {{ARGS_ADDITIONAL}}
+          value: "{{ARGS_ADDITIONAL}}"
         - name: LOCKSS_WAIT_FOR_200
           value: {{REPO_HOST}}:{{REPO_REST_PORT}}
         - name: LOCKSS_WAIT_FOR_PORT
