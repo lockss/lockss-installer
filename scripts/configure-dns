@@ -25,13 +25,13 @@
 # CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
 # SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 #
-
 PROGNAME=${0##*/}
 VERSION="1.0"
 
 ##
 ## Relative paths
 ##
+
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
@@ -41,34 +41,23 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
+##
+## Definitions
+##
+
 SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
 RESOLV_CONF="/etc/resolv.conf"
-LOCKSS_RESOLV_CONF=${CONFIG_DIR}/lockss-resolv.conf
+
 LOOPBACK_REGEX="(0{0,4}:{1,2}){1,7}(0{0,3}1)|127.0.0.*|localhost"
+
 DEFAULT_IP_LIST="8.8.8.8;8.8.4.4"
 
 # make sure dns is enabled.
 microk8s enable dns
 
-# check to see if we've done this before
-#if [ ! -f "$LOCKSS_RESOLV_CONF" ]; then
-#  echo "$LOCKSS_RESOLV_CONF does not exist, creating..."
-#  if [ -f "$SYSD_RESOLV_CONF" ]; then
-#    msg "copying $SYSD_RESOLV_CONF"
-#    cp "$SYSD_RESOLV_CONF" "$LOCKSS_RESOLV_CONF"
-#  else
-#    if [ -f "$RESOLV_CONF" ]; then
-#      msg "copying ${RESOLV_CONF}"
-#      cp "$RESOLV_CONF" "$LOCKSS_RESOLV_CONF"
-#    else
-#      err_exit "Unable to find a resolv.conf file.  Using defaults."
-#    fi
-#  fi
-#fi
-
 # examine the local resolv.conf for loopback address
 USE_RESOLV_CONF=Y
-if grep -E "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
+if grep -E -s "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
   if [ -f "$SYSD_RESOLV_CONF" ]; then
     if grep -E "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
       USE_RESOLV_CONF=N
@@ -77,18 +66,17 @@ if grep -E "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
     USE_RESOLV_CONF=N
   fi
 fi
+REPLACEMENT_STRING=""
 if is_yes ${USE_RESOLV_CONF}; then
   # Switch out the Google ips with the local resolv.conf file"
-  msg "Updating  CoreDNS ConfigMap to use $RESOLV_CONF..."
-  microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|8.8.8.8 8.8.4.4|${RESOLV_CONF}|" | microk8s kubectl apply -n kube-system -f -
+  REPLACEMENT_STRING=${RESOLV_CONF}
 else
-  msg "The /etc/resolv.conf file in the system contains a loopback address."
-  msg "CoreDNS does not allow a loopback address to be assigned to pods..."
-  msg "Please enter a list of downstream ip adresses to use from your etc/resolv.conf or accept microk8s defaults."
+  msg "${PROGNAME}:The /etc/resolv.conf file in your system contains a loopback address."
+  msg "${PROGNAME}:CoreDNS does not allow a loopback address to be assigned to pods."
+  msg "${PROGNAME}:Please enter a list of ip addresses of upstream dns resolvers."
   IP_OK=N
-  REPLACEMENT_STRING=""
   until is_yes ${IP_OK}; do
-    ask_for_input "Downstream IP address(s) for use by CoreDNS" ${DEFAULT_IP_LIST}
+    ask_for_input "IP address(es) for dns lookup, separated by ';'" ${DEFAULT_IP_LIST}
     OK_CNT=0
     IFS=';' read -r -a ip_arr <<<"${ANS}"
     len=${#ip_arr[@]}
@@ -105,8 +93,12 @@ else
       IP_OK=Y
     fi
   done
-  msg "Updating  CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
-  microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|8.8.8.8 8.8.4.4|${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
 fi
+msg "${PROGNAME}:Updating  CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
+microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|forward \. .*|forward \. ${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
 
-msg "Successfully changed CoreDNS ConfigMap"
+msg "--------------------------------------------------------------------"
+msg "${PROGNAME}:  Successfully changed CoreDNS ConfigMap"
+msg "--------------------------------------------------------------------"
+
+\
