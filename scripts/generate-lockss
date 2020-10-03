@@ -55,6 +55,11 @@ _D0=$(dirname "${0}")
 ##
 
 # Directories
+COMPOSE_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
+echo "Setting Compose Dir: ${COMPOSE_DIR}"
+
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
+SERVICES_DIR="${TEMPLATES_DIR}/svcs"
 MK_DIR="${TEMPLATES_DIR}/mk"
 
 # Files
