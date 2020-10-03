@@ -137,8 +137,9 @@ undeploy_stack() {
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
-  
+
   echo "Removing all deployments for $stack."
+  $KUBECTL delete -l lockss-stack-id=${stack} pods --grace-period=30
   $KUBECTL delete -l lockss-stack-id=${stack} deployments
   echo "Removing all services and volume claims for $stack."
   $KUBECTL delete -l lockss-stack-id=${stack} services,pvc
