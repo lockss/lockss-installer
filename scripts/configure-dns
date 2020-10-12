@@ -71,9 +71,9 @@ if is_yes ${USE_RESOLV_CONF}; then
   # Switch out the Google ips with the local resolv.conf file"
   REPLACEMENT_STRING=${RESOLV_CONF}
 else
-  msg "${PROGNAME}:The /etc/resolv.conf file in your system contains a loopback address."
-  msg "${PROGNAME}:CoreDNS does not allow a loopback address to be assigned to pods."
-  msg "${PROGNAME}:Please enter a list of ip addresses of upstream dns resolvers."
+  echo "The /etc/resolv.conf file in your system contains a loopback address."
+  echo "CoreDNS does not allow a loopback address to be assigned to pods."
+  echo "Please enter a list of ip addresses of upstream dns resolvers."
   IP_OK=N
   until is_yes ${IP_OK}; do
     ask_for_input "IP address(es) for dns lookup, separated by ';'" ${DEFAULT_IP_LIST}
@@ -94,11 +94,11 @@ else
     fi
   done
 fi
-echo "${PROGNAME}:Updating CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
+echo "Updating CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
 microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|forward \. .*|forward \. ${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
 
 echo "--------------------------------------------------------------------"
-echo "${PROGNAME}: Successfully changed CoreDNS ConfigMap"
+echo "Successfully changed CoreDNS ConfigMap"
 # output the edited line for confirmation
 microk8s kubectl get -n kube-system configmap/coredns -o 'jsonpath={.data}' | grep forward
 echo "--------------------------------------------------------------------"
