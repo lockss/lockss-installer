@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: restart [-h|--help] [-a|--args ARGS_ADDITIONAL]
+# Usage: start-lockss [-h|--help] [-u|--update] [-a|--args ARGS_ADDITIONAL]
 # Revision history:
 # ---------------------------------------------------------------------------
 PROGNAME=${0##*/}
@@ -40,7 +40,6 @@ VERSION="1.0"
 ##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
-
 
 ##
 ## Load _util
@@ -111,7 +110,9 @@ while [[ -n $1 ]]; do
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
-      msg "Forcing update of LOCKSS docker images" ;;
+      msg "Forcing update of LOCKSS docker images"
+      shift
+      ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
