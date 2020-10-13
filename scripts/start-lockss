@@ -111,13 +111,11 @@ while [[ -n $1 ]]; do
     -u | --update)
       UPDATE_ARG="-u"
       msg "Forcing update of LOCKSS docker images"
-      shift
       ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
       echo "Adding additional runtime args $ARGS_ADDITIONAL";
-      shift
     ;;
     -* | --*)
       usage
