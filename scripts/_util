@@ -68,7 +68,7 @@ Check_Runnable() {
   Check_LOCKSS_User
   Check_Installed 'microk8s'
   if ! microk8s status | grep "microk8s is running"; then
-    err_exit "microk8s is not running. Please run $(microk8s start)"
+    err_exit "microk8s is not running. Please run: microk8s start"
   fi
   if ! microk8s kubectl get namespace "lockss" &>/dev/null; then
     microk8s kubectl create namespace "lockss"
