@@ -53,13 +53,13 @@ LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0
 DEFAULT_IP_LIST="8.8.8.8;8.8.4.4"
 
 # make sure dns is enabled.
-microk8s enable dns
+microk8s enable dns || err_exit "microk8s enable dns failed"
 
 # examine the local resolv.conf for loopback address
 USE_RESOLV_CONF=Y
-if grep -E -i -s "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
+if grep -E -i -q "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
   if [ -f "$SYSD_RESOLV_CONF" ]; then
-    if grep -E -i "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
+    if grep -E -i -q "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
       USE_RESOLV_CONF=N
     fi
   else
