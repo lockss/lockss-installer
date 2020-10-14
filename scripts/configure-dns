@@ -61,6 +61,9 @@ if grep -E -i -q "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
   if [ -f "$SYSD_RESOLV_CONF" ]; then
     if grep -E -i -q "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
       USE_RESOLV_CONF=N
+    else
+      # This should be "use /run/systemd/resolve/resolv.conf", but that's not possible
+      USE_RESOLV_CONF=N
     fi
   else
     USE_RESOLV_CONF=N
@@ -73,10 +76,10 @@ if is_yes ${USE_RESOLV_CONF}; then
 else
   echo "The /etc/resolv.conf file in your system contains a loopback address."
   echo "CoreDNS does not allow a loopback address to be assigned to pods."
-  echo "Please enter a list of ip addresses of upstream dns resolvers."
+  echo "Please enter a list of IP addresses of upstream DNS resolvers."
   IP_OK=N
   until is_yes ${IP_OK}; do
-    ask_for_input "IP address(es) for dns lookup, separated by ';'" ${DEFAULT_IP_LIST}
+    ask_for_input "IP address(es) for DNS lookup, separated by ';'" ${DEFAULT_IP_LIST}
     OK_CNT=0
     IFS=';' read -r -a ip_arr <<<"${ANS}"
     len=${#ip_arr[@]}
