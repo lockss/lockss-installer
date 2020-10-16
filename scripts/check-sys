@@ -103,58 +103,19 @@ _EOF_
   return
 }
 
-get_next_daemon_uid() {
-  all_uids=$(dscl . -list /Users UniqueID | grep -o '[0-9]\+' | sort -nr)
-  for uid in $all_uids; do
-    if ((uid < 500)); then
-      echo "$(((uid + 1)))"
-      exit 0
-    fi
-  done
-  exit 1
-}
-
 ensure_lockss_user() {
   case ${OS_TYPE} in
   Linux)
     if ! id "lockss" &>/dev/null; then
       echo "${_0}: There is no 'lockss' user account."
-      ask_for_input "OK to create account for 'lockss' user?" Y
-      if is_yes "${ANS}"; then
-        if useradd -s /bin/false lockss; then
-          echo "Created user 'lockss'"
-        else
-          error_exit "Can't create user lockss"
-        fi
-      fi
+      error_exit "Please create a lockss user account"
     fi
     ;;
   Darwin)
     if [ $(dscl . -list /Users | grep "lockss" | wc -l) = 0 ]; then
-      new_uid=$(get_next_daemon_uid)
-      username="lockss"
-      realname="Lockss Daemon"
-
-      echo "Creating group ${username} with gid: ${new_uid}"
-      dscl . -create "/Groups/${username}"
-      dscl . -create "/Groups/${username}" PrimaryGroupID "${new_uid}"
-      dscl . -create "/Groups/${username}" RecordName "${username}" "${username}"
-      dscl . -create "/Groups/${username}" RealName "${realname}"
-      dscl . -create "/Groups/${username}" Password \*
-
-      echo "Creating user ${username} with uid: ${new_uid}"
-      dscl . -create "/Users/$username"
-      dscl . -create "/Users/$username" NFSHomeDirectory /var/empty
-      dscl . -create "/Users/$username" Password \*
-      dscl . -create "/Users/$username" PrimaryGroupID "${new_uid}"
-      dscl . -create "/Users/$username" RealName "$realname"
-      dscl . -create "/Users/$username" RecordName "${username}" "${username}"
-      dscl . -create "/Users/$username" UniqueID "${new_uid}"
-      dscl . -create "/Users/$username" UserShell /usr/bin/false
-      dscl . -delete "/Users/$username" PasswordPolicyOptions
-      dscl . -delete "/Users/$username" AuthenticationAuthority
+      echo "${_0}: There is no 'lockss' user account."
+      error_exit "Please create a lockss user account"
     fi
-    ;;
   *)
     error_exit "Unsupported system, create the user lockss in group lockss manually."
     ;;
@@ -162,10 +123,11 @@ ensure_lockss_user() {
 }
 
 ensure_snap() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/snap"
   if ! which snap &> /dev/null; then
       err "${_0}: Snap not found on path."
       err "${_0}: Snap is used to install microk8s."
-      error_exit "See instructions: https://snapcraft.io/docs/installing-snapd"
+        echo "To complete your install see: ${instr_link}"
   fi
 }
 ensure_microk8s() {
@@ -173,31 +135,20 @@ ensure_microk8s() {
   if ! which microk8s &> /dev/null; then
       err "${_0}: Mircok8s not found on the PATH (${PATH})"
       err "${_0}: LOCKSS requires Microk8s to run."
-      ask_for_input "OK to install Microk8s?" Y
-      if is_yes "${ANS}"; then
-        snap install microk8s --classic --channel=1.18/stable
-        echo "To complete your install see: ${instr_link}"
-      else
-        echo "Microk8s is needed to install LOCKSS."
-        error_exit "See instructions: ${instr_link}"
-      fi
+      error_exit "See instructions: ${instr_link}"
   fi
 }
 
-ensure_java() {
-    if ! which java &> /dev/null; then
-      err "${_0}: Java not found on the PATH (${PATH})"
-      err "${_0}: LOCKSS requires java versions greater than 8 to be installed."
-      error_exit "See instructions: https://openjdk.java.net/install/"
-    else
-      jver=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
-      if [ ${jver} -ge 8 ]; then
-        echo "Found java version ${jver}."
-      else
-        err "Java version is too old. LOCKSS requires versions greater than 8, your version is java ${jver}."
-        error_exit "See instructions: https://openjdk.java.net/install/"
-      fi
-    fi
+ensure_lockss_access() {
+  local instr_link= "https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
+  if ! sudo -l -U lockss sudo &> /dev/null; then
+      err "${_0}: The lockss user requires sudo privileges."
+      error_exit "See instructions: ${instr_link}"
+  fi
+  if !  grep '^microk8s:.*$' /etc/group | cut -d: -f4 | grep lockss &> /dev/null; then
+      err "${_0}: The lockss user should be a member of the group 'microk8s'."
+      error_exit "See instructions: ${instr_link}"
+  fi
 }
 
 # Trap signals
@@ -223,10 +174,6 @@ while [[ -n $1 ]]; do
 done
 
 # Main logic
-if ! am_i_root; then
-  error_exit "this script must be run as root."
-fi
-
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
 echo "${_0}: User lockss exists."
@@ -236,7 +183,6 @@ echo "${_0}: snapd is installed."
 echo "${_0}: Checking for microk8s..."
 ensure_microk8s
 echo "${_0}: microk8s is installed."
-#echo "${_0}: Checking for java install..."
-#ensure_java
-#echo "${_0}: Essential compoments have been sucessfully installed."
+echo "${_0}: Checking lockss groups and permissions.."
+ensure_lockss_access
 graceful_exit
