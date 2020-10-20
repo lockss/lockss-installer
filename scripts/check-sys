@@ -116,6 +116,7 @@ ensure_lockss_user() {
       echo "${_0}: There is no 'lockss' user account."
       error_exit "Please create a lockss user account"
     fi
+    ;;
   *)
     error_exit "Unsupported system, create the user lockss in group lockss manually."
     ;;
@@ -140,7 +141,7 @@ ensure_microk8s() {
 }
 
 ensure_lockss_access() {
-  local instr_link= "https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
   if ! sudo -l -U lockss sudo &> /dev/null; then
       err "${_0}: The lockss user requires sudo privileges."
       error_exit "See instructions: ${instr_link}"
