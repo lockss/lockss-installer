@@ -523,6 +523,7 @@ OS_TYPE=$(uname -s)
 if [ -z "${LOCKSS_TEAM}" ]; then
   LOCKSS_TEAM=lockssdiag@lockss.org
 fi
+umask 002
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 

@@ -250,7 +250,7 @@ set +a
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
-
+umask 002
 Check_Runnable
 
 init_service_arrays
