@@ -180,26 +180,25 @@ configure_services() {
   #    else
   #        USE_LOCKSS_HDFS=false
   #    fi
-  echo "You can use Pywb for content replay..."
+  echo "You can use Pywb and/or Openwayback for content replay..."
   ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
-    USE_LOCKSS_OPENWB=false
   else
     USE_LOCKSS_PYWB=false
-    ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+  fi
+  ask_for_input "Use LOCKSS OpenWayback Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
+  if is_yes "${ANS}"; then
+    echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to permit insecure read request."
+    ask_for_input "Okay to turn off authentication for read-only requests for LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
     if is_yes "${ANS}"; then
-      echo "Using LOCKSS OpenWayback Service requires the LOCKSS Repository Service to permit insecure read request."
-      ask_for_input "Okay to turn off authentication for read-only requests for LOCKSS Repository Service?" $(to_yes_no ${USE_LOCKSS_OPENWB})
-      if is_yes "${ANS}"; then
-        USE_LOCKSS_OPENWB=true
-      else
-        echo "Not enabling OpenWayback Service."
-        USE_LOCKSS_OPENWB=false
-      fi
+      USE_LOCKSS_OPENWB=true
     else
+      echo "Not enabling OpenWayback Service."
       USE_LOCKSS_OPENWB=false
     fi
+  else
+    USE_LOCKSS_OPENWB=false
   fi
 }
 
