@@ -115,7 +115,7 @@ spec:
         ports:
         - name: "postgres-port"
           containerPort: {{POSTGRES_DEFAULT_PORT}}
-          hostPort: {{POSTGRES_PORT}}
+#          hostPort: {{POSTGRES_PORT}}
           protocol: TCP
         resources: {}
         volumeMounts:
