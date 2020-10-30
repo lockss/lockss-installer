@@ -79,7 +79,7 @@ services:
       - "LOCKSS_PROPS_URL={{LOCKSS_PROPS_URL}}"
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     ports:
       - mode: host
         protocol: tcp
@@ -108,7 +108,7 @@ services:
       - host-network
 {{/USE_LOCKSS_CFG}}
 
- {{#USE_LOCKSS_MDQ}}
+{{#USE_LOCKSS_MDQ}}
   #
   # SERVICE lockss-metadata-service
   #
@@ -140,14 +140,14 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
       - lockss-auth
     networks:
       - host-network
-{{/USE_LOCKSS_MDQ}}
+ {{/USE_LOCKSS_MDQ}}
  {{#USE_LOCKSS_MDX}}
   #
   # SERVICE lockss-metadata-extraction-service
@@ -180,7 +180,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{POSTGRES_HOST}}:{{POSTGRES_DEFAULT_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}} {{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
       - lockss_ui_pass
@@ -189,7 +189,7 @@ services:
       - host-network
 {{/USE_LOCKSS_MDX}}
 
- {{#USE_LOCKSS_POL}}
+{{#USE_LOCKSS_POL}}
   #
   # SERVICE lockss-poller
   #
@@ -241,7 +241,7 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss_ui_pass
       - lockss-auth
@@ -283,9 +283,11 @@ services:
       - "LOCKSS_WAIT_FOR_PORT={{SOLR_HOST}}:{{SOLR_DEFAULT_PORT}}"
       - "-Dlog4j2.debug"
       - "LOCKSS_PRESERVATION_GROUP=${LOCKSS_PRESERVATION_GROUP}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     volumes:
-      - lockss-repo-data:/data
+  {{#REPO_DATA_MAP}}
+      - {{.}}
+  {{/REPO_DATA_MAP}}
       - lockss-repo-logs:/var/log/lockss
     networks:
       - host-network
@@ -318,7 +320,7 @@ services:
 #      - POSTGRES_INITDB_XLOGDIR=/var/log/postgres
 #        # for version 10+
 #      - POSTGRES_INITDB_WALDIR=/var/log/postgres
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     secrets:
       - lockss-postgres-pass
     networks:
@@ -338,9 +340,12 @@ services:
         published: {{SOLR_PORT}}
         target: {{SOLR_DEFAULT_PORT}}
     command: {{SOLR_CMD}}
+    #environment:
+    #  - LOG4J_PROPS=/opt/solr/server/solr/log4j.properties
     volumes:
       - lockss-solr-data:/opt/solr/server/solr
       - lockss-solr-logs:/opt/solr/server/logs
+      - ./solr-log4j.properties:/opt/solr/server/resource/log4j.properties
     networks:
       - host-network
     secrets:
@@ -387,7 +392,7 @@ services:
       - "REPO_REST_PORT={{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
       - "LOCKSS_WAIT_FOR_200={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}}"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     networks:
       - host-network
     secrets:
@@ -416,7 +421,7 @@ services:
       - "WAYBACK_URL_HOST={{OPENWB_HOST}}"
       - "WAYBACK_URL_PREFIX=http://{{OPENWB_HOST}}:{{OPENWB_PORT}}"
       - "WAYBACK_BASEDIR=/data"
-      - "ARGS_ADDITIONAL=${ARGS_ADDITIONAL}"
+      - "ARGS_ADDITIONAL={{ARGS_ADDITIONAL}}"
     networks:
       - host-network
     secrets:
@@ -428,7 +433,6 @@ services:
 #
 configs:
   lockss_bootstrap:
-    external: true
     external: true
     name: {{STACK}}-lockss-bootstrap
   lockss_cluster:
@@ -528,9 +532,11 @@ volumes:
     name: {{STACK}}-pol-logs
 {{/USE_LOCKSS_POL}}
 {{#USE_LOCKSS_REPO}}
-  lockss-repo-data:
+  {{#REPO_NUMS}}
+  lockss-repo-data{{.}}:
     external: true
-    name: {{STACK}}-repo-data
+    name: {{STACK}}-repo-data{{.}}
+  {{/REPO_NUMS}}
   lockss-repo-logs:
     external: true
     name: {{STACK}}-repo-logs

@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-service
+spec:
+  ports:
+  - name: "postgres-port"
+    port: {{POSTGRES_PORT}}
+    targetPort: {{POSTGRES_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-postgres-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-postgres-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-postgres-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-postgres-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-postgres-service
+  name: lockss-postgres-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-postgres-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-postgres-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: PGDATA
+          value: /data
+        - name: POSTGRES_DB
+          value: {{POSTGRES_DB}}
+        - name: POSTGRES_PASSWORD_FILE
+          value: /run/secrets/lockss-postgres-pass
+        - name: POSTGRES_USER
+          value: {{POSTGRES_USER}}
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{POSTGRES_IMG}}:{{POSTGRES_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-postgres-service
+        ports:
+        - name: "postgres-port"
+          containerPort: {{POSTGRES_DEFAULT_PORT}}
+#          hostPort: {{POSTGRES_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
+        - mountPath: /data
+          name: lockss-postgres-data
+        - mountPath: /var/logs/postgres
+          name: lockss-postgres-logs
+        - mountPath: /tmp
+          name: lockss-postgres-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - name: lockss-postgres-pass
+        secret:
+          secretName: lockss-postgres-pass
+      - name: lockss-postgres-data
+        persistentVolumeClaim:
+          claimName: lockss-postgres-data-pvc
+      - name: lockss-postgres-logs
+        persistentVolumeClaim:
+          claimName: lockss-postgres-logs-pvc
+      - name: lockss-postgres-tmp
+        persistentVolumeClaim:
+          claimName: lockss-postgres-tmp-pvc

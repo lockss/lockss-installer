@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-service
+spec:
+  ports:
+  - name: "pywb-port"
+    port: {{PYWB_PORT}}
+    targetPort: {{PYWB_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-pywb-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-pywb-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-pywb-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-pywb-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-pywb-service
+  name: lockss-pywb-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-pywb-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-pywb-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: LOCKSS_WAIT_FOR_200
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: {{REPO_HOST}}:{{REPO_REST_PORT}}
+        - name: REPO_HOST
+          value: {{REPO_HOST}}
+        - name: REPO_REST_PORT
+          value: '{{REPO_REST_PORT}}'
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{PYWB_IMG}}:{{PYWB_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-pywb-service
+        ports:
+        - name: "pywb-port"
+          containerPort: {{PYWB_DEFAULT_PORT}}
+          hostPort: {{PYWB_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /data
+          name: lockss-pywb-data
+        - mountPath: /tmp
+          name: lockss-pywb-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+      - name: lockss-pywb-data
+        persistentVolumeClaim:
+          claimName: lockss-pywb-data-pvc
+      - name: lockss-pywb-tmp
+        persistentVolumeClaim:
+          claimName: lockss-pywb-tmp-pvc

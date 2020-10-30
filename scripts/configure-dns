@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2000-2020, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+##
+## Definitions
+##
+
+SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
+RESOLV_CONF="/etc/resolv.conf"
+
+LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$'
+
+DEFAULT_IP_LIST="8.8.8.8;8.8.4.4"
+
+# make sure dns is enabled.
+microk8s enable dns || err_exit "microk8s enable dns failed"
+
+# examine the local resolv.conf for loopback address
+USE_RESOLV_CONF=Y
+if grep -E -i -q "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
+  if [ -f "$SYSD_RESOLV_CONF" ]; then
+    if grep -E -i -q "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
+      USE_RESOLV_CONF=N
+    else
+      # This should be "use /run/systemd/resolve/resolv.conf", but that's not possible
+      USE_RESOLV_CONF=N
+    fi
+  else
+    USE_RESOLV_CONF=N
+  fi
+fi
+REPLACEMENT_STRING=""
+if is_yes ${USE_RESOLV_CONF}; then
+  # Switch out the Google ips with the local resolv.conf file"
+  REPLACEMENT_STRING=${RESOLV_CONF}
+else
+  echo "The /etc/resolv.conf file in your system contains a loopback address."
+  echo "CoreDNS does not allow a loopback address to be assigned to pods."
+  echo "Please enter a list of IP addresses of upstream DNS resolvers."
+  IP_OK=N
+  until is_yes ${IP_OK}; do
+    ask_for_input "IP address(es) for DNS lookup, separated by ';'" ${DEFAULT_IP_LIST}
+    OK_CNT=0
+    IFS=';' read -r -a ip_arr <<<"${ANS}"
+    len=${#ip_arr[@]}
+    for ip in "${ip_arr[@]}"; do
+      if ! valid_ip_address "${ip}"; then
+        err "${ip} is not a valid IP address."
+        break
+      else
+        OK_CNT=$((OK_CNT + 1))
+        REPLACEMENT_STRING+=" ${ip}"
+      fi
+    done
+    if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
+      IP_OK=Y
+    fi
+  done
+fi
+echo "Updating CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
+microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|forward \. .*|forward \. ${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
+
+echo "--------------------------------------------------------------------"
+echo "Successfully changed CoreDNS ConfigMap"
+# output the edited line for confirmation
+microk8s kubectl get -n kube-system configmap/coredns -o 'jsonpath={.data}' | grep forward
+echo "--------------------------------------------------------------------"

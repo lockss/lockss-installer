@@ -1,8 +1,8 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# shutdown-lockss - Stop LOCKSS stack and containers.
+# check-sys - Check the host system for all necessary components for running LOCKSS stack.
 #
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,28 +30,28 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-#
-# Usage: shutdown-lockss [-h|--help]
-#
+# Usage: check-sys [-h|--help]
+
 # Revision history:
-# 2019-04-18 version 1
 # ---------------------------------------------------------------------------
+
 PROGNAME=${0##*/}
 VERSION="1.0"
-
+##
+## Relative paths
+##
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
-
 ##
 ## Load _util
 ##
 
 . "${_D0}/_util"
 
-declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
-
-STACK_PREFIX="lockss-stack"
-KUBECTL='microk8s kubectl -n lockss'
+OS_TYPE=$(uname -s)
+LOCKSS_USER=lockss
+SOLR_USER=solr
+LOCAL_HOSTNAME=$(uname -n)
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -90,25 +90,71 @@ usage() {
 help_message() {
   cat <<-_EOF_
   $PROGNAME ver. $VERSION
-  Stop LOCKSS stack and containers.
+  Check the host system for all necessary components for running LOCKSS stack.
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
 
+  NOTE: You must be the superuser to run this script.
+
 _EOF_
   return
 }
 
-##
-## MAIN
-##
+ensure_lockss_user() {
+  case ${OS_TYPE} in
+  Linux)
+    if ! id "lockss" &>/dev/null; then
+      echo "${_0}: There is no 'lockss' user account."
+      error_exit "Please create a lockss user account"
+    fi
+    ;;
+  Darwin)
+    if [ $(dscl . -list /Users | grep "lockss" | wc -l) = 0 ]; then
+      echo "${_0}: There is no 'lockss' user account."
+      error_exit "Please create a lockss user account"
+    fi
+    ;;
+  *)
+    error_exit "Unsupported system, create the user lockss in group lockss manually."
+    ;;
+  esac
+}
+
+ensure_snap() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/snap"
+  if ! which snap &> /dev/null; then
+      err "${_0}: Snap not found on path."
+      err "${_0}: Snap is used to install microk8s."
+        echo "To complete your install see: ${instr_link}"
+  fi
+}
+ensure_microk8s() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/microk8s"
+  if ! which microk8s &> /dev/null; then
+      err "${_0}: Mircok8s not found on the PATH (${PATH})"
+      err "${_0}: LOCKSS requires Microk8s to run."
+      error_exit "See instructions: ${instr_link}"
+  fi
+}
+
+ensure_lockss_access() {
+  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
+  if ! sudo -l -U lockss sudo &> /dev/null; then
+      err "${_0}: The lockss user requires sudo privileges."
+      error_exit "See instructions: ${instr_link}"
+  fi
+  if !  grep '^microk8s:.*$' /etc/group | cut -d: -f4 | grep lockss &> /dev/null; then
+      err "${_0}: The lockss user should be a member of the group 'microk8s'."
+      error_exit "See instructions: ${instr_link}"
+  fi
+}
+
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
-
-STACK_NUM=0
 
 # Parse command-line
 while [[ -n $1 ]]; do
@@ -117,10 +163,7 @@ while [[ -n $1 ]]; do
     help_message
     graceful_exit
     ;;
-  [1-9])
-    STACK_NUM=$1
-    ;;
-  -*)
+  -* | --*)
     usage
     error_exit "Unknown option $1"
     ;;
@@ -131,31 +174,16 @@ while [[ -n $1 ]]; do
   shift
 done
 
-undeploy_stack() {
-  local stack=${STACK_PREFIX}$1
-  # Source config.info and env.sh
-  set -a
-  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-  set +a
-
-  echo "Removing all deployments for $stack."
-  $KUBECTL delete -l lockss-stack-id=${stack} pods --grace-period=30
-  $KUBECTL delete -l lockss-stack-id=${stack} deployments
-  echo "Removing all services and volume claims for $stack."
-  $KUBECTL delete -l lockss-stack-id=${stack} services,pvc
-  echo "Removing all persistent volumes $stack."
-  microk8s kubectl delete -l lockss-stack-id=${stack} pv
-  echo "Removing all configmaps $stack."
-  $KUBECTL delete configmaps --all
-}
-
-# Sanity checks
-#Check_Runnable
-
-if [[ ${STACK_NUM} -eq 0 ]]; then
-  undeploy_stack ""
-else
-  undeploy_stack ${STACK_NUM}
-fi
-
+# Main logic
+echo "${_0}: Checking for lockss user..."
+ensure_lockss_user
+echo "${_0}: User lockss exists."
+echo "${_0}: Checking snapd install..."
+ensure_snap
+echo "${_0}: snapd is installed."
+echo "${_0}: Checking for microk8s..."
+ensure_microk8s
+echo "${_0}: microk8s is installed."
+echo "${_0}: Checking lockss groups and permissions.."
+ensure_lockss_access
 graceful_exit

@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-service
+spec:
+  ports:
+  - name: "solr-port"
+    port: {{SOLR_PORT}}
+    targetPort: {{SOLR_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-solr-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-solr-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-solr-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-solr-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-solr-service
+  name: lockss-solr-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-solr-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-solr-service
+    spec:
+      containers:
+      - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
+        env:
+        - name: LOG4J_PROPS
+          value: /opt/solr/server/resources/lockss-log4j.properties
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{SOLR_IMG}}:{{SOLR_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-solr-service
+        ports:
+        - name: "solr-port"
+          containerPort: {{SOLR_DEFAULT_PORT}}
+#          hostPort: {{SOLR_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /opt/solr/server/resources/lockss-log4j.properties
+          subPath: lockss-log4j.properties
+          name: lockss-solr-log4j-properties
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /opt/solr/server/solr
+          name: lockss-solr-data
+        - mountPath: /opt/solr/server/logs
+          name: lockss-solr-logs
+        - mountPath: /tmp
+          name: lockss-solr-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - configMap:
+          items:
+          - key: lockss-solr-log4j-properties
+            path: lockss-log4j.properties
+          name: lockss-solr-log4j-properties
+        name: lockss-solr-log4j-properties
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+      - name: lockss-solr-data
+        persistentVolumeClaim:
+          claimName: lockss-solr-data-pvc
+      - name: lockss-solr-logs
+        persistentVolumeClaim:
+          claimName: lockss-solr-logs-pvc
+      - name: lockss-solr-tmp
+        persistentVolumeClaim:
+          claimName: lockss-solr-tmp-pvc

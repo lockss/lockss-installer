@@ -1,0 +1,206 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-metadata-extraction-service
+spec:
+  ports:
+  - name: "mdx-service-rest-port"
+    port: {{MDX_REST_PORT}}
+    targetPort: {{MDX_DEFAULT_REST_PORT}}
+  - name: "mdx-service-ui-port"
+    port: {{MDX_UI_PORT}}
+    targetPort: {{MDX_DEFAULT_UI_PORT}}
+  selector:
+    io.kompose.service: lockss-metadata-extraction-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-mdx-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-mdx-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-mdx-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-mdx-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-metadata-extraction-service
+  name: lockss-metadata-extraction-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-metadata-extraction-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-metadata-extraction-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_WAIT_FOR_200
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: "{{MDX_IMG}}:{{MDX_VERSION}}"
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-metadata-extraction-service
+        ports:
+        - name: "mdx-rest-port"
+          containerPort: {{MDX_DEFAULT_REST_PORT}}
+          hostPort: {{MDX_REST_PORT}}
+          protocol: TCP
+        - name: "mdx-ui-port"
+          containerPort: {{MDX_DEFAULT_UI_PORT}}
+          hostPort: {{MDX_UI_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: mdx-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: mdx-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss-postgres-pass
+          name: lockss-postgres-pass
+          subPath: lockss-postgres-pass
+        - mountPath: /run/secrets/lockss_ui_pass
+          name: lockss-ui-pass
+          subPath: lockss_ui_pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /data
+          name: lockss-mdx-data
+        - mountPath: /var/log/lockss
+          name: lockss-mdx-logs
+        - mountPath: /tmp/lockss
+          name: lockss-mdx-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME}}"
+      volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: mdx-service
+            path: lockss_service
+          name: mdx-service
+        name: mdx-service
+      - configMap:
+          items:
+          - key: mdx-service-opt
+            path: lockss_service_opt
+          name: mdx-service-opt
+        name: mdx-service-opt
+      - name: lockss-postgres-pass
+        secret:
+          secretName: lockss-postgres-pass
+          items:
+          - key: lockss-postgres-pass
+            path: lockss-postgres-pass
+      - name: lockss-ui-pass
+        secret:
+          secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+      - name: lockss-mdx-data
+        persistentVolumeClaim:
+          claimName: lockss-mdx-data-pvc
+      - name: lockss-mdx-logs
+        persistentVolumeClaim:
+          claimName: lockss-mdx-logs-pvc
+      - name: lockss-mdx-tmp
+        persistentVolumeClaim:
+          claimName: lockss-mdx-tmp-pvc
