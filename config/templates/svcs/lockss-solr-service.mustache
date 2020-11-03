@@ -100,8 +100,10 @@ spec:
         env:
         - name: LOG4J_PROPS
           value: /opt/solr/server/resources/lockss-log4j.properties
-        - name: TZ
+        - name: SOLR_TIMEZONE
           value: {{LOCKSS_TIMEZONE}}
+        - name: SOLR_LOG_PRESTART_ROTATION
+          value: "false"
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-solr-service
