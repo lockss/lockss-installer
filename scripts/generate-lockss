@@ -170,7 +170,7 @@ fi
 umask 002
 
 msg "${PROGNAME}:  Checking install..."
-Check_Runnable
+#Check_Runnable
 
 msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
@@ -214,7 +214,6 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     export $varname
   done
   export REPO_NUMS
-
   msg "${PROGNAME}: add the service deployments..."
   mkdir "${STACK_CONFIG_DIR}/svcs"
   for f in ${SERVICES_DIR}/*.mustache; do
