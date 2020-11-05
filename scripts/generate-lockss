@@ -203,14 +203,15 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
   msg "${PROGNAME}: Getting postgres password..."
   export POSTGRES_PASSWD=$(microk8s kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
 
-  declare -a REPO_NUMS
-  REPO_NUMS[0]=""
-  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_CONTAINER_DIRS}"
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
   len=${#datadirs[@]}
-  export REPO_DATA_MAP=${MK_DATA_ROOT}
+  REPO_NUMS[0]=""
+  export REPO_DATA_MAP_=${datadirs[0]}
   for ((count = 1; count < $len; count++)); do
     REPO_NUMS[${count}]="$count"
-    export REPO_DATA_MAP_${count}="/data${datadirs[$count]}"
+    declare REPO_DATA_MAP_${count}=${datadirs[$count]}
+    varname=REPO_DATA_MAP_${count}
+    export $varname
   done
   export REPO_NUMS
 
@@ -231,6 +232,8 @@ for ((num = 1; num <= $STACK_COUNT; num++)); do
     dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
     msg "     Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
+    envsubst < ${dst} > ${dst}.out
+    mv ${dst}.out ${dst}
   done
   msg "${PROGNAME}: Generating lockss config files..."
   for f in ${TEMPLATES_DIR}/*.mustache; do
