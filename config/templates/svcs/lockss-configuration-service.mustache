@@ -120,6 +120,10 @@ spec:
           value: {{POSTGRES_HOST}}:{{POSTGRES_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_UID
+          value: {{LOCKSS_UID}}
+        - name: LOCKSS_GID
+          value: {{LOCKSS_GID}}
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap
@@ -168,6 +172,8 @@ spec:
           hostPort: {{JMS_PORT}}
           protocol: TCP
       restartPolicy: Always
+      securityContext:
+        allowPrivilegeEscalation: false
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:

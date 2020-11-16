@@ -132,6 +132,10 @@ spec:
           value: "{{REPO_HOST}}:{{REPO_REST_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_UID
+          value: {{LOCKSS_UID}}
+        - name: LOCKSS_GID
+          value: {{LOCKSS_GID}}
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
@@ -188,6 +192,8 @@ spec:
         - mountPath: /tmp/lockss
           name: lockss-pol-tmp
       restartPolicy: Always
+      securityContext:
+        allowPrivilegeEscalation: false
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:

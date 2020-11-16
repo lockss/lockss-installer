@@ -104,6 +104,14 @@ spec:
           value: {{LOCKSS_TIMEZONE}}
         - name: SOLR_LOG_PRESTART_ROTATION
           value: "false"
+        - name: SOLR_USER
+          value: {{LOCKSS_USER}}
+        - name: SOLR_UID
+          value: {{LOCKSS_UID}}
+        - name: SOLR_GROUP
+          value: {{LOCKSS_USER}}
+        - name: SOLR_GID
+          value: {{LOCKSS_GID}}
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-solr-service
