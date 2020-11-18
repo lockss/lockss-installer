@@ -95,6 +95,9 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-openwayback-service
     spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL

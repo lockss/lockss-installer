@@ -116,6 +116,9 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-poller-service
     spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL
@@ -133,9 +136,9 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_UID
-          value: {{LOCKSS_UID}}
+          value: '{{LOCKSS_UID}}'
         - name: LOCKSS_GID
-          value: {{LOCKSS_GID}}
+          value: '{{LOCKSS_GID}}'
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
@@ -192,8 +195,6 @@ spec:
         - mountPath: /tmp/lockss
           name: lockss-pol-tmp
       restartPolicy: Always
-      securityContext:
-        allowPrivilegeEscalation: false
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:

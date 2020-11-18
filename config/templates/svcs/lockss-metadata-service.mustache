@@ -98,6 +98,9 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-metadata-service
     spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL
@@ -115,9 +118,9 @@ spec:
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_UID
-          value: {{LOCKSS_UID}}
+          value: '{{LOCKSS_UID}}'
         - name: LOCKSS_GID
-          value: {{LOCKSS_GID}}
+          value: '{{LOCKSS_GID}}'
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap
@@ -156,8 +159,6 @@ spec:
           hostPort: {{MDQ_UI_PORT}}
           protocol: TCP
       restartPolicy: Always
-      securityContext:
-        allowPrivilegeEscalation: false
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:
