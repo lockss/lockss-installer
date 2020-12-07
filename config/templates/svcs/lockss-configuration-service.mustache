@@ -106,9 +106,6 @@ spec:
         io.kompose.service: lockss-configuration-service
         lockss-stack-id: {{STACK}}
     spec:
-      securityContext:
-        runAsUser: {{LOCKSS_UID}}
-        runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL
@@ -123,8 +120,12 @@ spec:
           value: {{POSTGRES_HOST}}:{{POSTGRES_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
         - name: LOCKSS_UID
           value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
         volumeMounts:
