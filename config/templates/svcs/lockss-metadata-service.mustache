@@ -114,6 +114,14 @@ spec:
           value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
+        - name: LOCKSS_UID
+          value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
+        - name: LOCKSS_GID
+          value: '{{LOCKSS_GID}}'
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap

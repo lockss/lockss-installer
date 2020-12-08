@@ -124,6 +124,14 @@ spec:
           value: {{SOLR_HOST}}:{{SOLR_PORT}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
+        - name: LOCKSS_UID
+          value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
+        - name: LOCKSS_GID
+          value: '{{LOCKSS_GID}}'
         image: {{REPO_IMG}}:{{REPO_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-repository-service
