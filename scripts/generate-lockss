@@ -170,7 +170,7 @@ fi
 umask 002
 
 msg "${PROGNAME}:  Checking install..."
-#Check_Runnable
+Check_Runnable
 
 msg "${PROGNAME}:  Removing old config files..."
 rm -rf "${DOCKER_CONFIGS_DIR}"
