@@ -199,6 +199,17 @@ ensure_writable_dir() {
   fi
 }
 
+ensure_lockss_owner() {
+  for svc in "${svcs_confs[@]}"; do
+    data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${data_dir}"
+    logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${logs_dir}"
+    tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${tmp_dir}"
+  done
+}
+
 # Create configs for each stack
 add_stack_configs() {
   local stack=$1
@@ -288,6 +299,7 @@ add_stack_volumes() {
   done
   add_additional_stack_volumes $stack
   $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml
+  ensure_lockss_owner
 }
 
 add_additional_stack_volumes() {
