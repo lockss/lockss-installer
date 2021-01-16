@@ -202,11 +202,11 @@ ensure_writable_dir() {
 ensure_lockss_owner() {
   for svc in "${svcs_confs[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
-    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${data_dir}"
+    find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${logs_dir}"
+    find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
-    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${tmp_dir}"
+    find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
   done
 }
 
