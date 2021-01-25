@@ -65,6 +65,7 @@ EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 declare -a arr global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties" "lockss-solr-log4j-properties")
 declare -a arr svcs
 declare -a arr svcs_confs
+declare -a arr lockss_owned
 
 KUBECTL='microk8s kubectl -n lockss'
 
@@ -152,28 +153,34 @@ init_service_arrays() {
   if ${USE_LOCKSS_CFG}; then
     svcs+=("cfg")
     svcs_confs+=("cfg")
+    lockss_owned+=("cfg")
   fi
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
     svcs_confs+=("mdq")
+    lockss_owned+=("mdq")
   fi
   if ${USE_LOCKSS_MDX}; then
     svcs+=("mdx")
     svcs_confs+=("mdx")
+    lockss_owned+=("mdx")
   fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")
     svcs_confs+=("pol")
+    lockss_owned+=("pol")
   fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     svcs_confs+=("repo")
+    lockss_owned+=("repo")
   fi
   if ${USE_LOCKSS_POSTGRES}; then
     svcs+=("postgres")
   fi
   if ${USE_LOCKSS_SOLR}; then
     svcs+=("solr")
+    lockss_owned+=("solr")
   fi
   if ${USE_LOCKSS_HDFS}; then
     svcs+=("hdfs")
@@ -197,6 +204,17 @@ ensure_writable_dir() {
     msg "${PROGNAME}: ${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
     sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}"
   fi
+}
+
+ensure_lockss_owner() {
+  for svc in "${lockss_owned[@]}"; do
+    data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
+    find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
+    find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
+    find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+  done
 }
 
 # Create configs for each stack
@@ -288,6 +306,7 @@ add_stack_volumes() {
   done
   add_additional_stack_volumes $stack
   $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml
+  ensure_lockss_owner
 }
 
 add_additional_stack_volumes() {
