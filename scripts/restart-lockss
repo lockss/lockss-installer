@@ -134,10 +134,9 @@ if $(am_i_root); then
 fi
 
 
-"${SCRIPTS_DIR}"/shutdown-lockss &&
+"${SCRIPTS_DIR}"/stop-lockss &&
 if [ -n "${UPDATE_ARG}" ]; then
-  "${SCRIPTS_DIR}"/generate-lockss ${UPDATE_ARG} &&
-  "${SCRIPTS_DIR}"/assemble-lockss &&
+  "${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
   "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 else
   "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"

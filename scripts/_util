@@ -46,6 +46,17 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
+# load log4sh
+if [ -r ${LIB_DIR}/log4sh ]; then
+  LOG4SH_CONFIGURATION='none' . ${LIB_DIR}/log4sh
+else
+  echo "ERROR: could not load (log4sh)" >&2
+  exit 1
+fi
+
+# change the default message level from ERROR to INFO
+logger_setLevel INFO
+
 err() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
 }
@@ -58,6 +69,7 @@ err_exit() {
 msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
 }
+
 
 #Check_Runnable()
 #{

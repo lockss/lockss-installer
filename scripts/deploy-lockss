@@ -72,7 +72,7 @@ clean_up() { # Perform pre-exit housekeeping
 }
 
 error_exit() {
-  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  logger_error "${PROGNAME}: ${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
 }
@@ -172,7 +172,7 @@ init_service_arrays() {
 
 # Check our secrets
 check_installed_secrets() {
-  echo "checking installed secrets..."
+  logger_info "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
@@ -182,7 +182,7 @@ check_installed_volumes() {
   local stack=$1
   # Check the mountpoints
   for svc in "${svcs[@]}"; do
-    echo "checking docker mountpoints for $stack-${svc}..."
+    logger_info "checking docker mountpoints for $stack-${svc}..."
     Check_Volume "$stack-${svc}-data"
     Check_Volume "$stack-${svc}-logs  "
   done
@@ -198,7 +198,7 @@ deploy_stack() {
   set +a
   pushd . &>/dev/null
   for svc in "${deploy_service_names[@]}"; do
-    echo "Deploying service from ${svc}..."
+    logger_trace "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
 #ß    $KUBECTL expose deployment $svc
   done
@@ -226,7 +226,7 @@ while [[ -n $1 ]]; do
   -a | --args)
     shift
     export ARGS_ADDITIONAL="$1"
-    msg "Adding additional runtime args $ARGS_ADDITIONAL"
+    logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
     shift
     ;;
   [1-9])

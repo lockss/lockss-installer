@@ -54,7 +54,7 @@ clean_up() { # Perform pre-exit housekeeping
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	logger_error  "${PROGNAME}: ${1:-"Unknown Error"}" >&2
 	clean_up
 	exit 1
 }
@@ -110,18 +110,18 @@ while [[ -n $1 ]]; do
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
-      msg "Forcing update of LOCKSS docker images"
+      logger_info "Forcing update of LOCKSS docker images"
       ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
-      echo "Adding additional runtime args $ARGS_ADDITIONAL";
+      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
     ;;
     -* | --*)
       usage
       error_exit "Unknown option $1" ;;
     *)
-      echo "Argument $1 to process..." ;;
+      logger_trace "Argument $1 to process..." ;;
   esac
   shift
 done
@@ -134,10 +134,10 @@ if $(am_i_root); then
 fi
 
 if $(is_lockss_running); then
-  msg "There is already a running lockss stack."
+  logger_warn "There is already a running lockss stack."
   ask_for_input "Okay to stop the lockss-stack and restart?" "Y"
   if is_yes "${ANS}"; then
-    "${_D0}"/shutdown-lockss && sleep 5 && msg "Preparing to start stack..."
+    "${_D0}"/stop-lockss && sleep 10 && logger_info "Preparing to start stack..."
   else
     error_exit "Call shutdown-lockss and then run start-lockss again."
   fi
@@ -145,10 +145,8 @@ fi
 
 echo "Scripts dir ${SCRIPTS_DIR}"
 
-"${SCRIPTS_DIR}"/generate-lockss ${UPDATE_ARG} &&
-"${SCRIPTS_DIR}"/assemble-lockss &&
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
 "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-
 
 graceful_exit
 
