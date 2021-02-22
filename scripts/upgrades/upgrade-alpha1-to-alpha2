@@ -110,14 +110,14 @@ _EOF_
 
 
 rename_dirs() {
-  msg "${PROGNAME}: Looking for old data directories..."
+  logger_info "${PROGNAME}: Looking for old data directories..."
     for dir in $(ls -d ${LOCKSS_DATA_DIR}/lockss-stack1*); do
       new_dir="${dir/stack1/stack}"
       if [ ! -d "${new_dir}" ]; then
         mv "$dir" "${new_dir}"
       fi
     done
-  msg "${PROGNAME}: Looking for old log directories..."
+  logger_info "${PROGNAME}: Looking for old log directories..."
     for dir in $(ls -d ${LOCKSS_LOG_DIR}/lockss-stack1*); do
       new_dir="${dir/stack1/stack}"
       if [ ! -d "${new_dir}" ]; then
@@ -127,12 +127,12 @@ rename_dirs() {
 }
 
 update_sql() {
-  msg "${PROGNAME}: bringing up temporary postgres instance..."
+  logger_info "${PROGNAME}: bringing up temporary postgres instance..."
   docker run --rm --name postgres-temp -v "${LOCKSS_DATA_DIR}/${POSTGRES_VOL}":/data -e POSTGRES_PASSWORD_FILE=${SQL_PASS_FILE} -e POSTGRES_USER=LOCKSS -e PGDATA=/data -d postgres:9.6.12-alpine
   sleep 10
   docker exec -i postgres-temp psql -U LOCKSS -d postgres <"${SQL_FILE}"
   docker container stop postgres-temp
-  msg "${PROGNAME}: Finished postgres update..."
+  logger_info "${PROGNAME}: Finished postgres update..."
 }
 
 write_sysconf() {
@@ -190,18 +190,18 @@ trap "signal_exit INT"  INT
 
 # MAIN ENTRY POINT
 # Sanity checks
-msg "${PROGNAME}: Checking system..."
+logger_info "${PROGNAME}: Checking system..."
 am_i_root || err_exit "This script must be run as root."
 
 Check_Runnable
 
-msg "${PROGNAME}: loading existing system config info..."
+logger_info "${PROGNAME}: loading existing system config info..."
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-  msg "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
-  msg "${PROGNAME}: You appear to be have run this script already.  Checking for missing configuration values..."
+  logger_info "${PROGNAME}: Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+  logger_info "${PROGNAME}: You appear to be have run this script already.  Checking for missing configuration values..."
   read_config ${SYSTEM_CONF_FILE}
 elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
-  msg "${PROGNAME}: Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
+  logger_info "${PROGNAME}: Setting defaults from existing config: ${OLD_SYSTEM_CONF_FILE}"
   read_config "${OLD_SYSTEM_CONF_FILE}"
   LOCKSS_PRESERVATION_GROUP=${LOCKSS_TEST_GROUP}
   LOCKSS_POSTGRES_HOST=${LOCKSS_HOSTNAME}
@@ -215,34 +215,34 @@ elif [ -r "${OLD_SYSTEM_CONF_FILE}" ]; then
 fi
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: writing updated system cfg..."
+logger_info "${PROGNAME}: writing updated system cfg..."
 write_sysconf
 chown "lockss:lockss" "${SYSTEM_CONF_FILE}" ||
   err_exit "Attempt to change ownership of ${SYSTEM_CONF_FILE} failed! This file must be owned by the lockss user for lockss to run."
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: shutting down alpha stacks..."
-"${SCRIPTS_DIR}/shutdown-lockss" && sleep 10 && msg "alpha1 stacks successfully shutdown."
+logger_info "${PROGNAME}: shutting down alpha stacks..."
+"${SCRIPTS_DIR}/shutdown-lockss" && sleep 10 && logger_info "alpha1 stacks successfully shutdown."
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Checking persistent storage directories..."
+logger_info "${PROGNAME}: Checking persistent storage directories..."
 rename_dirs
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: checking for postgres changes..."
+logger_info "${PROGNAME}: checking for postgres changes..."
 update_sql || err "Attempt to update sql failed."
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Uninstalling all lockss docker elements"
-"${SCRIPTS_DIR}/uninstall-lockss" && sleep 5 && msg "${PROGNAME}: Done uninstalling LOCKSS docker elements"
+logger_info "${PROGNAME}: Uninstalling all lockss docker elements"
+"${SCRIPTS_DIR}/uninstall-lockss" && sleep 5 && logger_info "${PROGNAME}: Done uninstalling LOCKSS docker elements"
 
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Checking solr indices for update..."
+logger_info "${PROGNAME}: Checking solr indices for update..."
 "${SCRIPTS_DIR}/upgrade-alpha1-solr" || err_exit "Your solr instance needs to be checked."
 
 echo "  ---------------------------  "
-msg "${PROGNAME}: Update complete."
+logger_info "${PROGNAME}: Update complete."
 msg "${PROGNAME}: Call configure-lockss to check configuration settings."
 
 graceful_exit

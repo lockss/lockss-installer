@@ -229,6 +229,7 @@ LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
 LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
 LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
 LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
+LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_TMPDIR}"
 LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST}"
 LOCKSS_POSTGRES_PORT="${LOCKSS_POSTGRES_PORT}"
 LOCKSS_POSTGRES_USER="${LOCKSS_POSTGRES_USER}"
@@ -451,6 +452,14 @@ build_config_file() {
     fi
     ask_for_input "Temporary storage directory (local storage preferred)" ${LOCKSS_TMPDIR}
     LOCKSS_TMPDIR="${ANS}"
+
+    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
+      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
+    fi
+    ask_for_input "Directory for storing install script logs (local storage preferred)" ${LOCKSS_SCRIPT_LOG_DIR}
+    LOCKSS_SCRIPT_LOG_DIR="${ANS}"
+}
+
     USER_OK=N
     until is_yes ${USER_OK}; do
       ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
@@ -484,17 +493,22 @@ build_config_file() {
       echo "Checking content storage directory(s)"
       for dir in "${curPaths[@]}"; do
         if ! init_one_dir ${dir} $2; then
-          err "${dir} cannot be created or written by $2.  Please fix permissions."
+          err_exit"${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       done
       if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
         if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
-          exit 1
+          err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
       if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
         if ! init_one_dir ${LOCKSS_TMPDIR} $2; then
-          exit 1
+          err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
+        fi
+      fi
+      if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
+        if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} $2; then
+          err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
 
@@ -526,6 +540,8 @@ fi
 umask 002
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
+echo "Beginning install with installer version:"
+installer-version
 
 echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
 # Sanity checks

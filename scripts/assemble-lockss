@@ -390,15 +390,15 @@ generate_lockss() {
 			export $varname
 		done
 		export REPO_NUMS
-		logger_info "${PROGNAME}: add the service deployments..."
+		logger_info "${PROGNAME}: converting the service deployments..."
 		mkdir "${STACK_CONFIG_DIR}/svcs"
 		for f in ${SERVICES_DIR}/*.mustache; do
 			src="${f}"
 			dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
-			logger_info "     Rendering ${src} to ${dst}..."
+			logger_debug "     Rendering ${src} to ${dst}..."
 			mo "${src}" >"${dst}"
 		done
-		logger_info "${PROGNAME}: Adding the microk8s elements..."
+		logger_info "${PROGNAME}: Converting the microk8s elements..."
 		mk_dst="${STACK_CONFIG_DIR}/mk"
 		mkdir "${mk_dst}"
 		cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
@@ -417,7 +417,7 @@ generate_lockss() {
 			logger_debug"     Rendering ${src} to ${dst}..."
 			mo "${src}" >"${dst}"
 		done
-		logger_info "${PROGNAME}:  Adding the user config files..."
+		logger_info "${PROGNAME}:  Generating user config files..."
 		for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
 			if [[ -f "${f}" ]]; then
 				src="${f}"
@@ -497,7 +497,9 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 umask 002
-
+version=$(installer-version)
+logger_info ${version}
+logger_info "Running assemble-lockss"
 # Sanity checks
 logger_info "${PROGNAME}:  Checking install..."
 Check_Runnable
@@ -507,8 +509,6 @@ generate_lockss
 
 assemble_lockss
 
-logger_info "--------------------------------------------------------------------"
-logger_info "${PROGNAME}:  Run deploy-lockss to deploy the services."
-logger_info "--------------------------------------------------------------------"
+logger_info "${PROGNAME}:  LOCKSS is ready to deploy."
 
 graceful_exit

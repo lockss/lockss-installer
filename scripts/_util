@@ -46,9 +46,11 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
+
 # load log4sh
 if [ -r ${LIB_DIR}/log4sh ]; then
-  LOG4SH_CONFIGURATION='none' . ${LIB_DIR}/log4sh
+  LOG4SH_CONFIGURATION='none'
+  . ${LIB_DIR}/log4sh
 else
   echo "ERROR: could not load (log4sh)" >&2
   exit 1
@@ -58,16 +60,16 @@ fi
 logger_setLevel INFO
 
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+  logger_error "$*" >&2
 }
 
 err_exit() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+  logger_error "$*" >&2
   exit 1
 }
 
 msg() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
 
 
@@ -146,7 +148,7 @@ Is_Secret_Installed() {
 ## Return 0 iff all secrets in arglist are installed.
 ##
 Are_Secrets_Installed() {
-  for s in $@; do
+  for s in "$@"; do
     if ! Is_Secret_Installed "${s}"; then
       return 1
     fi
