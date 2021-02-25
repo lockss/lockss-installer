@@ -295,7 +295,7 @@ build_config_file() {
     fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet for admin UI access" ${LOCKSS_ACCESS_SUBNET}
+      ask_for_input "Initial subnet(s) for admin UI access" ${LOCKSS_ACCESS_SUBNET}
       if valid_subnet "${ANS}"; then
         LOCKSS_ACCESS_SUBNET="${ANS}"
         SUBNET_OK=Y
@@ -483,17 +483,17 @@ build_config_file() {
       fi
       echo "Checking content storage directory(s)"
       for dir in "${curPaths[@]}"; do
-        if ! init_one_dir ${dir} $2; then
+        if ! init_one_dir ${dir} $2 750; then
           err "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       done
       if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
+        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2 755; then
           exit 1
         fi
       fi
       if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_TMPDIR} $2; then
+        if ! init_one_dir ${LOCKSS_TMPDIR} $2 750; then
           exit 1
         fi
       fi

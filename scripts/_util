@@ -364,6 +364,10 @@ is_pos() {
 # init_one_dir dir user
 init_one_dir() {
   local DIR="$1"
+  local MODE="$2"
+  if [ -z "${MODE}" ]; then
+      MODE="750"
+  fi
   if [ ! -d "${DIR}" ]; then
     ask_for_input "${DIR} does not exist; shall I create it" Y
     if is_yes "${ANS}"; then
@@ -371,7 +375,7 @@ init_one_dir() {
       if [ "X${CONFIG_USER}" != "X${2}" ]; then
         chown ${2} "${DIR}"
       fi
-      chmod 750 "${DIR}"
+      chmod "${MODE}" "${DIR}"
       if check_writable "${DIR}" ${2}; then
         return 0
       else
