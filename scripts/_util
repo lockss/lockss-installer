@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
@@ -46,25 +46,41 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
+LOGGER_INITED="FALSE"
 
-# load log4sh
-if [ -r ${LIB_DIR}/log4sh ]; then
-  LOG4SH_CONFIGURATION='none'
-  . ${LIB_DIR}/log4sh
-else
-  echo "ERROR: could not load (log4sh)" >&2
-  exit 1
-fi
+##
+## Logging and messaging utilities.
+##
+log_script_entry() {
+  logger_info "Running script "${1}""
+}
 
-# change the default message level from ERROR to INFO
-logger_setLevel INFO
+log_script_exit() {
+  logger_info "Exiting script "${1}""
+}
+
+
+logger_init() {
+  if [ $LOGGER_INITED != "TRUE" ]; then
+    LOGGER_INITED="TRUE"
+    if [ -r ${LIB_DIR}/log4sh ]; then
+      LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
+      . ${LIB_DIR}/log4sh
+      echo "-------------------------------------------------------------" | logger_info
+      logger_info "$(${SCRIPTS_DIR}/installer-version)"
+      echo "-------------------------------------------------------------" | logger_info
+    else
+      err_exit "logger_error: could not load (log4sh)" >&2
+    fi
+  fi
+}
 
 err() {
-  logger_error "$*" >&2
+  echo "$*" >&2
 }
 
 err_exit() {
-  logger_error "$*" >&2
+  echo "$*" >&2
   exit 1
 }
 
@@ -111,7 +127,7 @@ Check_Docker() {
 Check_Secret() {
   if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
     err "${1}: Kubernetes Secret does not exist"
-    err_exit "     Run scripts/configure-lockss."
+    err_exit "Run scripts/configure-lockss."
   fi
 
 }
@@ -126,8 +142,7 @@ Add_Secret() {
   microk8s kubectl delete secret "${NAME}" -n lockss &>/dev/null
   echo "Storing ${NAME} as a kubernetes secret .."
   if ! microk8s kubectl create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
-    err "Kubernetes secret creation failed for ${NAME}"
-    return 1
+    err_exit "Kubernetes secret creation failed for ${NAME}"
   else
     return 0
   fi
@@ -160,8 +175,7 @@ Check_Volume() {
   #    if ! docker volume inspect ${1} &> /dev/null; then
   if ! microk8s kubectl get pv ${1} &>/dev/null; then
     err "${1}: Docker Volume has not been installed."
-    err "${1}: Run lockss-install script."
-    exit 1
+    err_exit "${1}: Run lockss-install script."
   fi
 }
 
@@ -169,8 +183,7 @@ Check_Config() {
   #    if ! docker config inspect ${1} &> /dev/null; then
   if ! microk8s kubectl get config ${1} &>/dev/null; then
     err "${1}: Config file is missing. Run configure and install scripts.."
-    err "${1}: Run lockss-install script."
-    exit 1
+    err_exit "${1}: Run lockss-install script."
   fi
 }
 
@@ -190,7 +203,7 @@ ensure_lockss_user() {
     fi
     ;;
   *)
-    error_exit "Unsupported system. Please create a user 'lockss' before continuing."
+    err_exit "Unsupported system. Please create a user 'lockss' before continuing."
     ;;
   esac
 }
@@ -202,8 +215,7 @@ ensure_lockss_user() {
 Check_Installed() {
   while [ "X${1}" != "X" ]; do
     if ! which "${1}" &>/dev/null; then
-      err "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
-      exit 1
+      err_exit "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
     fi
     shift
   done

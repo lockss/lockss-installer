@@ -53,30 +53,33 @@ _D0=$(dirname "${0}")
 . "${_D0}/_util"
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  logger_error "${1:-"Unknown Error"}"
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    error_exit "Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
@@ -103,6 +106,13 @@ _EOF_
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
+# Source system config file
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
 
 # Parse command-line
 while [[ -n $1 ]]; do
@@ -113,7 +123,7 @@ while [[ -n $1 ]]; do
       usage
       error_exit "Unknown option $1" ;;
     *)
-      echo "Argument $1 to process..." ;;
+      logger_debug "Argument $1 to process..." ;;
   esac
   shift
 done
@@ -126,11 +136,11 @@ if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks
   if microk8s kubectl get namespace "lockss" >/dev/null; then
     msg ""
-    microk8s kubectl delete services,deployments,pods,pvc -n "lockss"
-    microk8s kubectl delete configmaps,secrets -n "lockss"
-  echo ""
-  echo "Successfully removed all running service and removed all installed data."
-  echo "You will need to rerun configure-lockss and start-lockss to run again."
+    microk8s kubectl delete services,deployments,pods,pvc,secrets -n "lockss"
+    microk8s kubectl delete pv,configmaps
+  logger_info ""
+  logger_info "Successfully removed all running service and removed all installed data."
+  logger_info "You will need to rerun configure-lockss and start-lockss to run again."
 fi
 
 graceful_exit

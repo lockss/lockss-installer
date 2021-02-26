@@ -101,6 +101,15 @@ _EOF_
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
+# Source system config file
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+#init the logger and mark script entry
+logger_init
+log_script_entry "${PROGNAME}"
+
 
 ARGS_ADDITIONAL=""
 # Parse command-line
@@ -137,13 +146,13 @@ if $(is_lockss_running); then
   logger_warn "There is already a running lockss stack."
   ask_for_input "Okay to stop the lockss-stack and restart?" "Y"
   if is_yes "${ANS}"; then
-    "${_D0}"/stop-lockss && sleep 10 && logger_info "Preparing to start stack..."
+    "${_D0}"/stop-lockss && logger_info "Preparing to start stack..."
   else
     error_exit "Call shutdown-lockss and then run start-lockss again."
   fi
 fi
 
-echo "Scripts dir ${SCRIPTS_DIR}"
+logger_debug "Scripts dir ${SCRIPTS_DIR}"
 
 "${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
 "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
