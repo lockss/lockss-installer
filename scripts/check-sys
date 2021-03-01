@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # check-sys - Check the host system for all necessary components for running LOCKSS stack.
 #

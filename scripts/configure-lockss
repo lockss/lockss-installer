@@ -452,7 +452,6 @@ build_config_file() {
     fi
     ask_for_input "Temporary storage directory (local storage preferred)" ${LOCKSS_TMPDIR}
     LOCKSS_TMPDIR="${ANS}"
-
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
     fi
@@ -504,11 +503,11 @@ build_config_file() {
           err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
-      if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
+      if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
         if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} $2; then
           err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
-      fi
+      fi      
 
       rm -f ${TMP_CONFIG}
       echo Done

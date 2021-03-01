@@ -412,8 +412,9 @@ generate_lockss() {
 		for f in ${TEMPLATES_DIR}/*.mustache; do
 			src="${f}"
 			dst="${STACK_CONFIG_DIR}/$(basename "${f}".mustache)"
-			logger_debug"Rendering ${src} to ${dst}..."
+			logger_debug "Rendering ${src} to ${dst}..."
 			mo "${src}">"${dst}"
+
 		done
 		logger_info "Generating user configuration files..."
 		for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
