@@ -458,8 +458,6 @@ build_config_file() {
     fi
     ask_for_input "Directory for storing install script logs (local storage preferred)" ${LOCKSS_SCRIPT_LOG_DIR}
     LOCKSS_SCRIPT_LOG_DIR="${ANS}"
-}
-
     USER_OK=N
     until is_yes ${USER_OK}; do
       ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
