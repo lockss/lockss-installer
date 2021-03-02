@@ -52,6 +52,9 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+
+
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
@@ -110,6 +113,7 @@ trap "signal_exit INT"  INT
 set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
+
 logger_init
 log_script_entry "${PROGNAME}"
 umask 002

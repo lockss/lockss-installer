@@ -537,10 +537,12 @@ fi
 umask 002
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
-echo "Beginning install with installer version:"
-installer-version
 
-echo "$(date) Checking system state.  Please run scripts/check-sys as root if needed."
+echo "-------------------------------------------------------------"
+logger_info "$(${SCRIPTS_DIR}/installer-version)"
+echo "-------------------------------------------------------------"
+echo "$(date) Checking system state...
+
 # Sanity checks
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
   Check_Runnable
@@ -576,6 +578,7 @@ declare -i CONFIG_COUNT
 
 echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
+
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
   msg "${_DO} Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
   read_config ${SYSTEM_CONF_FILE}

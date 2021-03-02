@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 # ---------------------------------------------------------------------------
 # Start-lockss - "Start the stopped or new LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
@@ -46,6 +46,8 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 
 UPDATE_ARG=""
 

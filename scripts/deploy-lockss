@@ -212,9 +212,11 @@ deploy_stack() {
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
 # Source system config file
+
 set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
+
 #init the logger and mark script entry
 logger_init
 log_script_entry "${PROGNAME}"

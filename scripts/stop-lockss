@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 # ---------------------------------------------------------------------------
 # shutdown-lockss - Stop LOCKSS stack and containers.
 #
@@ -47,6 +47,9 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
@@ -130,6 +133,7 @@ undeploy_stack() {
 set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
+
 logger_init
 log_script_entry "${PROGNAME}"
 umask 002

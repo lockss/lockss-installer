@@ -464,6 +464,7 @@ trap "signal_exit INT" INT
 set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
+
 logger_init
 log_script_entry "${PROGNAME}"
 umask 002

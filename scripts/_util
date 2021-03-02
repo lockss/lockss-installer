@@ -64,6 +64,7 @@ logger_init() {
   if [ $LOGGER_INITED != "TRUE" ]; then
     LOGGER_INITED="TRUE"
     if [ -r ${LIB_DIR}/log4sh ]; then
+			export LOCKSS_SCRIPT_LOG_DIR
       LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
       . ${LIB_DIR}/log4sh
       echo "-------------------------------------------------------------" | logger_info
