@@ -121,11 +121,12 @@ undeploy_stack() {
   $KUBECTL delete -l lockss-stack-id=${stack} pods --grace-period=30
   $KUBECTL delete -l lockss-stack-id=${stack} deployments
   logger_debug "Removing all services and volume claims for $stack."
-  $KUBECTL delete -l lockss-stack-id=${stack} services,pvc
+  $KUBECTL delete -l lockss-stack-id=${stack} services
 #  logger_debug "Removing all persistent volumes $stack."
+#  $KUBECTL delete -l lockss-stack-id=${stack} pvc
 #  microk8s kubectl delete -l lockss-stack-id=${stack} pv
   logger_debug "Removing all configmaps $stack."
-  $KUBECTL delete configmaps -n lockss
+  $KUBECTL delete configmaps --all -n lockss
   wait
 }
 

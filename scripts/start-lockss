@@ -52,30 +52,33 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 UPDATE_ARG=""
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-	logger_error  "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  logger_error "${1:-"Unknown Error"}"
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    error_exit "Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {

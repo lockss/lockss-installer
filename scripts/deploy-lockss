@@ -200,8 +200,10 @@ deploy_stack() {
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-#ß    $KUBECTL expose deployment $svc
+#    $KUBECTL expose deployment $svc
   done
+  $KUBECTL wait --for=condition=Ready --all pods --timeout=60s
+  #todo: Add new waitfor here
   popd &>/dev/null
 }
 
