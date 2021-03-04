@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 # ---------------------------------------------------------------------------
 # restart-lockss - "Restart the running LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
@@ -46,17 +46,19 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+
 
 UPDATE_ARG=""
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  logger_fatal "${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
@@ -101,6 +103,14 @@ _EOF_
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
+# Source system config file
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
 
 ARGS_ADDITIONAL=""
 # Parse command-line
@@ -110,18 +120,18 @@ while [[ -n $1 ]]; do
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
-      msg "Forcing update of LOCKSS docker images"
+      logger_info "Forcing update of LOCKSS docker images"
       ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
-      echo "Adding additional runtime args $ARGS_ADDITIONAL";
+      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
     ;;
     -*)
       usage
       error_exit "Unknown option $1" ;;
     *)
-      echo "Argument $1 to process..." ;;
+      logger_debug "Argument $1 to process..." ;;
   esac
   shift
 done
@@ -133,15 +143,12 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-
-"${SCRIPTS_DIR}"/shutdown-lockss &&
+"${SCRIPTS_DIR}"/stop-lockss && logger_info "LOCKSS stack has been stopped."
 if [ -n "${UPDATE_ARG}" ]; then
-  "${SCRIPTS_DIR}"/generate-lockss ${UPDATE_ARG} &&
-  "${SCRIPTS_DIR}"/assemble-lockss &&
-  "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-else
-  "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+  "${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG}
 fi
+logger_info "Restarting LOCKSS stack"
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
 
 graceful_exit
 

@@ -68,11 +68,11 @@ STACK_PREFIX="lockss-stack"
 KUBECTL="microk8s kubectl -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
-  return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  logger_fatal "${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
 }
@@ -85,14 +85,14 @@ graceful_exit() {
 signal_exit() { # Handle trapped signals
   case $1 in
   INT)
-    error_exit "Program interrupted by user"
+    logger_info "Program interrupted by user"
     ;;
   TERM)
-    echo -e "\n$PROGNAME: Program terminated" >&2
+    logger_error "Program terminated"
     graceful_exit
     ;;
   *)
-    error_exit "$PROGNAME: Terminating on unknown signal"
+    error_exit "Terminating on unknown signal"
     ;;
   esac
 }
@@ -172,7 +172,7 @@ init_service_arrays() {
 
 # Check our secrets
 check_installed_secrets() {
-  echo "checking installed secrets..."
+  logger_info "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
@@ -182,7 +182,7 @@ check_installed_volumes() {
   local stack=$1
   # Check the mountpoints
   for svc in "${svcs[@]}"; do
-    echo "checking docker mountpoints for $stack-${svc}..."
+    logger_info "checking docker mountpoints for $stack-${svc}..."
     Check_Volume "$stack-${svc}-data"
     Check_Volume "$stack-${svc}-logs  "
   done
@@ -198,10 +198,12 @@ deploy_stack() {
   set +a
   pushd . &>/dev/null
   for svc in "${deploy_service_names[@]}"; do
-    echo "Deploying service from ${svc}..."
+    logger_trace "Deploying service from ${svc}..."
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-#ß    $KUBECTL expose deployment $svc
+#    $KUBECTL expose deployment $svc
   done
+  $KUBECTL wait --for=condition=Ready --all pods --timeout=60s
+  #todo: Add new waitfor here
   popd &>/dev/null
 }
 
@@ -211,6 +213,16 @@ deploy_stack() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
+# Source system config file
+
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+#init the logger and mark script entry
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
 
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
@@ -226,7 +238,7 @@ while [[ -n $1 ]]; do
   -a | --args)
     shift
     export ARGS_ADDITIONAL="$1"
-    msg "Adding additional runtime args $ARGS_ADDITIONAL"
+    logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
     shift
     ;;
   [1-9])
@@ -237,20 +249,17 @@ while [[ -n $1 ]]; do
     error_exit "Unknown option $1"
     ;;
   *)
-    echo "Argument $1 to process..."
+    logger_trace "Argument $1 to process..."
     ;;
   esac
   shift
 done
-
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
+# Sanity checks
+logger_info "Checking system..."
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
-umask 002
 Check_Runnable
 
 init_service_arrays
@@ -260,7 +269,7 @@ if [ ${NUM_STACKS} -eq 0 ]; then
 elif [ ${NUM_STACKS} -eq 1 ]; then
   deploy_stack ""
 elif [ ${STACK_NUM} -eq 0 ]; then
-  echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
+  logger_info "Deploying ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   for ((num = 1; num <= $NUM_STACKS; num++)); do
     deploy_stack $num
   done
