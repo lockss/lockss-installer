@@ -166,26 +166,31 @@ init_service_arrays() {
     svcs+=("cfg")
     svcs_confs+=("cfg")
     lockss_owned+=("cfg")
+    export HAS_CFG=${USE_LOCKSS_CFG}
   fi
   if ${USE_LOCKSS_MDQ}; then
     svcs+=("mdq")
     svcs_confs+=("mdq")
     lockss_owned+=("mdq")
+    export HAS_MDQ=${USE_LOCKSS_MDQ}
   fi
   if ${USE_LOCKSS_MDX}; then
     svcs+=("mdx")
     svcs_confs+=("mdx")
     lockss_owned+=("mdx")
+    export HAS_MDX=${USE_LOCKSS_MDX}
   fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")
     svcs_confs+=("pol")
     lockss_owned+=("pol")
+    export HAS_POL=${USE_LOCKSS_POL}
   fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     svcs_confs+=("repo")
     lockss_owned+=("repo")
+    export HAS_REPO=${USE_LOCKSS_REPO}
   fi
   if ${USE_LOCKSS_POSTGRES}; then
     svcs+=("postgres")
@@ -378,7 +383,7 @@ generate_lockss() {
 
     logger_debug "Getting node hostname..."
     export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
-    logger_degug "Getting postgres password..."
+    logger_debug "Getting postgres password..."
     export POSTGRES_PASSWD=$(microk8s kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
 
     IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
