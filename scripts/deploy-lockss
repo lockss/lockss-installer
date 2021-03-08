@@ -185,7 +185,19 @@ check_installed_volumes() {
     logger_info "checking docker mountpoints for $stack-${svc}..."
     Check_Volume "$stack-${svc}-data"
     Check_Volume "$stack-${svc}-logs  "
+    logger_debug "clearing  wait file in ${LOCKSS_DATA_DIR}/$stack-${svc}-data"
+    rm "${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}"
   done
+}
+
+wait_for_ready() {
+  local wait_for_file=$1
+  while [ ! -f $wait_for_file ]
+  do
+    sleep 2
+  done
+  $KUBECTL wait --for=condition=Ready --all pods --timeout=90s
+  logger_info "LOCKSS services are now ready for use."
 }
 
 # Deploy the stack with incoming stack num
@@ -202,8 +214,7 @@ deploy_stack() {
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
 #    $KUBECTL expose deployment $svc
   done
-  $KUBECTL wait --for=condition=Ready --all pods --timeout=60s
-  #todo: Add new waitfor here
+  waitForReady "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null
 }
 
