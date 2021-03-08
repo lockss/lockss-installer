@@ -489,22 +489,22 @@ build_config_file() {
       fi
       echo "Checking content storage directory(s)"
       for dir in "${curPaths[@]}"; do
-        if ! init_one_dir ${dir} $2; then
+        if ! init_one_dir ${dir} $2 750; then
           err_exit"${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       done
       if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2; then
+        if ! init_one_dir ${LOCKSS_LOGS_DIR} $2 755; then
           err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
       if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_TMPDIR} $2; then
+        if ! init_one_dir ${LOCKSS_TMPDIR} $2 750; then
           err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
       if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-        if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} $2; then
+        if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} $2 755; then
           err_exit "${dir} cannot be created or written by $2.  Please fix permissions."
         fi
       fi
@@ -541,7 +541,7 @@ LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
 echo "-------------------------------------------------------------"
-echo "$(date) Checking system state...
+echo "$(date) Checking system state..."
 
 # Sanity checks
 if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
