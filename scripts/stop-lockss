@@ -118,10 +118,13 @@ undeploy_stack() {
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
   logger_info "Undeploying stack $stack"
-  $KUBECTL delete -l lockss-stack-id=${stack} pods --grace-period=30
-  $KUBECTL delete -l lockss-stack-id=${stack} deployments
-  logger_debug "Removing all services and volume claims for $stack."
+  # make the stack unreachable on the network
   $KUBECTL delete -l lockss-stack-id=${stack} services
+  # remove the the spec that controls the number of expected pods
+  $KUBECTL delete -l lockss-stack-id=${stack} deployments
+  # wait until all pods are deleted
+  $KUBECTL wait delete -l lockss-stack-id=${stack} pods --grace-period=30
+#  logger_debug "Removing all services and volume claims for $stack."
 #  logger_debug "Removing all persistent volumes $stack."
 #  $KUBECTL delete -l lockss-stack-id=${stack} pvc
 #  microk8s kubectl delete -l lockss-stack-id=${stack} pv
