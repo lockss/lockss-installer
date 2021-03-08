@@ -388,10 +388,11 @@ is_pos() {
   return $?
 }
 
-# init_one_dir dir user
+# init_one_dir dir user mode
 init_one_dir() {
   local DIR="$1"
-  local MODE="$2"
+  local USER="$2"
+  local MODE="$3"
   if [ -z "${MODE}" ]; then
       MODE="750"
   fi
@@ -399,38 +400,38 @@ init_one_dir() {
     ask_for_input "${DIR} does not exist; shall I create it" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
-      if [ "X${CONFIG_USER}" != "X${2}" ]; then
-        chown ${2} "${DIR}"
+      if [ "X${CONFIG_USER}" != "X${USER}" ]; then
+        chown ${USER} "${DIR}"
       fi
       chmod "${MODE}" "${DIR}"
-      if check_writable "${DIR}" ${2}; then
+      if check_writable "${DIR}" ${USER}; then
         return 0
       else
-        echo "${DIR} not writable by user ${2}"
+        echo "${DIR} not writable by user ${USER}"
         echo " Please make it so (check parent dir execute bits)"
         echo " LOCKSS will not run properly without it."
       fi
     else
-      echo "Please create ${DIR} and make it writable by user ${2};"
+      echo "Please create ${DIR} and make it writable by user ${USER};"
       echo " LOCKSS will not run properly without it."
     fi
     return 0
   fi
-  if check_writable "${DIR}" $2; then
-    echo "${DIR} exists and is writable by ${2}"
+  if check_writable "${DIR}" $USER; then
+    echo "${DIR} exists and is writable by ${USER}"
   else
     ask_for_input "${DIR} is not writable; shall I chown it" Y
     if is_yes "${ANS}"; then
-      chown ${2} "${DIR}"
-      if check_writable "${DIR}" $2; then
+      chown ${USER} "${DIR}"
+      if check_writable "${DIR}" $USER; then
         return 0
       else
-        echo "${DIR} still not writable by user ${2}"
+        echo "${DIR} still not writable by user ${USER}"
         echo " Please make it so (check parent dir execute bits)"
         echo " LOCKSS will not run properly without it."
       fi
     else
-      echo "Please ensure that ${DIR} is writable by user ${2};"
+      echo "Please ensure that ${DIR} is writable by user ${USER};"
       echo " LOCKSS will not run properly without it."
     fi
   fi
