@@ -192,11 +192,15 @@ check_installed_volumes() {
 
 wait_for_ready() {
   local wait_for_file=$1
-  while [ ! -f $wait_for_file ]
-  do
-    sleep 2
-  done
+  logger_info "Waiting for pods to be Ready..."
   $KUBECTL wait --for=condition=Ready --all pods --timeout=90s
+  if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
+    logger_debug "waiting for file: $wait_for_file"
+    while [ ! -f $wait_for_file ]
+    do
+      sleep 2
+    done
+  fi
   logger_info "LOCKSS services are now ready for use."
 }
 
