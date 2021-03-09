@@ -139,9 +139,9 @@ init_service_arrays() {
 
 ensure_writable_dir() {
   local DIR="$1"
-  USER=$(stat -c '%u' ${DIR})
-  GROUP=$(stat -c '%g' ${DIR})
-  if [ $USER -eq ${LOCKSS_UID} ]; then
+  local USER=$(stat -c '%u' ${DIR})
+  local GROUP=$(stat -c '%g' ${DIR})
+  if (($USER -eq ${LOCKSS_UID})) ; then
      return 0
   else
     logger_warn "${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
@@ -151,6 +151,10 @@ ensure_writable_dir() {
 
 ensure_lockss_owner() {
   local stack=${STACK_PREFIX}$1
+  stack_env_file="${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  set -a
+  . "${stack_env_file}"
+  set +a
 
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
@@ -163,7 +167,7 @@ ensure_lockss_owner() {
     len=${#datadirs[@]}
     start=1
     for ((cnt = $start; cnt < $len; cnt++)); do
-      data_dir=${datadirs[$cnt]}/$stack-repo-data
+      data_dir="${datadirs[$cnt]}/$stack-repo-data"
       sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     done
   done
@@ -176,6 +180,10 @@ ensure_lockss_owner() {
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
 # Source system config file
+
+if [ ! -r "$SYSTEM_CONF_FILE" ]; then
+  err_exit "$_0: The system configuration file does not exist.  Run scripts/configure-lockss."
+fi
 
 set -a
 . "${SYSTEM_CONF_FILE}"
@@ -194,17 +202,17 @@ init_service_arrays
 
 logger_info "Checking for lockss directories found in system.cfg."
 ensure_writable_dir $LOCKSS_DATA_DIR ||
-  error_exit "Unable to write $LOCKSS_DATA_DIR
+  error_exit "Unable to write $LOCKSS_DATA_DIR"
 ensure_writable_dir $LOCKSS_LOGS_DIR ||
-  error_exit "Unable to write $LOCKSS_LOGS_DIR
+  error_exit "Unable to write $LOCKSS_LOGS_DIR"
 ensure_writable_dir $LOCKSS_TMPDIR ||
-  error_exit "Unable to write $LOCKSS_TMPDIR
+  error_exit "Unable to write $LOCKSS_TMPDIR"
 ensure_writable_dir $LOCKSS_SCRIPT_LOG_DIR ||
-  error_exit "Unable to write $LOCKSS_SCRIPT_LOG_DIR
+  error_exit "Unable to write $LOCKSS_SCRIPT_LOG_DIR"
 
 logger_info "Checking for lockss stack info found in config/configs..."
 if [ ${NUM_STACKS} -eq 0 ]; then
-  ensure_lockss_owner ""
+  logger_error "No information found for stacks.  Run scripts/configure-lockss and scripts/assemble-lockss."
 elif [ ${NUM_STACKS} -eq 1 ]; then
   ensure_lockss_owner ""
 elif [ ${STACK_NUM} -eq 0 ]; then
