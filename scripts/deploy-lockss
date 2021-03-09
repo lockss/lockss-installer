@@ -214,7 +214,7 @@ deploy_stack() {
     $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
 #    $KUBECTL expose deployment $svc
   done
-  waitForReady "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
+  wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null
 }
 
@@ -281,7 +281,8 @@ elif [ ${NUM_STACKS} -eq 1 ]; then
   deploy_stack ""
 elif [ ${STACK_NUM} -eq 0 ]; then
   logger_info "Deploying ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
-  for ((num = 1; num <= $NUM_STACKS; num++)); do
+  deploy_stack ""
+  for ((num = 1; num < $NUM_STACKS; num++)); do
     deploy_stack $num
   done
 elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
