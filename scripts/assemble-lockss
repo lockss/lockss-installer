@@ -224,13 +224,21 @@ ensure_writable_dir() {
 }
 
 ensure_lockss_owner() {
+  local $stack=$1
+
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
-    sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    if [ find "${data_dir}" \! -user ${LOCKSS_UID} ]; then
+      error_exit "${data_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+    fi
     logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    sudo find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    if [ find "${logs_dir}" \! -user ${LOCKSS_UID} ]; then
+      error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+    fi
     tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
-    sudo find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    if [ find "${tmp_dir}" \! -user ${LOCKSS_UID} ]; then
+      error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+    fi
   done
 }
 
@@ -323,7 +331,7 @@ add_stack_volumes() {
   done
   add_additional_stack_volumes $stack
   $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml
-  ensure_lockss_owner
+  ensure_lockss_owner $stack
 }
 
 add_additional_stack_volumes() {
