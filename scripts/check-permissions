@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2000-2020, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+##
+## Definitions
+##
+declare -a arr svcs
+declare -a arr lockss_owned
+STACK_PREFIX="lockss-stack"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+
+clean_up() { # Perform pre-exit housekeeping
+  log_script_exit  "${PROGNAME}"
+}
+
+error_exit() {
+  logger_fatal "${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    logger_info "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    error_exit "Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<-_EOF_
+  $PROGNAME ver. $VERSION
+  Check the file and directory permissions.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
+
+#initialize the service arrays based on system.cfg info.
+init_service_arrays() {
+  if ${USE_LOCKSS_CFG}; then
+    svcs+=("cfg")
+    lockss_owned+=("cfg")
+  fi
+  if ${USE_LOCKSS_MDQ}; then
+    svcs+=("mdq")
+    lockss_owned+=("mdq")
+  fi
+  if ${USE_LOCKSS_MDX}; then
+    svcs+=("mdx")
+    lockss_owned+=("mdx")
+  fi
+  if ${USE_LOCKSS_POL}; then
+    svcs+=("pol")
+    lockss_owned+=("pol")
+  fi
+  if ${USE_LOCKSS_REPO}; then
+    svcs+=("repo")
+    lockss_owned+=("repo")
+  fi
+  if ${USE_LOCKSS_POSTGRES}; then
+    svcs+=("postgres")
+  fi
+  if ${USE_LOCKSS_SOLR}; then
+    svcs+=("solr")
+    lockss_owned+=("solr")
+  fi
+  if ${USE_LOCKSS_HDFS}; then
+    svcs+=("hdfs")
+  fi
+  if ${USE_LOCKSS_PYWB}; then
+    svcs+=("pywb")
+  fi
+  if ${USE_LOCKSS_OPENWB}; then
+    svcs+=("openwb")
+  fi
+}
+
+ensure_writable_dir() {
+  local DIR="$1"
+  USER=$(stat -c '%u' ${DIR})
+  GROUP=$(stat -c '%g' ${DIR})
+  if [ $USER -eq ${LOCKSS_UID} ]; then
+     return 0
+  else
+    logger_warn "${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}" || error_exit "Unable to chown ${DIR}"
+  fi
+}
+
+ensure_lockss_owner() {
+  local stack=${STACK_PREFIX}$1
+
+  for svc in "${lockss_owned[@]}"; do
+    data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
+    sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
+    sudo find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
+    sudo find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
+    len=${#datadirs[@]}
+    start=1
+    for ((cnt = $start; cnt < $len; cnt++)); do
+      data_dir=${datadirs[$cnt]}/$stack-repo-data
+      sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    done
+  done
+}
+
+##
+## MAIN
+##
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+# Source system config file
+
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+#init the logger and mark script entry
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
+
+STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+NUM_STACKS=${#STACK_DIRS[@]}
+STACK_NUM=0
+
+init_service_arrays
+
+logger_info "Checking for lockss directories found in system.cfg."
+ensure_writable_dir $LOCKSS_DATA_DIR ||
+  error_exit "Unable to write $LOCKSS_DATA_DIR
+ensure_writable_dir $LOCKSS_LOGS_DIR ||
+  error_exit "Unable to write $LOCKSS_LOGS_DIR
+ensure_writable_dir $LOCKSS_TMPDIR ||
+  error_exit "Unable to write $LOCKSS_TMPDIR
+ensure_writable_dir $LOCKSS_SCRIPT_LOG_DIR ||
+  error_exit "Unable to write $LOCKSS_SCRIPT_LOG_DIR
+
+logger_info "Checking for lockss stack info found in config/configs..."
+if [ ${NUM_STACKS} -eq 0 ]; then
+  ensure_lockss_owner ""
+elif [ ${NUM_STACKS} -eq 1 ]; then
+  ensure_lockss_owner ""
+elif [ ${STACK_NUM} -eq 0 ]; then
+  logger_info "Checking ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
+  ensure_lockss_owner ""
+  for ((num = 1; num < $NUM_STACKS; num++)); do
+    ensure_lockss_owner $num
+  done
+fi
+
+graceful_exit
