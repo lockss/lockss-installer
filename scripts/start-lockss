@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # Start-lockss - "Start the stopped or new LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University

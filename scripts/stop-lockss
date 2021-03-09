@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # stop-lockss - Stop LOCKSS stack and containers.
 #
@@ -123,7 +123,7 @@ undeploy_stack() {
   # remove the the spec that controls the number of expected pods
   $KUBECTL delete -l lockss-stack-id=${stack} deployments
   # wait until all pods are deleted
-  $KUBECTL wait delete -l lockss-stack-id=${stack} pods --grace-period=30
+  $KUBECTL wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s
 #  logger_debug "Removing all services and volume claims for $stack."
 #  logger_debug "Removing all persistent volumes $stack."
 #  $KUBECTL delete -l lockss-stack-id=${stack} pvc
