@@ -280,11 +280,11 @@ add_stack_shared() {
   local stack=$1
   local mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   logger_debug "Clearing old deployments..."
-  $KUBECTL delete deployments -l lockss-stack-id=${stack}
+  $KUBECTL delete deployments -l lockss-stack-id=${stack} >&/dev/null
   logger_debug "Clearing old  configuration maps..."
-  $KUBECTL delete configmaps --all
+  $KUBECTL delete configmaps --all >&/dev/null
   logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  microk8s kubectl apply -f "${mk_dir}/local-storage.yaml"
+  microk8s kubectl apply -f "${mk_dir}/local-storage.yaml" >&/dev/null
 }
 
 check_stack_solr() {
@@ -318,9 +318,6 @@ add_stack_volumes() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
 
-  ensure_writable_dir $LOCKSS_DATA_DIR
-  ensure_writable_dir $LOCKSS_LOGS_DIR
-  ensure_writable_dir $LOCKSS_TMPDIR
   logger_info "Creating data and log volumes for $stack"
  for svc in "${svcs[@]}"; do
     logger_debug "Creating data and log volumes for $stack-${svc}..."
@@ -350,8 +347,11 @@ add_additional_stack_volumes() {
 }
 
 assemble_stack() {
+  ensure_writable_dir $LOCKSS_DATA_DIR
+  ensure_writable_dir $LOCKSS_LOGS_DIR
+  ensure_writable_dir $LOCKSS_TMPDIR
   local stack=${STACK_PREFIX}$1
-  logger_info "Processing stack $stack"
+  logger_info "Assembling stack $stack..."
   # Source config.info and env.sh for this stack
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
@@ -360,8 +360,8 @@ assemble_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
   add_stack_volumes ${stack}
-  add_stack_configs ${stack}
   check_stack_solr ${stack}
+  add_stack_configs ${stack}
   popd &>/dev/null
 }
 
@@ -407,7 +407,7 @@ generate_lockss() {
       export $varname
     done
     export REPO_NUMS
-    logger_info "Generating the service deployments..."
+    logger_debug "Generating the service deployments..."
     mkdir "${STACK_CONFIG_DIR}/svcs"
     for f in ${SERVICES_DIR}/*.mustache; do
       src="${f}"
@@ -415,7 +415,7 @@ generate_lockss() {
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_info "Generating the microk8s files..."
+    logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
     cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
@@ -427,14 +427,14 @@ generate_lockss() {
       envsubst < ${dst} > ${dst}.out
       mv ${dst}.out ${dst}
     done
-    logger_info "Generating lockss configuration files..."
+    logger_debug "Generating lockss configuration files..."
     for f in ${TEMPLATES_DIR}/*.mustache; do
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_info "Generating the user configuration files..."
+    logger_debug "Generating the user configuration files..."
     for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
       if [[ -f "${f}" ]]; then
         src="${f}"
