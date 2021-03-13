@@ -144,7 +144,7 @@ ensure_writable_dir() {
   if (($USER -eq ${LOCKSS_UID})) ; then
      return 0
   else
-    logger_warn "${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
+    logger_warn "${DIR} is not writable by $LOCKSS_USER; attempting to chown it."
     sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}" || error_exit "Unable to chown ${DIR}"
   fi
 }
@@ -156,19 +156,20 @@ ensure_lockss_owner() {
   . "${stack_env_file}"
   set +a
 
+
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
-    sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -0 -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    sudo find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    sudo find "${logs_dir}" \! -user ${LOCKSS_UID} | xargs -0 -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
-    sudo find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+    sudo find "${tmp_dir}" \! -user ${LOCKSS_UID} | xargs -0 -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
     len=${#datadirs[@]}
     start=1
     for ((cnt = $start; cnt < $len; cnt++)); do
       data_dir="${datadirs[$cnt]}/$stack-repo-data"
-      sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
+      sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -0 -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {}
     done
   done
 }

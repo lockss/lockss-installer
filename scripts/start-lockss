@@ -112,7 +112,6 @@ trap "signal_exit INT"  INT
 logger_init
 log_script_entry "${PROGNAME}"
 
-
 ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ -n $1 ]]; do

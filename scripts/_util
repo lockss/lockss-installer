@@ -58,21 +58,18 @@ log_script_exit() {
 }
 
 logger_init() {
-  if [ -z $LOGGER_INITED ]; then
-    export LOGGER_INITED="TRUE"
-    if [ -r ${LIB_DIR}/log4sh ]; then
-      if [ -z "$LOCKSS_SCRIPT_LOG_DIR" ]; then
-        err "LOCKSS_SCRIPT_LOG_DIR is not defined."
-        err_exit "Run scripts/configure-lockss to assign value."
-      else
-        LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
-      fi
-      . ${LIB_DIR}/log4sh
-      logger_info "$(${SCRIPTS_DIR}/installer-version)"
-      echo "-------------------------------------------------------------"
+  if [ -r ${LIB_DIR}/log4sh ]; then
+    if [ -z "$LOCKSS_SCRIPT_LOG_DIR" ]; then
+      err "LOCKSS_SCRIPT_LOG_DIR is not defined."
+      err_exit "Run scripts/configure-lockss to assign value."
     else
-      err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
+      LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
     fi
+    . ${LIB_DIR}/log4sh
+    logger_info "$(${SCRIPTS_DIR}/installer-version)"
+    echo "-------------------------------------------------------------"
+  else
+    err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
   fi
 }
 
