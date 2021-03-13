@@ -46,11 +46,13 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
-
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 UPDATE_ARG=""
-
+WAIT_ARG=""
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
@@ -95,6 +97,7 @@ help_message() {
   Options:
   -h, --help  Display this help message and exit.
   -u, --update  force update of LOCKSS docker images
+  -w, --wait Use a wait file to signal stack ready.
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -106,12 +109,6 @@ _EOF_
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
-# Source system config file
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
-
-#init the logger and mark script entry
 logger_init
 log_script_entry "${PROGNAME}"
 
@@ -125,6 +122,10 @@ while [[ -n $1 ]]; do
     -u | --update)
       UPDATE_ARG="-u"
       logger_info "Forcing update of LOCKSS docker images"
+      ;;
+    -w | --wait)
+      WAIT_ARG="-w"
+      logger_info "Setting wait for file on deploy."
       ;;
     -a | --args)
       shift
@@ -149,18 +150,13 @@ fi
 
 if $(is_lockss_running); then
   logger_warn "There is already a running lockss stack."
-  ask_for_input "Okay to stop the lockss-stack and restart?" "Y"
-  if is_yes "${ANS}"; then
-    "${_D0}"/stop-lockss && logger_info "Preparing to start stack..."
-  else
-    error_exit "Call shutdown-lockss and then run start-lockss again."
-  fi
+  error_exit "Call restart-lockss  to run lockss again."
 fi
 
 logger_debug "Scripts dir ${SCRIPTS_DIR}"
 
-"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} &&
-"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || error_exit "Attempt to assemble lockss components failed."
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || error_exit "Attempt to deploy lockss components failed."
 
 graceful_exit
 

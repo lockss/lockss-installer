@@ -51,6 +51,11 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 . "${_D0}/lib/mo"
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
+
 
 ##
 ## Definitions
@@ -63,7 +68,6 @@ MK_DIR="${TEMPLATES_DIR}/mk"
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 COMPOSE_TMPL="${CONFIG_DIR}/docker-compose.mustache"
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 STORAGE_CLASS_FILE="local-storage.yaml"
 
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
@@ -228,17 +232,17 @@ ensure_lockss_owner() {
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     logger_debug "Checking files in $data_dir"
-    if ! find "${data_dir}" \! -user ${LOCKSS_UID} ; then
+    if ! find "${data_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
       error_exit "${data_dir} contains files not owned by user lockss. Run scripts/check-permissions"
     fi
     logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
     logger_debug "Checking files in $logs_dir"
-    if ! find "${logs_dir}" \! -user ${LOCKSS_UID} ; then
+    if ! find "${logs_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
       error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/check-permissions"
     fi
     tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     logger_debug "Checking files in $tmp_dir"
-    if ! find "${tmp_dir}" \! -user ${LOCKSS_UID} ; then
+    if ! find "${tmp_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
       error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/check-permissions"
     fi
   done
@@ -253,10 +257,10 @@ add_stack_configs() {
   logger_info "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss"); then
+    if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt"); then
+    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -265,10 +269,10 @@ add_stack_configs() {
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     logger_debug "adding service config ${key}..."
-   if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss"); then
+   if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
       error_exit "${_0}: error creating config ${key}"
     fi
-    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt"); then
+    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
@@ -280,11 +284,11 @@ add_stack_shared() {
   local stack=$1
   local mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   logger_debug "Clearing old deployments..."
-  $KUBECTL delete deployments -l lockss-stack-id=${stack} >&/dev/null
+  $KUBECTL delete deployments -l lockss-stack-id=${stack} | logger_debug
   logger_debug "Clearing old  configuration maps..."
-  $KUBECTL delete configmaps --all >&/dev/null
+  $KUBECTL delete configmaps --all | logger_debug
   logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  microk8s kubectl apply -f "${mk_dir}/local-storage.yaml" >&/dev/null
+  microk8s kubectl apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 }
 
 check_stack_solr() {
@@ -475,11 +479,6 @@ assemble_lockss() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
-
-# Source system config file
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
 
 logger_init
 log_script_entry "${PROGNAME}"

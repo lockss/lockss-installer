@@ -57,8 +57,9 @@ _D0=$(dirname "${0}")
 ##
 
 # Files
-DOCKER_COMPOSE_FILE="docker-compose.yml"
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 #Data
 declare -a deploy_service_names
@@ -110,7 +111,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
+  -w, --wait Use a wait file to signal stack ready.
+  -a, --args ARGS_ADDITIONAL  Add additional runtime options.
     Where 'ARGS_ADDITIONAL' is the additional arguments.
 
 _EOF_
@@ -182,18 +184,15 @@ check_installed_volumes() {
   local stack=$1
   # Check the mountpoints
   for svc in "${svcs[@]}"; do
-    logger_info "checking docker mountpoints for $stack-${svc}..."
-    Check_Volume "$stack-${svc}-data"
-    Check_Volume "$stack-${svc}-logs  "
     logger_debug "clearing  wait file in ${LOCKSS_DATA_DIR}/$stack-${svc}-data"
-    rm "${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}"
+    rm "${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}" &>/dev/null
   done
 }
 
 wait_for_ready() {
   local wait_for_file=$1
   logger_info "Waiting for pods to be Ready..."
-  $KUBECTL wait --for=condition=Ready --all pods --timeout=90s
+  $KUBECTL wait --for=condition=Ready --all pods --timeout=90s | logger_info
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
     logger_debug "waiting for file: $wait_for_file"
     while [ ! -f $wait_for_file ]
@@ -207,15 +206,15 @@ wait_for_ready() {
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-
   # Source config.info and env.sh
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
+  check_installed_volumes $stack
   pushd . &>/dev/null
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
-    $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
+    $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
 #    $KUBECTL expose deployment $svc
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
@@ -228,12 +227,6 @@ deploy_stack() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
-# Source system config file
-
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
-
 #init the logger and mark script entry
 logger_init
 log_script_entry "${PROGNAME}"
@@ -254,6 +247,11 @@ while [[ -n $1 ]]; do
     shift
     export ARGS_ADDITIONAL="$1"
     logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
+    shift
+    ;;
+  -w | --wait)
+    CHECK_WAIT_FILE="TRUE"
+    logger_debug "Using wait file to check ready"
     shift
     ;;
   [1-9])

@@ -46,10 +46,14 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 
 UPDATE_ARG=""
+WAIT_ARG=""
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -91,7 +95,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -u, --update  force update of LOCKSS docker images
+  -u, --update  Force update of LOCKSS docker images
+  -w, --wait Use a wait file to signal stack ready.
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -122,6 +127,10 @@ while [[ -n $1 ]]; do
       UPDATE_ARG="-u"
       logger_info "Forcing update of LOCKSS docker images"
       ;;
+    -w | --wait)
+      WAIT_ARG="-w"
+      logger_info "Setting wait for file on deploy."
+      ;;
     -a | --args)
       shift
       export ARGS_ADDITIONAL="$1"
@@ -143,12 +152,9 @@ if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-"${SCRIPTS_DIR}"/stop-lockss && logger_info "LOCKSS stack has been stopped."
-if [ -n "${UPDATE_ARG}" ]; then
-  "${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG}
-fi
-logger_info "Restarting LOCKSS stack"
-"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
+"${SCRIPTS_DIR}"/stop-lockss || error_exit "An error occured while stopping running stack."
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || error_exit "Stack reassembly failed."
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || error_exit "Attempt to redeploy stack failed"
 
 graceful_exit
 

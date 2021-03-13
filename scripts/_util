@@ -46,34 +46,30 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
-LOGGER_INITED="FALSE"
-
 ##
 ## Logging and messaging utilities.
 ##
 log_script_entry() {
-  logger_info "Running script "${1}""
+  logger_debug "Running script "${1}""
 }
 
 log_script_exit() {
-  logger_info "Exiting script "${1}""
+  logger_debug "Exiting script "${1}""
 }
 
 logger_init() {
-  if [ $LOGGER_INITED != "TRUE" ]; then
-    LOGGER_INITED="TRUE"
+  if [ -z $LOGGER_INITED ]; then
+    export LOGGER_INITED="TRUE"
     if [ -r ${LIB_DIR}/log4sh ]; then
       if [ -z "$LOCKSS_SCRIPT_LOG_DIR" ]; then
-        echo "LOCKSS_SCRIPT_LOG_DIR is not defined."
+        err "LOCKSS_SCRIPT_LOG_DIR is not defined."
         err_exit "Run scripts/configure-lockss to assign value."
       else
-			  export LOCKSS_SCRIPT_LOG_DIR
         LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
       fi
       . ${LIB_DIR}/log4sh
-      echo "-------------------------------------------------------------" | logger_info
       logger_info "$(${SCRIPTS_DIR}/installer-version)"
-      echo "-------------------------------------------------------------" | logger_info
+      echo "-------------------------------------------------------------"
     else
       err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
     fi
@@ -106,7 +102,7 @@ Check_Runnable() {
     err_exit "microk8s is not running. Please run: microk8s start"
   fi
   if ! microk8s kubectl get namespace "lockss" &>/dev/null; then
-    microk8s kubectl create namespace "lockss"
+    microk8s kubectl create namespace "lockss" >/dev/null
   fi
 }
 
