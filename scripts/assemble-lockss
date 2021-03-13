@@ -333,7 +333,7 @@ add_stack_volumes() {
     mkdir --mode=1777 -p ${mtpoint} || error_exit "unable to create tmp dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
-  $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml
+  $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
   ensure_lockss_owner $stack
 }
 

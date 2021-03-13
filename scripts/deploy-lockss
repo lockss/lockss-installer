@@ -187,7 +187,7 @@ check_installed_volumes() {
   for svc in "${svcs[@]}"; do
     logger_debug "clearing  wait file in ${LOCKSS_DATA_DIR}/$stack-${svc}-data"
     wait_file="${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}"
-    if [ -f $wait_file ]
+    if [ -f $wait_file ]; then
       rm "${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}" >/dev/null ||
         logger_warn "Unable to delete file $wait_file"
     fi
