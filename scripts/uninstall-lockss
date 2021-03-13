@@ -51,9 +51,12 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-
+KUBECTL="microk8s kubectl -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -109,10 +112,6 @@ _EOF_
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
-# Source system config file
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
 
 logger_init
 log_script_entry "${PROGNAME}"
@@ -139,9 +138,8 @@ done
 if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks
   if microk8s kubectl get namespace "lockss" >/dev/null; then
-    msg ""
-    microk8s kubectl delete services,deployments,pods,pvc,secrets -n "lockss"
-    microk8s kubectl delete pv,configmaps
+    KUBECTL delete services,deployments,pods,pvc,secrets,configmaps | logger_debug
+  microk8s kubectl delete pv  -l app=lockss | logger_debug
   logger_info ""
   logger_info "Successfully removed all running service and removed all installed data."
   logger_info "You will need to rerun configure-lockss and start-lockss to run again."
