@@ -99,6 +99,8 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-metadata-extraction-service
     spec:
+      securityContext:
+        fsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL

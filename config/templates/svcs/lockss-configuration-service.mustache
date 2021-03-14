@@ -106,6 +106,8 @@ spec:
         io.kompose.service: lockss-configuration-service
         lockss-stack-id: {{STACK}}
     spec:
+      securityContext:
+        fsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL

@@ -100,6 +100,8 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-repository-service
     spec:
+      securityContext:
+        fsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL
