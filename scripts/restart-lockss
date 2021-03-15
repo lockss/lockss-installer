@@ -83,7 +83,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {

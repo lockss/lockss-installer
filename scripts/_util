@@ -50,11 +50,11 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 ## Logging and messaging utilities.
 ##
 log_script_entry() {
-  logger_debug "Running script "${1}""
+  logger_debug "Running script ${1}"
 }
 
 log_script_exit() {
-  logger_debug "Exiting script "${1}""
+  logger_debug "Exiting script ${1}"
 }
 
 logger_init() {
