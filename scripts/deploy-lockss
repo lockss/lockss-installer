@@ -204,8 +204,8 @@ wait_for_ready() {
     do
       sleep 2
     done
+    logger_info "LOCKSS services are now ready for use."
   fi
-  logger_info "LOCKSS services are now ready for use."
 }
 
 # Deploy the stack with incoming stack num
