@@ -187,30 +187,35 @@ spec:
           items:
           - key: lockss-bootstrap
             path: lockss_bootstrap
+            mode: 0660
           name: lockss-bootstrap
         name: lockss-bootstrap
       - configMap:
           items:
           - key: cfg-service
             path: lockss_service
+            mode: 0660
           name: cfg-service
         name: cfg-service
       - configMap:
           items:
           - key: cfg-service-opt
             path: lockss_service_opt
+            mode: 0660
           name: cfg-service-opt
         name: cfg-service-opt
       - configMap:
           items:
           - key: lockss-cluster
             path: lockss_cluster
+            mode: 0660
           name: lockss-cluster
         name: lockss-cluster
       - configMap:
           items:
           - key: lockss-cluster-opt
             path: lockss_cluster_opt
+            mode: 0660
           name: lockss-cluster-opt
         name: lockss-cluster-opt
       - name: lockss-postgres-pass
@@ -219,18 +224,21 @@ spec:
           items:
           - key: lockss-postgres-pass
             path: lockss-postgres-pass
+            mode: 0660
       - name: lockss-ui-pass
         secret:
           secretName: lockss-ui-pass
           items:
           - key: lockss-ui-pass
             path: lockss_ui_pass
+            mode: 0660
       - name: lockss-auth
         secret:
           secretName: lockss-auth
           items:
           - key: lockss-auth
             path: lockss-auth
+            mode: 0660
       - name: lockss-cfg-data
         persistentVolumeClaim:
           claimName: lockss-cfg-data-pvc
