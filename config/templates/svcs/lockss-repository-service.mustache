@@ -101,6 +101,8 @@ spec:
         io.kompose.service: lockss-repository-service
     spec:
       securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
         fsGroup: {{LOCKSS_GID}}
       containers:
       - env:

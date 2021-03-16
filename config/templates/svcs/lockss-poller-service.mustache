@@ -117,6 +117,8 @@ spec:
         io.kompose.service: lockss-poller-service
     spec:
       securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
         fsGroup: {{LOCKSS_GID}}
       containers:
       - env:

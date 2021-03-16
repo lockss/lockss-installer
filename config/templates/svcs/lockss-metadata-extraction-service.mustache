@@ -100,6 +100,8 @@ spec:
         io.kompose.service: lockss-metadata-extraction-service
     spec:
       securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
         fsGroup: {{LOCKSS_GID}}
       containers:
       - env:
