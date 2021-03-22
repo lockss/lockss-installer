@@ -90,7 +90,7 @@ UPDATE_IMAGES=0
 PORT_BASE=245
 PULL_POLICY="IfNotPresent"
 
-KUBECTL='microk8s kubectl -n lockss'
+LKUBECTL="${KUBECTL} -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -257,10 +257,10 @@ add_stack_configs() {
   logger_info "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
+    if ! $LKUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
       error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
+    if ! $LKUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
       error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -269,10 +269,10 @@ add_stack_configs() {
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     logger_debug "adding service config ${key}..."
-   if ! $KUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
+   if ! $LKUBECTL create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
       error_exit "${_0}: error creating config ${key}"
     fi
-    if ! $KUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
+    if ! $LKUBECTL create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
       error_exit "${_0}: error creating config ${key}-opt"
     fi
   done
@@ -284,11 +284,11 @@ add_stack_shared() {
   local stack=$1
   local mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   logger_debug "Clearing old deployments..."
-  $KUBECTL delete deployments -l lockss-stack-id=${stack} | logger_debug
+  $LKUBECTL delete deployments -l lockss-stack-id=${stack} | logger_debug
   logger_debug "Clearing old  configuration maps..."
-  $KUBECTL delete configmaps --all | logger_debug
+  $LKUBECTL delete configmaps --all | logger_debug
   logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  microk8s kubectl apply -f "${mk_dir}/local-storage.yaml" | logger_debug
+  $KUBECTL apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 }
 
 check_stack_solr() {
@@ -333,7 +333,7 @@ add_stack_volumes() {
     mkdir --mode=1777 -p ${mtpoint} || error_exit "unable to create tmp dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
-  $KUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
+  $LKUBECTL apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
   ensure_lockss_owner $stack
 }
 
@@ -396,9 +396,9 @@ generate_lockss() {
     set +a
 
     logger_debug "Getting node hostname..."
-    export NODE_HOSTNAME=$(microk8s kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
+    export NODE_HOSTNAME=$($KUBECTL get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
     logger_debug "Getting postgres password..."
-    export POSTGRES_PASSWD=$(microk8s kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
+    export POSTGRES_PASSWD=$($KUBECTL get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
 
     IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
     len=${#datadirs[@]}
@@ -419,7 +419,7 @@ generate_lockss() {
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_debug "Generating the microk8s files..."
+    logger_debug "Generating Kubernetes files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
     cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"

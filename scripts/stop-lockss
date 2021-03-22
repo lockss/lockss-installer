@@ -57,7 +57,7 @@ set +a
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 STACK_PREFIX="lockss-stack"
-KUBECTL='microk8s kubectl -n lockss'
+LKUBECTL="${KUBECTL} -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -122,14 +122,14 @@ undeploy_stack() {
   set +a
   logger_info "Undeploying stack $stack"
   # make the stack unreachable on the network
-  $KUBECTL delete -l lockss-stack-id=${stack} services | logger_debug
+  $LKUBECTL delete -l lockss-stack-id=${stack} services | logger_debug
   # remove the the spec that controls the number of expected pods
-  $KUBECTL delete -l lockss-stack-id=${stack} deployments | logger_debug
+  $LKUBECTL delete -l lockss-stack-id=${stack} deployments | logger_debug
   # wait until all pods are deleted
   logger_info "Waiting for pods to be complete shutdown..."
-  $KUBECTL wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s | logger_info
+  $LKUBECTL wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s | logger_info
   logger_debug "Removing all configmaps $stack."
-  $KUBECTL delete --all configmaps | logger_debug
+  $LKUBECTL delete --all configmaps | logger_debug
   wait
 }
 

@@ -66,7 +66,7 @@ declare -a deploy_service_names
 declare -a svcs
 declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
-KUBECTL="microk8s kubectl -n lockss"
+LKUBECTL="${KUBECTL} -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
