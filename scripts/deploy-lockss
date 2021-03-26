@@ -178,6 +178,7 @@ check_installed_secrets() {
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
+  Check_Secret 'lockss-solr-pass'
 }
 
 check_installed_volumes() {
@@ -194,12 +195,13 @@ check_installed_volumes() {
   done
 }
 
+
 wait_for_ready() {
   local wait_for_file=$1
-  logger_info "Waiting for pods to be Ready..."
+  logger_info "Waiting for pods to be marked 'Ready'..."
   $KUBECTL wait --for=condition=Ready --all pods --timeout=90s | logger_info
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
-    logger_debug "waiting for file: $wait_for_file"
+    logger_info "waiting for LOCKSS wait file..."
     while [ ! -f $wait_for_file ]
     do
       sleep 2
