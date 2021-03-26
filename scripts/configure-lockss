@@ -241,6 +241,7 @@ LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
+KUBECTL="${KUBECTL}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -471,7 +472,13 @@ build_config_file() {
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
       Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
-
+    # support for alternate kubectl command
+    if [ "X${KUBECTL}" = X ]; then
+      KUBECTL="${DEFAULT_KUBECTL}"
+    fi
+    ask_for_input "Command to use for kubectl" ${KUBECTL}
+    KUBECTL="${ANS}"
+    # Configure the individual services
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
     export LOCKSS_CONFIG_VERSION=2
@@ -537,6 +544,7 @@ fi
 umask 002
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
+DEFAULT_KUBECTL="microk8s kubectl"
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"

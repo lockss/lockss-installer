@@ -98,8 +98,8 @@ Check_Runnable() {
   if ! microk8s status | grep -q "microk8s is running"; then
     err_exit "microk8s is not running. Please run: microk8s start"
   fi
-  if ! microk8s kubectl get namespace "lockss" &>/dev/null; then
-    microk8s kubectl create namespace "lockss" >/dev/null
+  if ! $KUBECTL get namespace "lockss" &>/dev/null; then
+    $KUBECTL create namespace "lockss" >/dev/null
   fi
 }
 
@@ -123,7 +123,7 @@ Check_Docker() {
 ## Check For installed secret
 ##
 Check_Secret() {
-  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
+  if ! $KUBECTL get secret -n lockss ${1} &>/dev/null; then
     err "${1}: Kubernetes Secret does not exist"
     err_exit "Run scripts/configure-lockss."
   fi
@@ -137,9 +137,9 @@ Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
 
-  microk8s kubectl delete secret "${NAME}" -n lockss &>/dev/null
+  $KUBECTL delete secret "${NAME}" -n lockss &>/dev/null
   echo "Storing ${NAME} as a kubernetes secret .."
-  if ! microk8s kubectl create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
+  if ! $KUBECTL create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
     err_exit "Kubernetes secret creation failed for ${NAME}"
   else
     return 0
@@ -150,7 +150,7 @@ Add_Secret() {
 ## Check for an installed lockss secret, return 0 if found 1 otherwise.
 ##
 Is_Secret_Installed() {
-  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
+  if ! $KUBECTL get secret -n lockss ${1} &>/dev/null; then
     return 1
   else
     return 0
@@ -171,7 +171,7 @@ Are_Secrets_Installed() {
 
 Check_Volume() {
   #    if ! docker volume inspect ${1} &> /dev/null; then
-  if ! microk8s kubectl get pv ${1} &>/dev/null; then
+  if ! $KUBECTL get pv ${1} &>/dev/null; then
     err "${1}: Docker Volume has not been installed."
     err_exit "${1}: Run lockss-install script."
   fi
@@ -179,7 +179,7 @@ Check_Volume() {
 
 Check_Config() {
   #    if ! docker config inspect ${1} &> /dev/null; then
-  if ! microk8s kubectl get config ${1} &>/dev/null; then
+  if ! $KUBECTL get config ${1} &>/dev/null; then
     err "${1}: Config file is missing. Run configure and install scripts.."
     err_exit "${1}: Run lockss-install script."
   fi
@@ -269,7 +269,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(microk8s kubectl get pods -n 'lockss' | grep 'lockss-configuration-service')" ]
+  [ "$($KUBELOCKSS get pods | grep 'lockss-configuration-service')" ]
 }
 
 #

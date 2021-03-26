@@ -98,10 +98,10 @@ else
   done
 fi
 logger_info "Updating CoreDNS ConfigMap to use ${REPLACEMENT_STRING}..."
-microk8s kubectl get -n kube-system configmap/coredns -o yaml | sed -e "s|forward \. .*|forward \. ${REPLACEMENT_STRING}|" | microk8s kubectl apply -n kube-system -f -
+$KUBECTL get -n kube-system configmap/coredns -o yaml | sed -e "s|forward \. .*|forward \. ${REPLACEMENT_STRING}|" | $KUBECTL apply -n kube-system -f -
 
 echo "--------------------------------------------------------------------"
 echo "Successfully changed CoreDNS ConfigMap"
 # output the edited line for confirmation
-microk8s kubectl get -n kube-system configmap/coredns -o 'jsonpath={.data}' | grep forward
+$KUBECTL get -n kube-system configmap/coredns -o 'jsonpath={.data}' | grep forward
 echo "--------------------------------------------------------------------"

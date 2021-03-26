@@ -66,7 +66,7 @@ declare -a deploy_service_names
 declare -a svcs
 declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
-KUBECTL="microk8s kubectl -n lockss"
+KUBELOCKSS="$KUBECTL -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -197,7 +197,7 @@ check_installed_volumes() {
 wait_for_ready() {
   local wait_for_file=$1
   logger_info "Waiting for pods to be Ready..."
-  $KUBECTL wait --for=condition=Ready --all pods --timeout=90s | logger_info
+  $KUBELOCKSS wait --for=condition=Ready --all pods --timeout=90s | logger_info
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
     logger_debug "waiting for file: $wait_for_file"
     while [ ! -f $wait_for_file ]
@@ -220,8 +220,8 @@ deploy_stack() {
   logger_info "Deploying services and deployments for stack $stack"
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
-    $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
-#    $KUBECTL expose deployment $svc
+    $KUBELOCKSS apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
+#    $KUBELOCKSS expose deployment $svc
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null
