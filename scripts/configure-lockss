@@ -241,7 +241,7 @@ LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
-KUBECTL="${KUBECTL}"
+KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
@@ -472,12 +472,6 @@ build_config_file() {
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
       Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
-    # support for alternate kubectl command
-    if [ "X${KUBECTL}" = X ]; then
-      KUBECTL="${DEFAULT_KUBECTL}"
-    fi
-    ask_for_input "Command to use for kubectl" ${KUBECTL}
-    KUBECTL="${ANS}"
     # Configure the individual services
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
@@ -544,24 +538,10 @@ fi
 umask 002
 LOCKSS_USER="lockss"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
-DEFAULT_KUBECTL="microk8s kubectl"
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
 echo "-------------------------------------------------------------"
-echo "$(date) Checking system state..."
-
-# Sanity checks
-if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
-  Check_Runnable
-else
-  echo "Bypassing Check_Runnable and microk8s commands"
-  microk8s() {
-    echo "Bypassing microk8s, simulating success of"
-    echo "microk8s $*"
-    return 0
-  }
-fi
 
 case ${OS_TYPE} in
 Linux)
@@ -590,6 +570,27 @@ echo "For more information see README"
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
   msg "${_DO} Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
   read_config ${SYSTEM_CONF_FILE}
+fi
+# support for alternate kubectl command
+if [ "X${KUBECTL_CMD}" = X ]; then
+  KUBECTL_CMD="microk8s kubectl"
+fi
+ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
+KUBECTL_CMD="${ANS}"
+echo "Kubectl command alias set to $KUBECTL_CMD"
+
+echo "$(date) Checking system state..."
+
+# Sanity checks
+if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
+  Check_Runnable
+else
+  echo "Bypassing Check_Runnable and microk8s commands"
+  microk8s() {
+    echo "Bypassing microk8s, simulating success of"
+    echo "microk8s $*"
+    return 0
+  }
 fi
 
 #get the number of stacks

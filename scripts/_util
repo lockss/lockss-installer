@@ -45,7 +45,10 @@ UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
-
+# todo: move all KUBECTL commands to seperate file
+if [ -z "${KUBECTL}" ]; then
+  KUBECTL="microk8s kubectl"
+fi
 ##
 ## Logging and messaging utilities.
 ##
@@ -136,7 +139,6 @@ Check_Secret() {
 Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
-
   $KUBECTL delete secret "${NAME}" -n lockss &>/dev/null
   echo "Storing ${NAME} as a kubernetes secret .."
   if ! $KUBECTL create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then

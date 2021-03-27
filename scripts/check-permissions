@@ -48,6 +48,9 @@ declare -a arr svcs
 declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -185,10 +188,6 @@ trap "signal_exit INT" INT
 if [ ! -r "$SYSTEM_CONF_FILE" ]; then
   err_exit "$_0: The system configuration file does not exist.  Run scripts/configure-lockss."
 fi
-
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
 
 #init the logger and mark script entry
 logger_init

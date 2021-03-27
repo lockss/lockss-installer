@@ -57,7 +57,8 @@ set +a
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 
 STACK_PREFIX="lockss-stack"
-KUBELOCKSS='$KUBECTL -n lockss'
+KUBECTL="${KUBECTL_CMD}"
+KUBELOCKSS="${KUBECTL} -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
