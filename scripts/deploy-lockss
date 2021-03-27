@@ -178,7 +178,7 @@ check_installed_secrets() {
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
-  Check_Secret 'lockss-solr-pass'
+  Check_Secret 'solr-auth'
 }
 
 check_installed_volumes() {

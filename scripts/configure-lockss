@@ -177,10 +177,10 @@ configure_services() {
   ask_for_input "User name for LOCKSS SOLR access." "${LOCKSS_SOLR_USER}"
   LOCKSS_SOLR_USER=${ANS}
 
-  ask_for_password "Password for LOCKSS SOLR access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass
-"
+  ask_for_password "Password for LOCKSS SOLR access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
   LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
+      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
       Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
   fi
 
