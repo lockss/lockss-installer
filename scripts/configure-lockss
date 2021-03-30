@@ -180,8 +180,9 @@ configure_services() {
   ask_for_password "Password for LOCKSS SOLR access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
   LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
-      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
-      Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
+    LOCKSS_SOLR_HASH=$(Solr_Hash PASSWD_CLEAR)
+    Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${LOCKSS_SOLR_HASH}"
+    Add_Secret lockss-solr-pass "${LOCKSS_SOLR_HASH}"
   fi
 
   #check HDFS service
@@ -254,6 +255,7 @@ LOCKSS_SOLR_PORT=${LOCKSS_SOLR_PORT}
 LOCKSS_SOLR_CORE_REPO="${LOCKSS_SOLR_CORE_REPO}"
 LOCKSS_SOLR_USER="${LOCKSS_SOLR_USER}"
 LOCKSS_SOLR_PASSWD="${LOCKSS_SOLR_PASSWD}"
+LOCKSS_SOLR_HASH="${LOCKSS_SOLR_HASH}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"

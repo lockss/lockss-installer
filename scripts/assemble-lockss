@@ -300,7 +300,7 @@ check_stack_solr() {
   SOLR_FILE="${SOLR_HOME_PATH}/solr.xml"
   OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
   SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
-
+  SOLR_SECURITY_PLUGIN="security.json"
   logger_info "Checking solr installation at ${SOLR_HOME_PATH}..."
 
   if [ -d "${OLD_REPO}" ]; then
@@ -315,14 +315,12 @@ check_stack_solr() {
     tar -xzf "${UPDATES_DIR}/solr-home.tar.gz"-C "${SOLR_HOME_PATH}">/dev/null ||
       error_exit "Unable to install LOCKSS solr files, exiting..."
   fi
-  src_plugin_file="${UPDATES_DIR}/${SOLR_SECURITY_PLUGIN}"
+  src_plugin_file="${STACK_CONFIG_DIR}/${SOLR_SECURITY_PLUGIN}"
   dst_plugin_file="${SOLR_HOME_PATH}/${SOLR_SECURITY_PLUGIN}"
-  if [ ! -e $dst_plugin_file ]; then
-    logger_info "Enabling solr security plugin..."
-    ensure_writable_dir ${SOLR_HOME_PATH} ||
+  ensure_writable_dir ${SOLR_HOME_PATH} ||
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
-    cp $src_plugin_file $dst_plugin_file | logger_info
-  fi
+  cp "${src_plugin_file}" "${dst_plugin_file}" ||
+      error_exit "Unable to install solr security file exiting..."
 }
 
 # Create a mount points for each stack
