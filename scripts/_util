@@ -86,17 +86,6 @@ msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
 
-#Solr_Hash()
-#{
-#  Generate the Solr hasH+salt from
-# <script src="https://gist.github.com/rmalchow/51f5b23c2f59c687b001bfcdbf4bad5c.js"></script>
-#  requires pwgen and vim or vim-utils
-#}
-Solr_Hash() {
-  PW=${1}
-  SALT=$(pwgen 48 -1)
-  echo "$(echo -n "$SALT$PW" | sha256sum -b | xxd -r -p | sha256sum -b | xxd -r -p | base64 -w 1024) $(echo -n "$SALT" | base64 -w1024)"
-}
 #Check_Runnable()
 #{
 #  Check_Installed 'microk8s'
