@@ -179,6 +179,7 @@ check_installed_secrets() {
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
+  Check_Secret 'solr-auth'
 }
 
 check_installed_volumes() {
@@ -197,10 +198,10 @@ check_installed_volumes() {
 
 wait_for_ready() {
   local wait_for_file=$1
-  logger_info "Waiting for pods to be Ready..."
+  logger_info "Waiting for pods to be marked 'Ready'..."
   $KUBELOCKSS wait --for=condition=Ready --all pods --timeout=90s | logger_info
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
-    logger_debug "waiting for file: $wait_for_file"
+    logger_info "waiting for LOCKSS wait file..."
     while [ ! -f $wait_for_file ]
     do
       sleep 2
@@ -221,8 +222,8 @@ deploy_stack() {
   logger_info "Deploying services and deployments for stack $stack"
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
-    $KUBELOCKSS apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
-#    $KUBELOCKSS expose deployment $svc
+    $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
+#    $KUBECTL expose deployment $svc
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null

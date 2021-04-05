@@ -89,7 +89,6 @@ msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
 
-
 #Check_Runnable()
 #{
 #  Check_Installed 'microk8s'
