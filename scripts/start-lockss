@@ -118,30 +118,32 @@ log_script_entry "${PROGNAME}"
 
 ARGS_ADDITIONAL=""
 # Parse command-line
-while [[ -n $1 ]]; do
+while [[ $# -gt 0 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
       logger_info "Forcing update of LOCKSS docker images"
+      shift
       ;;
     -w | --wait)
       WAIT_ARG="-w"
       logger_info "Setting wait for file on deploy."
+      shift
       ;;
     -a | --args)
-      shift
-      export ARGS_ADDITIONAL="$1"
+      export ARGS_ADDITIONAL="$2"
       logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
+      shift; shift
     ;;
     -* | --*)
       usage
       error_exit "Unknown option $1" ;;
     *)
       logger_trace "Argument $1 to process..." ;;
+      shift
   esac
-  shift
 done
 
 # Main logic

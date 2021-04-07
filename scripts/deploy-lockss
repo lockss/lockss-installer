@@ -245,17 +245,16 @@ NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 ARGS_ADDITIONAL=""
 # Parse command-line
-while [[ -n $1 ]]; do
-  case $1 in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
   -h | --help)
     help_message
     graceful_exit
     ;;
   -a | --args)
-    shift
-    export ARGS_ADDITIONAL="$1"
+    export ARGS_ADDITIONAL="$2"
     logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
-    shift
+    shift; shift
     ;;
   -w | --wait)
     CHECK_WAIT_FILE="TRUE"
@@ -264,6 +263,7 @@ while [[ -n $1 ]]; do
     ;;
   [1-9])
     STACK_NUM=$1
+    shift
     ;;
   -* | --*)
     usage
@@ -271,10 +271,11 @@ while [[ -n $1 ]]; do
     ;;
   *)
     logger_trace "Argument $1 to process..."
+    shift
     ;;
   esac
-  shift
 done
+
 # Sanity checks
 logger_info "Checking system..."
 
