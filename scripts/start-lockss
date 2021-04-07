@@ -141,8 +141,9 @@ while [[ $# -gt 0 ]]; do
       usage
       error_exit "Unknown option $1" ;;
     *)
-      logger_trace "Argument $1 to process..." ;;
+      logger_trace "Argument $1 to process..."
       shift
+      ;;
   esac
 done
 
