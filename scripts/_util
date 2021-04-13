@@ -45,10 +45,7 @@ UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
-# todo: move all KUBECTL commands to seperate file
-if [ -z "${KUBECTL}" ]; then
-  KUBECTL="microk8s kubectl"
-fi
+
 ##
 ## Logging and messaging utilities.
 ##
@@ -91,17 +88,16 @@ msg() {
 
 #Check_Runnable()
 #{
-#  Check_Installed 'microk8s'
+#  Check for an available kubernetes node.
 #  Create Namespace
 #}
 Check_Runnable() {
   Check_LOCKSS_User
-  Check_Installed 'microk8s'
-  if ! microk8s status | grep -q "microk8s is running"; then
-    err_exit "microk8s is not running. Please run: microk8s start"
+  if ! $KUBECTL get node | grep -q "Ready"; then
+    err_exit "No available kubernetes node. Please start kubernetes node"
   fi
   if ! $KUBECTL get namespace "lockss" &>/dev/null; then
-    $KUBECTL create namespace "lockss" >/dev/null
+    $KUBECTL create namespace "lockss" >/dev/null || err_exit "Unable to create lockss namespace."
   fi
 }
 
