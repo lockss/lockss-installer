@@ -101,6 +101,15 @@ Check_Runnable() {
   fi
 }
 
+Check_Configured() {
+  Check_VarDef "LOCKSS_SOLR_USER"
+  Check_VarDef "LOCKSS_SOLR_PASSWD"
+  Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
+  Check_VarDef "KUBECTL_CMD"
+#TODO: Add container subnet change check
+}
+
 Check_LOCKSS_User() {
   if ! id "lockss" >/dev/null; then
     err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
@@ -126,6 +135,14 @@ Check_Secret() {
     err_exit "Run scripts/configure-lockss."
   fi
 
+}
+
+Check_VarDef() {
+  local env_var="${1}"
+  if [ -z "$env_var" ]; then
+      err "$env_var is not defined."
+      err_exit "Run scripts/configure-lockss to assign value."
+  fi
 }
 
 ##

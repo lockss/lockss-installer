@@ -166,6 +166,7 @@ done
 
 # Sanity checks
 Check_Runnable
+Check_Configured
 
 if [[ ${STACK_NUM} -eq 0 ]]; then
   undeploy_stack ""
