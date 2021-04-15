@@ -38,6 +38,11 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
+if [ -n "${BYPASS_ALL_CHECKS}" ]; then
+  BYPASS_CHECK_USER=1
+  BYPASS_KUBE_COMMANDS=1
+fi
+
 ##
 ## Relative paths
 ##
@@ -217,6 +222,25 @@ configure_services() {
   fi
 }
 
+# find os release name
+os_release_name() {
+  if [ -f /etc/os-release ]; then
+    OS_NAME=$(grep '^PRETTY_NAME=' /etc/os-release)
+    OS_NAME=$(echo "${OS_NAME}" | sed -e 's/.*=//')
+    if [ -z "${OS_NAME}" ]; then
+      OS_NAME=$(grep '^NAME=' /etc/os-release)
+      OS_NAME=$(echo "${OS_NAME}" | sed -e 's/.*=//')
+      OS_VER=$(grep '^VERSION=' /etc/os-release)
+      OS_VER=$(echo "${OS_VER}" | sed -e 's/.*=//')
+      if [ -n "${OS_NAME}" -o -n "${OS_VER}" ]; then
+        OS_NAME="${OS_NAME} ${OS_VER}"
+      fi
+    fi
+    OS_NAME=$(echo "${OS_NAME}" | sed -e 's/"//g')
+    echo "${OS_NAME}"
+  fi
+}
+
 # write_config_file file
 write_config_file() {
   cat >"${1}" <<EOF
@@ -271,6 +295,10 @@ USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
 EOF
+  OS_NAME="$(os_release_name)"
+  if [ -n "${OS_NAME}" ]; then
+    echo "OS_NAME=\"${OS_NAME}\"" >>"${1}"
+  fi
 }
 # build_config_file file user
 build_config_file() {
@@ -533,14 +561,22 @@ build_config_file() {
       CONFIG_OK=Y
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-      if ! mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-        echo "The attempt to mail configuration failed.  Please check your mail configuration."
+      mail_sent=""
+      if [ $(command -v mail) >/dev/null ]; then
+        if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+          mail_sent=1
+        else
+          echo "The attempt to mail configuration failed.  Please check your mail configuration."
+        fi
+      else
+        echo "The 'mail' command isn't installed (or isn't on the PATH)."
+      fi
+      if [ -z "${mail_sent}" ]; then
         UNSENT_FILE=/tmp/unsent-lockss-config
         cp ${FILT_CONFIG} ${UNSENT_FILE}
-        echo "Please also send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+        echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
       fi
       rm -f ${FILT_CONFIG}
-
     fi
   done
 }
@@ -549,6 +585,14 @@ build_config_file() {
 # Start
 ###
 CONFIG_USER=$(whoami)
+
+# While this script is inherently able to create a configuration for any
+# user, the rest of the Kubernetes-based infrastructure currently runs the
+# containers as lockss, so that's enforced here as well.
+if [ -z "${BYPASS_CHECK_USER}" -a "${CONFIG_USER}" != "lockss" ]; then
+  err_exit "${0} must be run as the 'lockss' user."
+fi
+
 OS_TYPE=$(uname -s)
 if [ -z "${LOCKSS_TEAM}" ]; then
   LOCKSS_TEAM=lockssdiag@lockss.org
@@ -603,15 +647,17 @@ KUBELOCKSS="${KUBECTL_CMD} -n lockss"
 echo "$(date) Checking system state..."
 
 # Sanity checks
-if [ -z "${BYPASS_CHECK_RUNNABLE}" ]; then
+if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
   Check_Runnable
 else
   echo "Bypassing Check_Runnable and KUBECTL commands"
-  kubectl() {
+  not_kubectl() {
     echo "Bypassing kubectl, simulating success of"
     echo "kubectl $*"
     return 0
   }
+  export KUBECTL=not_kubectl
+  export KUBELOCKSS=not_kubectl
 fi
 
 #get the number of stacks
