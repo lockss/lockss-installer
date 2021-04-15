@@ -54,6 +54,8 @@ set +a
 
 UPDATE_ARG=""
 WAIT_ARG=""
+KUBECTL="${KUBECTL_CMD}"
+KUBELOCKSS="${KUBECTL_CMD} -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
