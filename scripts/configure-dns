@@ -40,7 +40,9 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
-."${CONFIG_DIR}/system.cfg"
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 ##
 ## Definitions
