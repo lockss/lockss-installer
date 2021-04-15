@@ -559,7 +559,7 @@ build_config_file() {
       rm -f ${TMP_CONFIG}
       echo Done
       CONFIG_OK=Y
-      FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXX)
+      FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
       if [ $(command -v mail) >/dev/null ]; then
