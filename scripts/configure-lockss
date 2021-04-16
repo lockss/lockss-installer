@@ -635,7 +635,13 @@ if [ -r "${SYSTEM_CONF_FILE}" ]; then
 fi
 # support for alternate kubectl command
 if [ "X${KUBECTL_CMD}" = X ]; then
-  KUBECTL_CMD="sudo k3s kubectl"
+  if kubepath=$(command -v k3s); then
+    KUBECTL_CMD="sudo ${kubepath} kubectl"
+  elif kubepath=$(command -v microk8s); then
+    KUBECTL_CMD="${kubepath} kubectl"
+  elif kubepath=$(command -v kubectl); then
+    KUBECTL_CMD="${kubepath}"
+  fi
 fi
 
 ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
