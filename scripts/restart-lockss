@@ -144,7 +144,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
   esac
-  shift
 done
 
 # Main logic
