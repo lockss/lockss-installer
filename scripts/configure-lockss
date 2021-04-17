@@ -637,10 +637,13 @@ fi
 if [ "X${KUBECTL_CMD}" = X ]; then
   if kubepath=$(command -v k3s); then
     KUBECTL_CMD="sudo ${kubepath} kubectl"
+    K8S_FLAVOR=k3s
   elif kubepath=$(command -v microk8s); then
     KUBECTL_CMD="${kubepath} kubectl"
+    K8S_FLAVOR=microk8s
   elif kubepath=$(command -v kubectl); then
     KUBECTL_CMD="${kubepath}"
+    K8S_FLAVOR=k8s
   fi
 fi
 
@@ -648,7 +651,6 @@ ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
 KUBECTL_CMD="${ANS}"
 echo "Kubectl command alias set to $KUBECTL_CMD"
 KUBECTL="${KUBECTL_CMD}"
-KUBELOCKSS="${KUBECTL_CMD} -n lockss"
 
 echo "$(date) Checking system state..."
 
@@ -662,8 +664,7 @@ else
     echo "kubectl $*"
     return 0
   }
-  export KUBECTL=not_kubectl
-  export KUBELOCKSS=not_kubectl
+  export KUBECTL_CMD=not_kubectl
 fi
 
 #get the number of stacks

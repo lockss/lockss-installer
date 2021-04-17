@@ -56,9 +56,6 @@ set -a
 . "${CONFIG_DIR}/system.cfg"
 set +a
 
-KUBECTL="${KUBECTL_CMD}"
-KUBELOCKSS="${KUBECTL} -n lockss"
-
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
@@ -138,10 +135,10 @@ done
 if [[ $# -eq 0 ]]; then
   # Make sure we stop any running service by calling remove all stacks
   "${SCRIPTS_DIR}"/stop-lockss
-  if $KUBECTL get namespace "lockss" >/dev/null; then
-    $KUBELOCKSS delete svc,deployments,pods,pvc,secrets,configmaps --all | logger_debug
+  if kubectl_cmd get namespace "lockss" >/dev/null; then
+    kubectl_lockss delete svc,deployments,pods,pvc,secrets,configmaps --all | logger_debug
   fi
-  $KUBECTL delete pv -l app=lockss | logger_debug
+  kubectl_cmd delete pv -l app=lockss | logger_debug
   logger_info ""
   logger_info "Successfully removed all running service and removed all installed data."
   logger_info "You will need to rerun configure-lockss and start-lockss to run again."
