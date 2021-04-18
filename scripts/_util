@@ -159,9 +159,9 @@ Check_VarDef() {
 }
 
 ##
-## Add a kubernetes secret, deleting existing secret if it exists.
+## Store a kubernetes secret, deleting existing secret if it exists.
 ##
-Add_Secret() {
+Store_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
   kubectl_cmd delete secret "${NAME}" -n lockss &>/dev/null
@@ -173,30 +173,30 @@ Add_Secret() {
   fi
 }
 
-declare -A queued_secrets
+declare -A secrets_to_store
 
 ##
-## Queue a kubernetes secret to be added later
+## Remember a kubernetes secret to be stored later
 ##
-Queue_Secret() {
+Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
-  queued_secrets["${NAME}"]="${VALUE}"
+  secrets_to_store["${NAME}"]="${VALUE}"
 }
 
 ##
-## Clear the queued secrets array
+## Clear the saved secrets array
 ##
-Clear_Queued_Secrets() {
-  queued_secrets=()
+Clear_Secrets() {
+  secrets_to_store=()
 }
 
 ##
-## Add all the queued secrets to k8s
+## Store the secrets to k8s
 ##
-Add_Queued_Secrets() {
-  for x in ${!queued_secrets[@]}; do
-    Add_Secret "${x}" "${queued_secrets[${x}]}"
+Store_All_Secrets() {
+  for x in ${!secrets_to_store[@]}; do
+    Store_Secret "${x}" "${secrets_to_store[${x}]}"
   done
 }
 
