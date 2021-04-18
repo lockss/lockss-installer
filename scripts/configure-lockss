@@ -659,12 +659,11 @@ if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
   Check_Runnable
 else
   echo "Bypassing Check_Runnable and KUBECTL commands"
-  not_kubectl() {
-    echo "Bypassing kubectl, simulating success of"
-    echo "kubectl $*"
+  kubectl_cmd() {
+    echo "Bypassing kubectl, simulating success of" >&2
+    echo "kubectl $*" >&2
     return 0
   }
-  export KUBECTL_CMD=not_kubectl
 fi
 
 #get the number of stacks
