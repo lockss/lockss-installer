@@ -303,6 +303,7 @@ EOF
 # build_config_file file user
 build_config_file() {
   echo "Building config file info ${1} for user ${2}..."
+  Clear_Queued_Secrets
   CONFIG_OK=N
   until is_yes ${CONFIG_OK}; do
     if [ "X${LOCKSS_HOSTNAME}" = X ]; then
