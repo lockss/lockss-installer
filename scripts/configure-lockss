@@ -139,7 +139,7 @@ configure_services() {
   ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
   LOCKSS_DB_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
-      Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
+      Queue_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
   #check Solr service
@@ -186,8 +186,8 @@ configure_services() {
   LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
     LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
-    Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
-    Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
+    Queue_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
+    Queue_Secret lockss-solr-pass "${PASSWD_CLEAR}"
   fi
 
   #check HDFS service
@@ -515,8 +515,8 @@ build_config_file() {
     ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
     LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
     if [ -n "${PASSWD_CLEAR}" ]; then
-      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
-      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
+      Queue_Secret lockss-ui-pass "${PASSWD_CLEAR}"
+      Queue_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
     # Configure the individual services
     configure_services
@@ -534,6 +534,7 @@ build_config_file() {
         echo "Config not installed, left in ${TMP_CONFIG}"
         exit 1
       fi
+      Add_Queued_Secrets
       echo "Checking content storage directory(s)"
       for dir in "${curPaths[@]}"; do
         if ! init_one_dir ${dir} $2 750; then

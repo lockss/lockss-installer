@@ -173,6 +173,33 @@ Add_Secret() {
   fi
 }
 
+declare -A queued_secrets
+
+##
+## Queue a kubernetes secret to be added later
+##
+Queue_Secret() {
+  local NAME="${1}"
+  local VALUE="${2}"
+  queued_secrets["${NAME}"]="${VALUE}"
+}
+
+##
+## Clear the queued secrets array
+##
+Clear_Queued_Secrets() {
+  queued_secrets=()
+}
+
+##
+## Add all the queued secrets to k8s
+##
+Add_Queued_Secrets() {
+  for x in ${!queued_secrets[@]}; do
+    Add_Secret "${x}" "${queued_secrets[${x}]}"
+  done
+}
+
 ##
 ## Check for an installed lockss secret, return 0 if found 1 otherwise.
 ##
