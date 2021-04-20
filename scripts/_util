@@ -343,10 +343,13 @@ read_config() {
 }
 
 ask_for_input() {
-  echo -n "$1: [$2] "
+  case "${1}" in
+    *\?) echo -n "${1} [${2}] "  ;;
+    *)   echo -n "${1}: [${2}] " ;;
+  esac
   read ANS
-  if [ "X${ANS}" = "X" ]; then
-    ANS=$2
+  if [ -z "${ANS}" ]; then
+    ANS="${2}"
   fi
 }
 
