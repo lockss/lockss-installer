@@ -179,10 +179,10 @@ configure_services() {
   if [ "X${LOCKSS_SOLR_USER}" = X ]; then
       LOCKSS_SOLR_USER=${LOCKSS_ADMIN_USER}
   fi
-  ask_for_input "User name for LOCKSS SOLR access" "${LOCKSS_SOLR_USER}"
+  ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}"
   LOCKSS_SOLR_USER=${ANS}
 
-  ask_for_password "Password for LOCKSS SOLR access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
+  ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
   LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
     LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
@@ -201,7 +201,7 @@ configure_services() {
   #        USE_LOCKSS_HDFS=false
   #    fi
   echo "You can use Pywb and/or Openwayback for content replay..."
-  ask_for_input "Use LOCKSS PyWb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
+  ask_for_input "Use LOCKSS Pywb Service?" $(to_yes_no ${USE_LOCKSS_PYWB})
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
   else
@@ -373,7 +373,7 @@ build_config_file() {
     if [ "X${LOCKSS_PROXY_PORT}" = X ]; then
       LOCKSS_PROXY_PORT=24670
     fi
-    ask_for_input "PROXY port" ${LOCKSS_PROXY_PORT}
+    ask_for_input "Proxy port" ${LOCKSS_PROXY_PORT}
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_PROXY_PORT="${ANS}"
     fi
@@ -389,7 +389,7 @@ build_config_file() {
     if [ "X${LOCKSS_MAILHUB_USER}" != X ]; then
       NEED_USER=Y
     fi
-    ask_for_input "Does mail relay ${LOCKSS_MAILHUB} need user & password" ${NEED_USER}
+    ask_for_input "Does the mail relay ${LOCKSS_MAILHUB} need a username and password?" ${NEED_USER}
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
       LOCKSS_MAILHUB_USER="${ANS}"
@@ -458,7 +458,7 @@ build_config_file() {
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
     repoDirs[0]="/data"
-    ask_for_input "Use additional directories for content storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
+    ask_for_input "Use additional directories for content data storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
     if is_yes "${ANS}"; then
       count=1
       until is_yes "${done}"; do
