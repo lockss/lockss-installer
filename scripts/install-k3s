@@ -58,12 +58,15 @@ _D0=$(dirname "${0}")
 USE_RESOLV_CONF=Y
 SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
 RESOLV_CONF="/etc/resolv.conf"
+LOCKSS_ETC_DIR="/etc/lockss"
+LOCKSS_RESOLV_CONF="$LOCKSS_ETC_DIR/resolv.conf"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
 LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$'
 RESOLVE_CONF_CONFIG=""
 K8S_VERSION="1.20"
 K8S_CHANNEL="stable"
+K3S_VERSION="v1.20.6+k3s1"
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -148,24 +151,24 @@ configure_resolv_conf() {
       fi
     done
     IFS=';' read -r -a nameservers <<<"${ns_address}"
+
     src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
-    dst="${CONFIG_DIR}/resolv.conf"
+    sudo mkdir -p ${LOCKSS_ETC_DIR || error_exit "Unable to create directory: ${LOCKSS_ETC_DIR}"
+    dst="${LOCKSS_ETC_DIR}/resolv.conf"
     echo "Rendering ${src} to ${dst}..."
-    mo "${src}" >"${dst}"
-    RESOLVE_CONF_CONFIG="--resolv-conf ${dst}"
+    sudo {LIB_DIR}/mo "${src}" >"${dst}"
+    RESOLVE_CONF_CONFIG="K3S_RESOLV_CONF=${dst}"
   fi
 }
 
 install_k3s() {
-echo "${PROGNAME}: Using ${K8S_CHANNEL} channel of kubernetes version ${K8S_VERSION}..."
-sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K8S_VERSION} INSTALL_K3S_CHANNEL=${K8S_CHANNEL} sh -s
-echo "${PROGNAME}: Installing and starting k3s..."
-sudo curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644 --disable traefik --with-node-id \
-    ${RESOLVE_CONF_CONFIG}
+echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 $RESOLVE_CONF_CONFIG sh -s - --disable traefik
+
 }
 
 check_k3s() {
-  if sudo k3s check-config; then
+  if k3s check-config; then
     echo "The configuration check completed successfully."
   else
     echo "The configuration check failed a test, please fix before running the lockss stack."
@@ -177,7 +180,9 @@ write_config() {
 K8S_FLAVOR="k3s"
 K8S_VERSION="${K8S_VERSION}"
 K8S_CHANNEL="${K8S_CHANNEL}"
+K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="$(command -v k3s) kubectl"
+RESOLVE_CONF_CONFIG
 EOF
 }
 ##
@@ -205,6 +210,9 @@ while [[ -n $1 ]]; do
   esac
   shift
 done
+if $(am_i_root); then
+  error_exit "This script should not be run as root. Run as the lockss user."
+fi
 
 echo "${PROGNAME}: Setting resolv.conf for container dns usage..."
 configure_resolv_conf || error_exit "Unable obtain valid resolv.conf information."

@@ -285,8 +285,8 @@ add_stack_shared() {
   kubectl_lockss delete deployments -l lockss-stack-id=${stack} | logger_debug
   logger_debug "Clearing old  configuration maps..."
   kubectl_lockss delete configmaps --all | logger_debug
-  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
-  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
+#  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
+#  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 }
 
 check_stack_solr() {
@@ -426,7 +426,7 @@ generate_lockss() {
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
-    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+#    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
     for f in ${MK_DIR}/*.mustache; do
       src="${f}"
       dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
