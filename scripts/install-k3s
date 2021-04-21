@@ -148,7 +148,7 @@ configure_resolv_conf() {
       fi
     done
     IFS=';' read -r -a nameservers <<<"${ns_address}"
-    src="${CONFIG_DIR}/k3s/resolv.conf.mustache"
+    src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
     dst="${CONFIG_DIR}/resolv.conf"
     echo "Rendering ${src} to ${dst}..."
     mo "${src}" >"${dst}"
