@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+#---------------------------------------------------------------------------
+# k3s-installers - Collect configuration information to build config and
+# resolv.conf file before calling the k3s installer.
+# Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors10.233.231.99
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: configure-lockss [-h|--help] [-s|--stacks]
+#
+# Revision history:
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util and mustache template support
+##
+
+. "${_D0}/_util"
+. "${_D0}/lib/mo"
+
+##
+## Definitions
+##
+USE_RESOLV_CONF=Y
+SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
+RESOLV_CONF="/etc/resolv.conf"
+K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
+
+LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$'
+RESOLVE_CONF_CONFIG=""
+K8S_VERSION="1.20"
+K8S_CHANNEL="stable"
+
+clean_up() { # Perform pre-exit housekeeping
+  return
+}
+
+error_exit() {
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<-_EOF_
+  $PROGNAME ver. $VERSION
+  Deploy the lockss stacks to docker.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+_EOF_
+  return
+}
+
+configure_resolv_conf() {
+  # examine the local resolv.conf for loopback address
+  if grep -E -i -q "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
+    if [ -f "$SYSD_RESOLV_CONF" ]; then
+      if grep -E -i -q "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
+        USE_RESOLV_CONF=N
+      fi
+    else
+      USE_RESOLV_CONF=N
+    fi
+  fi
+  ns_address=""
+  if ! is_yes ${USE_RESOLV_CONF}; then
+    echo "The /etc/resolv.conf file in your system contains a loopback address."
+    echo "CoreDNS does not allow a loopback address to be assigned to pods."
+    echo "Please enter a list of IP addresses of upstream DNS resolvers."
+    IP_OK=N
+    until is_yes ${IP_OK}; do
+      ask_for_input "IP address(es) for DNS lookup, separated by ';'" ${DEFAULT_IP_LIST}
+      OK_CNT=0
+      IFS=';' read -r -a ip_arr <<<"${ANS}"
+      len=${#ip_arr[@]}
+      for ip in "${ip_arr[@]}"; do
+        if ! valid_ip_address "${ip}"; then
+          err "${ip} is not a valid IP address."
+          break
+        else
+          OK_CNT=$((OK_CNT + 1))
+          ns_address+=";${ip}"
+        fi
+      done
+      if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
+        IP_OK=Y
+      fi
+    done
+    IFS=';' read -r -a nameservers <<<"${ns_address}"
+    src="${CONFIG_DIR}/k3s/resolv.conf.mustache"
+    dst="${CONFIG_DIR}/resolv.conf"
+    echo "Rendering ${src} to ${dst}..."
+    mo "${src}" >"${dst}"
+    RESOLVE_CONF_CONFIG="--resolv-conf ${dst}"
+  fi
+}
+
+install_k3s() {
+echo "${PROGNAME}: Using ${K8S_CHANNEL} channel of kubernetes version ${K8S_VERSION}..."
+sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K8S_VERSION} INSTALL_K3S_CHANNEL=${K8S_CHANNEL} sh -s
+echo "${PROGNAME}: Installing and starting k3s..."
+sudo curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644 --disable traefik --with-node-id \
+    ${RESOLVE_CONF_CONFIG}
+}
+
+check_k3s() {
+  if sudo k3s check-config; then
+    echo "The configuration check completed successfully."
+  else
+    echo "The configuration check failed a test, please fix before running the lockss stack."
+  fi
+}
+
+write_config() {
+  cat >"${1}" <<EOF
+K8S_FLAVOR="k3s"
+K8S_VERSION="${K8S_VERSION}"
+K8S_CHANNEL="${K8S_CHANNEL}"
+KUBECTL_CMD="$(command -v k3s) kubectl"
+EOF
+}
+##
+## MAIN
+##
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+umask 002
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    logger_debug "Argument $1 to process..."
+    ;;
+  esac
+  shift
+done
+
+echo "${PROGNAME}: Setting resolv.conf for container dns usage..."
+configure_resolv_conf || error_exit "Unable obtain valid resolv.conf information."
+echo "${PROGNAME}: Installing k3s kubernetes..."
+install_k3s || error_exit "Attempt to install k3s failed."
+echo "${PROGNAME}: Running k3s system check..."
+check_k3s || error_exit "System check failed run 'sudo k3s check_config' for details."
+echo "${PROGNAME}: Writing configurgation file..."
+write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
+
