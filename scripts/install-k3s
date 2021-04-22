@@ -153,7 +153,7 @@ configure_resolv_conf() {
     IFS=';' read -r -a nameservers <<<"${ns_address}"
 
     src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
-    sudo mkdir -p ${LOCKSS_ETC_DIR || error_exit "Unable to create directory: ${LOCKSS_ETC_DIR}"
+    sudo mkdir -p ${LOCKSS_ETC_DIR}
     dst="${LOCKSS_ETC_DIR}/resolv.conf"
     echo "Rendering ${src} to ${dst}..."
     sudo {LIB_DIR}/mo "${src}" >"${dst}"
