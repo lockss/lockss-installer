@@ -126,44 +126,45 @@ configure_resolv_conf() {
       USE_RESOLV_CONF=N
     fi
   fi
-  ns_address=""
+  declare -a nameservers
   if ! is_yes ${USE_RESOLV_CONF}; then
     echo "The /etc/resolv.conf file in your system contains a loopback address."
     echo "CoreDNS does not allow a loopback address to be assigned to pods."
     echo "Please enter a list of IP addresses of upstream DNS resolvers."
-    IP_OK=N
+    local IP_OK=N
     until is_yes ${IP_OK}; do
       ask_for_input "IP address(es) for DNS lookup, separated by ';'" ${DEFAULT_IP_LIST}
-      OK_CNT=0
+      local OK_CNT=0
       IFS=';' read -r -a ip_arr <<<"${ANS}"
-      len=${#ip_arr[@]}
+      local len=${#ip_arr[@]}
       for ip in "${ip_arr[@]}"; do
         if ! valid_ip_address "${ip}"; then
           err "${ip} is not a valid IP address."
           break
         else
           OK_CNT=$((OK_CNT + 1))
-          ns_address+=";${ip}"
+          nameservers+=("${ip}")
         fi
       done
       if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
         IP_OK=Y
       fi
     done
-    IFS=';' read -r -a nameservers <<<"${ns_address}"
 
     src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
     sudo mkdir -p ${LOCKSS_ETC_DIR}
-    dst="${LOCKSS_ETC_DIR}/resolv.conf"
+    dst="${CONFIG_DIR}/resolv.conf"
     echo "Rendering ${src} to ${dst}..."
-    sudo {LIB_DIR}/mo "${src}" >"${dst}"
-    RESOLVE_CONF_CONFIG="K3S_RESOLV_CONF=${dst}"
+    mo "${src}" > "${dst}"
+    echo "Moving file to ${LOCKSS_RESOLV_CONF}"
+    sudo cp ${dst} ${LOCKSS_RESOLV_CONF}
+    RESOLVE_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
   fi
 }
 
 install_k3s() {
 echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
-curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 $RESOLVE_CONF_CONFIG sh -s - --disable traefik
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLVE_CONF_CONFIG}
 
 }
 
