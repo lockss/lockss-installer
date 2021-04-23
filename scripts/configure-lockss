@@ -61,6 +61,7 @@ _D0=$(dirname "${0}")
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
 configure_services() {
   echo ""
@@ -636,6 +637,10 @@ if [ -r "${SYSTEM_CONF_FILE}" ]; then
   read_config ${SYSTEM_CONF_FILE}
 fi
 # support for alternate kubectl command
+if [ -r "${K8S_CONF_FILE}" ]; then
+  msg "${_DO} Setting defaults from existing config: ${K8S_CONF_FILE}"
+  read_config ${K8S_CONF_FILE}
+fi
 if [ "X${KUBECTL_CMD}" = X ]; then
   if kubepath=$(command -v k3s); then
     KUBECTL_CMD="sudo ${kubepath} kubectl"
