@@ -351,10 +351,18 @@ build_config_file() {
         SUBNET_OK=Y
       fi
     done
-  LOCKSS_CONTAINER_SUBNET=$(ip -4 -o addr show dev cni0| awk '{split($4,a,"/");print a[1]}')
-  if [ "X${LOCKSS_CONTAINER_SUBNETS}" = "X" ]; then
-      LOCKSS_CONTAINER_SUBNETS=$(echo ${LOCKSS_CONTAINER_SUBNET} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-  else
+
+    CNI0_ADDR=$(ip -4 -o addr show dev cni0| awk '{split($4,a,"/");print a[1]}')
+    CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+    if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
+      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+    elif [ "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
+      echo "Container subnet appears to have changed from ${LOCKSS_CONTAINER_SUBNETS} to ${CNI0_SUBNET}"
+      ask_for_input "Do you want to use the new subnet?" Y
+      if is_yes "${ANS}"; then
+        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+      fi
+    fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
       ask_for_input "LOCKSS subnet for container access" ${LOCKSS_CONTAINER_SUBNETS}
@@ -363,7 +371,6 @@ build_config_file() {
         SUBNET_OK=Y
       fi
     done
-  fi
     if [ "X${LOCKSS_V3_PORT}" = X ]; then
       LOCKSS_V3_PORT=9729
     fi
