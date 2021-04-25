@@ -356,22 +356,22 @@ build_config_file() {
     CNI0_ADDR=$(ip -4 -o addr show dev cni0 | awk '{split($4,a,"/");print a[1]}')
     CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
     if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
-        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
     elif [ "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
-        # The current value isn't what we would choose
-        if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
-            # It matches the previous CNI0 subnet, use new one by default
-            echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
-            LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-        elif [ -z "${PREV_CNI0_SUBNET}" ]; then
-            # No record of previous CNI0_SUBNET, can't tell whether it
-            # changed or user previously entered a different subnet
-            echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
-            ask_for_input "Do you want to change it?" Y
-            if is_yes "${ANS}"; then
-                LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-            fi
+      # The current value isn't what we would choose
+      if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
+        # It matches the previous CNI0 subnet, use new one by default
+        echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
+        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+      elif [ -z "${PREV_CNI0_SUBNET}" ]; then
+        # No record of previous CNI0_SUBNET, can't tell whether it
+        # changed or user previously entered a different subnet
+        echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
+        ask_for_input "Do you want to change it?" Y
+        if is_yes "${ANS}"; then
+          LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
         fi
+      fi
     fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
