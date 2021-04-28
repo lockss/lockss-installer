@@ -220,8 +220,7 @@ ensure_writable_dir() {
   if [ $USER -eq ${LOCKSS_UID} ]; then
      return 0
   else
-    logger_warn "${DIR} is not writable by ${LOCKSS_USER}; attempting to chown it."
-    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}"
+    error_exit "${DIR} is not writable by ${LOCKSS_USER}. Run scripts/fix-permissions."
   fi
 }
 
@@ -231,17 +230,17 @@ ensure_lockss_owner() {
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     logger_debug "Checking files in $data_dir"
     if ! find "${data_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      error_exit "${data_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+      error_exit "${data_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
     fi
     logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
     logger_debug "Checking files in $logs_dir"
     if ! find "${logs_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+      error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
     fi
     tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     logger_debug "Checking files in $tmp_dir"
     if ! find "${tmp_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/check-permissions"
+      error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
     fi
   done
 }
