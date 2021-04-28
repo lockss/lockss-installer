@@ -141,14 +141,14 @@ init_service_arrays() {
 }
 
 ensure_writable_dir() {
-  local DIR="$1"
-  local USER=$(stat -c '%u' ${DIR})
-  local GROUP=$(stat -c '%g' ${DIR})
-  if (($USER -eq ${LOCKSS_UID})) ; then
+  local dir="$1"
+  local user=$(stat -c '%u' ${DIR})
+  local group=$(stat -c '%g' ${DIR})
+  if (($user == ${LOCKSS_UID})) ; then
      return 0
   else
-    logger_warn "${DIR} is not writable by $LOCKSS_USER; attempting to chown it."
-    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${DIR}" || error_exit "Unable to chown ${DIR}"
+    logger_warn "${dir} is not writable by $LOCKSS_USER; attempting to chown it."
+    sudo chown -R ${LOCKSS_UID}:${LOCKSS_GID} "${dir}" || error_exit "Unable to chown ${DIR}"
   fi
 }
 
@@ -158,7 +158,6 @@ ensure_lockss_owner() {
   set -a
   . "${stack_env_file}"
   set +a
-
 
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
@@ -174,6 +173,15 @@ ensure_lockss_owner() {
       data_dir="${datadirs[$cnt]}/$stack-repo-data"
       sudo find "${data_dir}" \! -user ${LOCKSS_UID} | xargs -0 -I{} -P3 -- sudo chown ${LOCKSS_UID}:${LOCKSS_GID} {} | logger_info
     done
+  done
+}
+
+fix_directory_permissions() {
+  local stack=${STACK_PREFIX}$1
+  for svc in "${svcs[@]}"; do
+    sudo chmod -R 750 "${LOCKSS_DATA_DIR}/$stack-${svc}-data"
+    sudo chmod -R 750 "${LOCKSS_LOGS_DIR}/$stack-${svc}-logs"
+    sudo chmod -R 1777 "${LOCKSS_TMPDIR}/$stack-${svc}-tmp"
   done
 }
 
@@ -215,11 +223,14 @@ if [ ${NUM_STACKS} -eq 0 ]; then
   logger_error "No information found for stacks.  Run scripts/configure-lockss and scripts/assemble-lockss."
 elif [ ${NUM_STACKS} -eq 1 ]; then
   ensure_lockss_owner ""
+  fix_directory_permissions ""
 elif [ ${STACK_NUM} -eq 0 ]; then
   logger_info "Checking ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   ensure_lockss_owner ""
-  for ((num = 1; num < $NUM_STACKS; num++)); do
+  fix_directory_permissions ""
+ for ((num = 1; num < $NUM_STACKS; num++)); do
     ensure_lockss_owner $num
+    fix_directory_permissions $num
   done
 fi
 
