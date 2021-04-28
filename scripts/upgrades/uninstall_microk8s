@@ -108,9 +108,13 @@ uninstall_snap() {
     sudo apk del snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
     ;;
     "centos" | "fedora")
-    sudo yum erase snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    if [ ${VERSION_ID} -ge 8 ]; then
+      sudo dnf remove snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    else
+      sudo yum erase snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    fi
     ;;
-    "debian" | "ubuntu")
+    "debian")
     sudo apt purge snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
     ;;
     "arch")
