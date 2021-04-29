@@ -72,7 +72,7 @@ configure_databases() {
     USE_LOCKSS_POSTGRES=true
   fi
   echo "You may use either the embedded PostgresSQL service or an external one"
-  echo "provided by you or your institution, in which can you will be asked for"
+  echo "provided by you or your institution, in which case you will be asked for"
   echo "its hostname and other pertinent information."
   ask_for_input "Use embedded LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
   if is_yes "${ANS}"; then
@@ -124,7 +124,7 @@ configure_databases() {
 
   #check Solr service
   echo "You may use either the embedded Solr service or an external one"
-  echo "provided by you or your institution, in which can you will be asked for a"
+  echo "provided by you or your institution, in which case you will be asked for a"
   echo "its hostname and other pertinent information."
   if [ "X${USE_LOCKSS_SOLR}" = X ]; then
     USE_LOCKSS_SOLR=true
