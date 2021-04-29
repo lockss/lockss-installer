@@ -63,39 +63,18 @@ _D0=$(dirname "${0}")
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
-configure_services() {
+configure_databases() {
   echo ""
-  echo "Configuring installed services..."
+  echo "Configuring database services..."
   echo ""
-  USE_LOCKSS_CFG=true
-
-  #check metadata service
-  if [ "X${USE_LOCKSS_MDQ}" = X ]; then
-    USE_LOCKSS_MDQ=true
-  fi
-  ask_for_input "Use LOCKSS Metadata Query Service?" $(to_yes_no ${USE_LOCKSS_MDQ})
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_MDQ=true
-  else
-    USE_LOCKSS_MDQ=false
-  fi
-  #check metadata extractor service
-  if [ "X${USE_LOCKSS_MDX}" = X ]; then
-    USE_LOCKSS_MDX=true
-  fi
-  ask_for_input "Use LOCKSS Metadata Extractor Service?" $(to_yes_no ${USE_LOCKSS_MDX})
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_MDX=true
-  else
-    USE_LOCKSS_MDX=false
-  fi
-  #check repository service
-  USE_LOCKSS_REPO=true
   #check postgres service
   if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
     USE_LOCKSS_POSTGRES=true
   fi
-  ask_for_input "Use LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
+  echo "You may use either the embedded PostgresSQL service or an external one"
+  echo "provided by you or your institution, in which can you will be asked for"
+  echo "its hostname and other pertinent information."
+  ask_for_input "Use embedded LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
   if is_yes "${ANS}"; then
     USE_LOCKSS_POSTGRES=true
     LOCKSS_POSTGRES_HOST='lockss-postgres-service'
@@ -144,13 +123,16 @@ configure_services() {
   fi
 
   #check Solr service
+  echo "You may use either the embedded Solr service or an external one"
+  echo "provided by you or your institution, in which can you will be asked for a"
+  echo "its hostname and other pertinent information."
   if [ "X${USE_LOCKSS_SOLR}" = X ]; then
     USE_LOCKSS_SOLR=true
     LOCKSS_SOLR_HOST='lockss-solr'
     LOCKSS_SOLR_PORT='8983'
     LOCKSS_SOLR_CORE_REPO="lockss-repo"
   fi
-  ask_for_input "Use LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
+  ask_for_input "Use embedded LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
   if is_yes "${ANS}"; then
     USE_LOCKSS_SOLR=true
     LOCKSS_SOLR_HOST='lockss-solr-service'
@@ -190,6 +172,37 @@ configure_services() {
     Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
     Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
   fi
+}
+
+
+configure_services() {
+  echo ""
+  echo "Configuring LOCKSS services..."
+  echo ""
+  USE_LOCKSS_CFG=true
+
+  #check metadata service
+  if [ "X${USE_LOCKSS_MDQ}" = X ]; then
+    USE_LOCKSS_MDQ=true
+  fi
+  ask_for_input "Use LOCKSS Metadata Query Service?" $(to_yes_no ${USE_LOCKSS_MDQ})
+  if is_yes "${ANS}"; then
+    USE_LOCKSS_MDQ=true
+  else
+    USE_LOCKSS_MDQ=false
+  fi
+  #check metadata extractor service
+  if [ "X${USE_LOCKSS_MDX}" = X ]; then
+    USE_LOCKSS_MDX=true
+  fi
+  ask_for_input "Use LOCKSS Metadata Extractor Service?" $(to_yes_no ${USE_LOCKSS_MDX})
+  if is_yes "${ANS}"; then
+    USE_LOCKSS_MDX=true
+  else
+    USE_LOCKSS_MDX=false
+  fi
+  #check repository service
+  USE_LOCKSS_REPO=true
 
   #check HDFS service
   #    if [ "X${USE_LOCKSS_HDFS}" = X ]; then
@@ -537,6 +550,8 @@ build_config_file() {
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
       Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
+    # Configure databases
+    configure_databases
     # Configure the individual services
     configure_services
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
