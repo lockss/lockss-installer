@@ -106,8 +106,7 @@ _EOF_
 uninstall_snap() {
   msg "Removing snap software..."
   sudo systemctl disable --now snapd
-  sudo read_config "/etc/os-release"
-  case  $ID in
+  case "${ID}" in
     "alpine")
     sudo apk del snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
     ;;
@@ -118,7 +117,7 @@ uninstall_snap() {
       sudo yum erase snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
     fi
     ;;
-    "debian")
+    "debian" | "ubuntu")
     sudo apt purge snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
     ;;
     "arch")
@@ -135,6 +134,9 @@ uninstall_snap() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
+
+# Read os-release
+read_config "/etc/os-release"
 
 # Parse command-line
 while [[ -n $1 ]]; do
@@ -155,23 +157,27 @@ while [[ -n $1 ]]; do
 done
 
 # Main logic
+
 # if no microk8s exit
-if ! which microk8s &>/dev/null; then
+if ! command -v microk8s &>/dev/null; then
   err_exit "${_0}: Unable to uninstall microk8s, it is not found or not on path."
 fi
+
 msg "Uninstalling the existing lockss stack from microk8s install..."
 "${SCRIPTS_DIR}"/uninstall-lockss
+
 msg "Stopping microk8s..."
 microk8s stop
+
 msg "Removing microk8s from snapd..."
 sudo snap remove microk8s
+
 msg "If you installed snapd solely to run microk8s, you may want to uninstall it."
+if [ "${ID}" = 'ubuntu' ] ; then
+  msg "However, on Ubuntu, snapd is used natively and should not be uninstalled."
+fi
 UNINSTALL_SNAP="false"
-ask_for_input "Uninstall snapd software - Ubuntu requires snap?" $(to_yes_no ${UNINSTALL_SNAP})
+ask_for_input "Uninstall snapd?" $(to_yes_no ${UNINSTALL_SNAP})
 if is_yes "${ANS}"; then
   uninstall_snap
 fi
-
-
-
-
