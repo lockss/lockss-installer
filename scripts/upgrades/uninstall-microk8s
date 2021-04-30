@@ -172,6 +172,9 @@ microk8s stop
 msg "Removing microk8s from snapd..."
 sudo snap remove microk8s
 
+msg "Removing microk8s group..."
+sudo groupdel microk8s
+
 msg "If you installed snapd solely to run microk8s, you may want to uninstall it."
 if [ "${ID}" = 'ubuntu' ] ; then
   msg "However, on Ubuntu, snapd is used natively and should not be uninstalled."
