@@ -51,12 +51,14 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/../_util"
 
+SCRIPTS_DIR="${_D0}/../"
+
 clean_up() { # Perform pre-exit housekeeping
-  log_script_exit  "${PROGNAME}"
+  return
 }
 
 error_exit() {
-  logger_error "${1:-"Unknown Error"}"
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
 }
@@ -72,28 +74,30 @@ signal_exit() { # Handle trapped signals
     error_exit "Program interrupted by user"
     ;;
   TERM)
-    logger_error "Program terminated"
+    echo -e "\n$PROGNAME: Program terminated" >&2
     graceful_exit
     ;;
   *)
-    error_exit "Terminating on unknown signal"
+    error_exit "$PROGNAME: Terminating on unknown signal"
     ;;
   esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
-  "Uninstall microk8s."
+  Uninstall microk8s.
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
+
+  NOTE: You must be the superuser to run this script.
 
 _EOF_
   return
@@ -130,24 +134,31 @@ uninstall_snap() {
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
 # Parse command-line
-while [[ $# -gt 0 ]]; do
+while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      logger_trace "Argument $1 to process..."
-      shift
-      ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
   esac
+  shift
 done
 
 # Main logic
+# if no microk8s exit
+if ! which microk8s &>/dev/null; then
+  err_exit "${_0}: Unable to uninstall microk8s, it is not found or not on path."
+fi
 msg "Uninstalling the existing lockss stack from microk8s install..."
 "${SCRIPTS_DIR}"/uninstall-lockss
 msg "Stopping microk8s..."
