@@ -221,6 +221,6 @@ echo "${PROGNAME}: Installing k3s kubernetes..."
 install_k3s || error_exit "Attempt to install k3s failed."
 echo "${PROGNAME}: Running k3s system check..."
 check_k3s || error_exit "System check failed run 'sudo k3s check_config' for details."
-echo "${PROGNAME}: Writing configurgation file..."
+echo "${PROGNAME}: Writing configuration file..."
 write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 
