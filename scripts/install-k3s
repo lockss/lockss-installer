@@ -152,19 +152,19 @@ configure_resolv_conf() {
     done
 
     src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
-    sudo mkdir -p ${LOCKSS_ETC_DIR}
+    SUDO mkdir -p ${LOCKSS_ETC_DIR}
     dst="${CONFIG_DIR}/resolv.conf"
     echo "Rendering ${src} to ${dst}..."
     mo "${src}" > "${dst}"
     echo "Moving file to ${LOCKSS_RESOLV_CONF}"
-    sudo cp ${dst} ${LOCKSS_RESOLV_CONF}
-    RESOLVE_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+    SUDO cp ${dst} ${LOCKSS_RESOLV_CONF}
+    RESOLV_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
   fi
 }
 
 install_k3s() {
-echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
-curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLVE_CONF_CONFIG}
+  echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
+  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLVE_CONF_CONFIG}
 
 }
 
@@ -177,6 +177,8 @@ check_k3s() {
 }
 
 write_config() {
+  get_k3s_bin_dir
+
   cat >"${1}" <<EOF
 K8S_FLAVOR="k3s"
 K8S_VERSION="${K8S_VERSION}"
@@ -185,7 +187,12 @@ K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="$(command -v k3s) kubectl"
 RESOLVE_CONF_CONFIG="${RESOLVE_CONF_CONFIG}"
 EOF
+  if [ $(id -u) -eq 0 ]; then
+    chown lockss:lockss "${1}" ||
+    echo "The file ${CONFIG_DIR}/k8s.cfg is not owned by lockss. Please create lockss user and group and chown it to lockss."
+  fi
 }
+
 ##
 ## MAIN
 ##
@@ -211,16 +218,17 @@ while [[ -n $1 ]]; do
   esac
   shift
 done
-if $(am_i_root); then
-  error_exit "This script should not be run as root. Run as the lockss user."
+# --- use SUDO if we are not already root ---
+SUDO=sudo
+if [ $(id -u) -eq 0 ]; then
+    SUDO=
 fi
-
 echo "${PROGNAME}: Setting resolv.conf for container dns usage..."
 configure_resolv_conf || error_exit "Unable obtain valid resolv.conf information."
 echo "${PROGNAME}: Installing k3s kubernetes..."
 install_k3s || error_exit "Attempt to install k3s failed."
 echo "${PROGNAME}: Running k3s system check..."
-check_k3s || error_exit "System check failed run 'sudo k3s check_config' for details."
-echo "${PROGNAME}: Writing configuration file..."
+check_k3s || error_exit "System check failed run 'SUDO k3s check_config' for details."
+echo "${PROGNAME}: Writing configurgation file..."
 write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 
