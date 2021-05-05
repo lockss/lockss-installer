@@ -315,6 +315,18 @@ EOF
     echo "OS_NAME=\"${OS_NAME}\"" >>"${1}"
   fi
 }
+
+write_k8s_cfg() {}
+  cat >"${1}" <<EOF
+K8S_FLAVOR="${K8S_FLAVOR:-unknown}"
+K8S_VERSION="${K8S_VERSION}"
+K8S_CHANNEL="${K8S_CHANNEL}"
+K3S_VERSION="${K3S_VERSION}"
+KUBECTL_CMD="${BIN_DIR}/kubectl"
+RESOLV_CONF_CONFIG="${RESOLV_CONF_CONFIG}"
+EOF
+}
+
 # build_config_file file user
 build_config_file() {
   echo "Building config file info ${1} for user ${2}..."
@@ -624,6 +636,7 @@ CONFIG_USER=$(whoami)
 # While this script is inherently able to create a configuration for any
 # user, the rest of the Kubernetes-based infrastructure currently runs the
 # containers as lockss, so that's enforced here as well.
+# Actually the rest of the infrastructure runs as $LOCKSS_USER
 if [ -z "${BYPASS_CHECK_USER}" -a "${CONFIG_USER}" != "lockss" ]; then
   err_exit "${0} must be run as the 'lockss' user."
 fi
@@ -675,11 +688,12 @@ if [ -r "${K8S_CONF_FILE}" ]; then
 fi
 if [ "X${KUBECTL_CMD}" = X ]; then
   if kubepath=$(command -v k3s); then
-    KUBECTL_CMD="sudo ${kubepath} kubectl"
+    KUBECTL_CMD="${kubepath} kubectl"
     K8S_FLAVOR=k3s
   elif kubepath=$(command -v microk8s); then
     KUBECTL_CMD="${kubepath} kubectl"
     K8S_FLAVOR=microk8s
+    K8S_VERSION=$(KUBECTL_CMD version --short=true | sed )
   elif kubepath=$(command -v kubectl); then
     KUBECTL_CMD="${kubepath}"
     K8S_FLAVOR=k8s
