@@ -184,7 +184,7 @@ write_config() {
 K8S_FLAVOR="k3s"
 K8S_VERSION="${K8S_VERSION}"
 K3S_VERSION="${K3S_VERSION}"
-KUBECTL_CMD="${BIN_DIR}/kubectl"
+KUBECTL_CMD="${K3S_BIN_DIR}/kubectl"
 RESOLV_CONF_CONFIG="${RESOLV_CONF_CONFIG}"
 EOF
   # we are hard coding the assumption that the only name for LOCKSS_USER is "lockss"
