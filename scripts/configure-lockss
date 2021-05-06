@@ -71,10 +71,10 @@ configure_databases() {
   if [ "X${USE_LOCKSS_POSTGRES}" = X ]; then
     USE_LOCKSS_POSTGRES=true
   fi
-  echo "You may use either the embedded PostgresSQL service or an external one"
+  echo "You may use either the embedded PostgreSQL service or an external one"
   echo "provided by you or your institution, in which case you will be asked for"
   echo "its hostname and other pertinent information."
-  ask_for_input "Use embedded LOCKSS PostgresSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
+  ask_for_input "Use embedded LOCKSS PostgreSQL DB Service?" $(to_yes_no ${USE_LOCKSS_POSTGRES})
   if is_yes "${ANS}"; then
     USE_LOCKSS_POSTGRES=true
     LOCKSS_POSTGRES_HOST='lockss-postgres-service'
