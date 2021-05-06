@@ -97,14 +97,8 @@ configure_databases() {
     ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}"
     LOCKSS_POSTGRES_PORT=${ANS}
 
-    if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
-      LOCKSS_POSTGRES_USER="LOCKSS"
-    fi
-    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}"
-    LOCKSS_POSTGRES_USER=${ANS}
-
     if [ "X${LOCKSS_POSTGRES_SCHEMA}" = X ]; then
-      LOCKSS_POSTGRES_SCHEMA="$LOCKSS_POSTGRES_USER"
+      LOCKSS_POSTGRES_SCHEMA="LOCKSS"
     fi
     ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}"
     LOCKSS_POSTGRES_SCHEMA=${ANS}
@@ -114,6 +108,13 @@ configure_databases() {
     fi
     ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}"
     LOCKSS_DBNAME_PREFIX=${ANS}
+
+    if [ "X${LOCKSS_POSTGRES_USER}" = X ]; then
+      LOCKSS_POSTGRES_USER="LOCKSS"
+    fi
+    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}"
+    LOCKSS_POSTGRES_USER=${ANS}
+
   fi
 
   ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
@@ -123,15 +124,12 @@ configure_databases() {
   fi
 
   #check Solr service
+  if [ "X${USE_LOCKSS_SOLR}" = X ]; then
+    USE_LOCKSS_SOLR=true
+  fi
   echo "You may use either the embedded Solr service or an external one"
   echo "provided by you or your institution, in which case you will be asked for a"
   echo "its hostname and other pertinent information."
-  if [ "X${USE_LOCKSS_SOLR}" = X ]; then
-    USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST='lockss-solr'
-    LOCKSS_SOLR_PORT='8983'
-    LOCKSS_SOLR_CORE_REPO="lockss-repo"
-  fi
   ask_for_input "Use embedded LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
   if is_yes "${ANS}"; then
     USE_LOCKSS_SOLR=true
@@ -191,11 +189,11 @@ configure_services() {
   else
     USE_LOCKSS_MDQ=false
   fi
-  #check metadata extractor service
+  #check metadata extraction service
   if [ "X${USE_LOCKSS_MDX}" = X ]; then
     USE_LOCKSS_MDX=true
   fi
-  ask_for_input "Use LOCKSS Metadata Extractor Service?" $(to_yes_no ${USE_LOCKSS_MDX})
+  ask_for_input "Use LOCKSS Metadata Extraction Service?" $(to_yes_no ${USE_LOCKSS_MDX})
   if is_yes "${ANS}"; then
     USE_LOCKSS_MDX=true
   else
@@ -577,7 +575,7 @@ build_config_file() {
     echo "Configuration:"
     cat ${TMP_CONFIG}
 
-    ask_for_input "OK to store this configuration" Y
+    ask_for_input "OK to store this configuration?" Y
     if is_yes "${ANS}"; then
       if ! cp ${TMP_CONFIG} ${1}; then
         echo "Config not installed, left in ${TMP_CONFIG}"
