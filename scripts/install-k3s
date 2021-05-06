@@ -65,7 +65,6 @@ K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$'
 RESOLVE_CONF_CONFIG=""
 K8S_VERSION="1.20"
-K8S_CHANNEL="stable"
 K3S_VERSION="v1.20.6+k3s1"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -185,14 +184,16 @@ K8S_FLAVOR="k3s"
 K8S_VERSION="${K8S_VERSION}"
 K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="${K3S_BIN_DIR}/kubectl"
-RESOLV_CONF_CONFIG="${RESOLV_CONF_CONFIG}"
 EOF
+  if [ -n "${RESOLV_CONF_CONFIG}" ]; then
+    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\""
+  fi
   # we are hard coding the assumption that the only name for LOCKSS_USER is "lockss"
   lockss_uid=$(id -u lockss)
   lockss_gid=$(id -g lockss)
 
   if [ $(id -u) -ne ${lockss_uid} ]; then
-    chown lockss_uid:lockss_gid "${1}" ||
+    SUDO chown lockss_uid:lockss_gid "${1}" ||
     echo "The file ${CONFIG_DIR}/k8s.cfg is not owned by lockss."
     echo "Please create lockss user and group and chown the file to lockss before running configure-lockss."
   fi
@@ -232,8 +233,6 @@ echo "${PROGNAME}: Setting resolv.conf for container dns usage..."
 configure_resolv_conf || error_exit "Unable obtain valid resolv.conf information."
 echo "${PROGNAME}: Installing k3s kubernetes..."
 install_k3s || error_exit "Attempt to install k3s failed."
-#echo "${PROGNAME}: Running k3s system check..."
-#check_k3s || error_exit "System check failed run 'SUDO k3s check_config' for details."
 echo "${PROGNAME}: Writing configurgation file..."
 write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 

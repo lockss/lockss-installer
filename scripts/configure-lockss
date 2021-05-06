@@ -316,15 +316,18 @@ EOF
   fi
 }
 
-write_k8s_cfg() {}
+write_k8s_cfg() {
   cat >"${1}" <<EOF
-K8S_FLAVOR="${K8S_FLAVOR:-unknown}"
+K8S_FLAVOR="${K8S_FLAVOR}"
 K8S_VERSION="${K8S_VERSION}"
-K8S_CHANNEL="${K8S_CHANNEL}"
-K3S_VERSION="${K3S_VERSION}"
-KUBECTL_CMD="${BIN_DIR}/kubectl"
-RESOLV_CONF_CONFIG="${RESOLV_CONF_CONFIG}"
+KUBECTL_CMD="${KUBECTL_CMD}"
 EOF
+  if [ -n "${K3S_VERSION}" ]; then
+    echo "K3S_VERSION=\"${K3S_VERSION}\"" >>"${1}"
+  fi
+  if [ -n "${RESOLV_CONF_CONFIG}" ]; then
+    echo "RESOLV_CONF_CONFIG=\"${RESOLV_CONF_CONFIG}\"" >>"${1}"
+  fi
 }
 
 # build_config_file file user
@@ -628,17 +631,40 @@ build_config_file() {
   done
 }
 
+setup_k8s_cmd() {
+  if [ "X${KUBECTL_CMD}" = X ]; then
+    if kubepath=$(command -v k3s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=k3s
+    elif kubepath=$(command -v microk8s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=microk8s
+    elif kubepath=$(command -v kubectl); then
+      KUBECTL_CMD="${kubepath}"
+      K8S_FLAVOR=k8s
+    fi
+  fi
+  KUBCTL_OK=false
+  until is_yes ${KUBCTL_OK}; do
+    ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
+    if [  -x "${ANS}" ]; then
+      KUBECTL_CMD="${ANS}"
+      KUBCTL_OK=Y
+    fi
+  done
+  echo "Kubectl command alias set to $KUBECTL_CMD"
+  KUBECTL="${KUBECTL_CMD}"
+  K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
+  write_k8s_cfg ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
+}
+
 ###
 # Start
 ###
 CONFIG_USER=$(whoami)
 
-# While this script is inherently able to create a configuration for any
-# user, the rest of the Kubernetes-based infrastructure currently runs the
-# containers as lockss, so that's enforced here as well.
-# Actually the rest of the infrastructure runs as $LOCKSS_USER
-if [ -z "${BYPASS_CHECK_USER}" -a "${CONFIG_USER}" != "lockss" ]; then
-  err_exit "${0} must be run as the 'lockss' user."
+if $(am_i_root); then
+  error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
 OS_TYPE=$(uname -s)
@@ -686,29 +712,11 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   msg "${_DO} Setting defaults from existing config: ${K8S_CONF_FILE}"
   read_config ${K8S_CONF_FILE}
 fi
-if [ "X${KUBECTL_CMD}" = X ]; then
-  if kubepath=$(command -v k3s); then
-    KUBECTL_CMD="${kubepath} kubectl"
-    K8S_FLAVOR=k3s
-  elif kubepath=$(command -v microk8s); then
-    KUBECTL_CMD="${kubepath} kubectl"
-    K8S_FLAVOR=microk8s
-    K8S_VERSION=$(KUBECTL_CMD version --short=true | sed )
-  elif kubepath=$(command -v kubectl); then
-    KUBECTL_CMD="${kubepath}"
-    K8S_FLAVOR=k8s
-  fi
-fi
-
-ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
-KUBECTL_CMD="${ANS}"
-echo "Kubectl command alias set to $KUBECTL_CMD"
-KUBECTL="${KUBECTL_CMD}"
-
 echo "$(date) Checking system state..."
 
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
+  setup_k8s_cmd
   Check_Runnable
 else
   echo "Bypassing Check_Runnable and KUBECTL commands"
