@@ -128,7 +128,7 @@ configure_databases() {
     USE_LOCKSS_SOLR=true
   fi
   echo "You may use either the embedded Solr service or an external one"
-  echo "provided by you or your institution, in which case you will be asked for a"
+  echo "provided by you or your institution, in which case you will be asked for"
   echo "its hostname and other pertinent information."
   ask_for_input "Use embedded LOCKSS Solr Service?" $(to_yes_no ${USE_LOCKSS_SOLR})
   if is_yes "${ANS}"; then
