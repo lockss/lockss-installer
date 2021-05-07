@@ -467,7 +467,7 @@ init_one_dir() {
       MODE="750"
   fi
   if [ ! -d "${DIR}" ]; then
-    ask_for_input "${DIR} does not exist; shall I create it" Y
+    ask_for_input "${DIR} does not exist; shall I create it?" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
       if [ "X${CONFIG_USER}" != "X${USER}" ]; then
@@ -490,7 +490,7 @@ init_one_dir() {
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
   else
-    ask_for_input "${DIR} is not writable; shall I chown it" Y
+    ask_for_input "${DIR} is not writable; shall I chown it?" Y
     if is_yes "${ANS}"; then
       chown ${USER} "${DIR}"
       if check_writable "${DIR}" $USER; then
