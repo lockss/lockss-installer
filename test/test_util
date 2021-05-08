@@ -1,0 +1,70 @@
+#!/usr/bin/env bats
+
+# tests for lockss-installer utilities - lockss-installer/scripts/_util
+
+load "${BATS_LIBEXEC}/../bats-support/load.bash"
+load "${BATS_LIBEXEC}/../bats-assert/load.bash"
+
+setup() {
+  . ../scripts/_util
+}
+
+@test 'Get_Value' {
+  assert_equal $(Get_Value foo=1) 1
+}
+
+@test 'valid_ip_address' {
+  assert valid_ip_address 1.1.1.1
+  refute valid_ip_address 1.1.1
+  refute valid_ip_address 1.1.1.d
+  refute valid_ip_address 1.1.1.1.d
+  refute valid_ip_address 1.2.3.4.5
+  refute valid_ip_address 1.2.3.400
+}
+
+@test 'valid_subnet' {
+  assert valid_subnet 1.2.3.4
+  refute valid_subnet 1.2.3
+  refute valid_subnet 1.2.3.4.5
+
+  assert valid_subnet 1.1.1.0/24
+  refute valid_subnet 1.1.1.0/33
+  refute valid_subnet 1.1.1.0/123
+  refute valid_subnet 1.1.1/24
+  refute valid_subnet "1.1.1.1.1/24"
+  refute valid_subnet 172.16.0.0/123
+  refute valid_subnet "1.1.1.0/55"
+
+  assert valid_subnet "10.*.*.*"
+  assert valid_subnet "10.1.*.*"
+  assert valid_subnet "10.1.1.*"
+  refute valid_subnet "10.1.1.1.*"
+  assert valid_subnet "10.1.1.*.*"
+  assert valid_subnet "10.1.1.**"
+
+  refute valid_subnet "1.1.1.0/24;1.2.3.4/31"
+  refute valid_subnet "1.1.1.0/24:1.2.3.4/31"
+}
+
+@test 'valid_subnet_list' {
+  assert valid_subnet_list 10.1.1.0/24
+  assert valid_subnet_list "10.0.0.0/8;192.168.0.0/16"
+  assert valid_subnet_list "10.0.0.0/8;192.168.0.0/16;172.16.0.0/12"
+  refute valid_subnet_list "10.0.0.0/8;192:168.0.0/16;172.16.0.0/123"
+  refute valid_subnet_list "10.0.0.0/8;192 168.0.0/16"
+  refute valid_subnet_list "10.0.0.0/8;192.168.0.0/33"
+
+  assert valid_subnet_list "1.1.1.*"
+  assert valid_subnet_list "10.0.0.0/8;1.1.*.*"
+  refute valid_subnet_list "10.0.0.0/8 1.1.*.*"
+
+  refute valid_subnet_list "1.1.1.1.1/24"
+  refute valid_subnet_list "1.1.1.0/55"
+}
+
+@test 'normalize_path' {
+  local v=$(normalize_path /a/b/c)
+  assert_equal "$v" "/a/b/c"
+  local v=$(normalize_path /a/./b//d/../c/xx/..)
+  assert_equal "$v" "/a/b/c/"
+}

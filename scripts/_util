@@ -569,19 +569,6 @@ guess_ip_address() {
   esac
 }
 
-# read_config file
-read_config() {
-  local FILE="$1"
-  local OLD_IFS="${IFS}"
-  IFS='
-'
-  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1); do
-    eval "$A"
-  done
-  IFS="${OLD_IFS}"
-}
-
 # valid_ip_address address
 valid_ip_address() {
   local IPADDR=$(parse_ip_address "$1")
@@ -596,55 +583,74 @@ valid_ip_address() {
 # Usage: valid_subnet address
 #
 valid_subnet() {
-  local INP=$1
-  if ! echo ${INP} | grep -s '/' >/dev/null; then
-    oct='[0-9]{1,3}'
-    if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
+  local INP="$1"
+  local oct='[0-9]{1,3}'
+  if valid_ip_address "${INP}"; then
+    return 0
+  elif [[ "${INP}" =~ ^($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*)$ ]]; then
+    return 0
+  elif [[ "${INP}" =~ ^([^/]+)/([^/]+)$ ]]; then
+    local NET="${BASH_REMATCH[1]}"
+    local MASK="${BASH_REMATCH[2]}"
+    if ! valid_ip_address "${NET}"; then
+      return 1
+    fi
+    if valid_ip_address "${MASK}"; then
+      local MASKADDR=$(parse_ip_address "${MASK}")
+      if [[ ${MASKADDR} -eq 0 ]]; then
+        return 1
+      fi
+      # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
       return 0
-    fi
-    return 1
-  fi
-  local NET=$(echo ${INP} | sed 's/\/.*//')
-  local MASK=$(echo ${INP} | sed 's/.*\///')
-  local NETADDR=$(parse_ip_address "${NET}")
-  if [ ${NETADDR} -eq 0 ]; then
-    return 1
-  fi
-  if echo ${MASK} | grep -s '\.' >/dev/null; then
-    local MASKADDR=$(parse_ip_address "${MASK}")
-    if [ ${MASKADDR} -eq 0 ]; then
+    elif [[ "${MASK}" -ge 0 && "${MASK}" -le 32 ]]; then
+      # should check legal cidr
+      return 0
+    else
       return 1
     fi
-    # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
-    return 0
   else
-    if ! expr ${MASK} + 1 >/dev/null 2>&1; then
-      return 1
-    fi
-    if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
-      return 1
-    fi
-    # should check legal cidr
-    return 0
+    return 1
   fi
+}
+
+#
+# Usage: valid_subnet_list subnet[;subnet...]
+#
+valid_subnet_list() {
+  if [[ "${1}" =~ " " ]] ; then
+    echo "subnet list may not contain spaces" >&2
+    return 1
+  fi
+  for sub in ${1//;/ }; do
+    if ! valid_subnet "${sub}" ; then
+      echo "${sub} is not a valid subnet" >&2
+      return 1
+    fi
+  done
+  return 0
 }
 
 #
 # Usage: normalize_path PATH
 #
-# Remove /./ and dir/.. sequences from a pathname and write result to stdout.
-# from https://www.linuxjournal.com/content/normalizing-path-names-bash
+# Remove /./ and dir/.. sequences and replace // with / and write result to
+# stdout.
 #
 function normalize_path() {
   # Remove all /./ sequences.
   local path=${1//\/.\//\/}
 
-  # Remove first dir/.. sequence.
-  local npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  # Replace all // sequences with /
+  path=${path//\/\//\/}
 
-  # Remove remaining dir/.. sequence.
-  while [[ $npath != $path ]]; do
-    path=$npath
-    npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  # Remove dir/.. sequences.
+  while [[ $path =~ ([^/][^/]*/\.\./) ]]; do
+    path=${path/${BASH_REMATCH[0]}/}
   done
+  # Remove final dir/.. sequence.
+  if [[ $path =~ ([^/][^/]*/\.\.$) ]]; then
+    path=${path/${BASH_REMATCH[0]}/}
+  fi
+  # Remove final /. sequence.
+  echo "${path%%/.}"
 }
