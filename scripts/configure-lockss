@@ -373,7 +373,7 @@ build_config_file() {
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
       ask_for_input "Initial subnet(s) for admin UI access" ${LOCKSS_ACCESS_SUBNET}
-      if valid_subnet "${ANS}"; then
+      if valid_subnet_list "${ANS}"; then
         LOCKSS_ACCESS_SUBNET="${ANS}"
         SUBNET_OK=Y
       fi
