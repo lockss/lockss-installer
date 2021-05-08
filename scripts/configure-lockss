@@ -383,7 +383,7 @@ build_config_file() {
     CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
     if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
       LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-    elif [ "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
+    elif [ -n "${CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
       # The current value isn't what we would choose
       if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
         # It matches the previous CNI0 subnet, use new one by default
