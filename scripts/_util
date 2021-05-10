@@ -100,7 +100,7 @@ kubectl_lockss() {
 }
 
 set_k3s_bin_dir () {
-  K3S_BIN_DIR="/usr/local/bin/k3s"
+  K3S_BIN_DIR="/usr/local/bin"
   if [ -n "${INSTALL_K3S_BIN_DIR}" ]; then
     if [ -x "${INSTALL_K3S_BIN_DIR}"/k3s ]; then
       K3S_BIN_DIR=${INSTALL_K3S_BIN_DIR}
