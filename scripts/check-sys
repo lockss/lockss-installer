@@ -52,6 +52,7 @@ OS_TYPE=$(uname -s)
 LOCKSS_USER=lockss
 SOLR_USER=solr
 LOCAL_HOSTNAME=$(uname -n)
+K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -125,27 +126,27 @@ ensure_lockss_user() {
 
 ensure_kubernetes() {
   local instr_link=""
-  if ! which kubectl &> /dev/null; then
-    err "${_0}: kubectl is not found on the PATH (${PATH})"
-    err "${_0}: LOCKSS requires kubectl to run."
-    echo "checking for k3s install..."
-    if ! which k3s &> /dev/null; then
-      err "${_0}: K3s is not found on the PATH (${PATH})"
-      err "${_0}: LOCKSS uses k3s to install kubernetes."
-      echo "To complete your install see: ${instr_link}"
+  # look for the k8s.cfg file and use it if possible
+  if [ -r "${K8S_CONF_FILE}" ]; then
+    read_config ${K8S_CONF_FILE}
+  fi
+  if [ "X${KUBECTL_CMD}" = X ]; then
+    set_k3s_bin_dir
+    if kubepath=$(command -v ${K3S_BIN_DIR}/k3s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+    elif kubepath=$(command -v microk8s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+    elif kubepath=$(command -v kubectl); then
+      KUBECTL_CMD="${kubepath}"
+    else
+      err "${_0}: kubectl is not found on the PATH (${PATH})"
+      error_exit "${_0}: LOCKSS requires kubectl to run."
     fi
-  elif ! sudo kubectl get node | grep -q "Ready"; then
+  fi
+  if ! ${KUBECTL_CMD} get node | grep -q "Ready"; then
     err "${_0}: No available kubernetes node. Please start kubernetes node"
   fi
-}
-
-
-ensure_lockss_access() {
-  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
-  if ! sudo -l -U lockss sudo &> /dev/null; then
-      err "${_0}: The lockss user requires sudo privileges."
-      error_exit "See instructions: ${instr_link}"
-  fi
+  if ! ${KUBECTL_CMD} get pod coredns -n kube-system
 }
 
 # Trap signals
@@ -177,7 +178,5 @@ echo "${_0}: User lockss exists."
 echo "${_0}: Checking for kubernetes..."
 ensure_kubernetes
 echo "${_0}: kubernetes is installed and has a active node."
-echo "${_0}: Checking lockss groups and permissions.."
-ensure_lockss_access
 echo "${_0}: The lockss user has appropriate permissions.."
 graceful_exit
