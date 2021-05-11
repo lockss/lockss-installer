@@ -645,7 +645,8 @@ setup_k8s_cmd() {
   KUBCTL_OK=false
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
-    if [  -x "${ANS}" ]; then
+    IFS=' ' ; read -ra CMD_ELEMS <<< "${ANS}"
+    if [  -x "${CMD_ELEMS[0]}" ]; then
       KUBECTL_CMD="${ANS}"
       KUBCTL_OK=Y
     fi
