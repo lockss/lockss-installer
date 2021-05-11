@@ -132,21 +132,11 @@ configure_resolv_conf() {
     echo "Please enter a list of IP addresses of upstream DNS resolvers."
     local IP_OK=N
     until is_yes ${IP_OK}; do
-      ask_for_input "IP address(es) for DNS lookup, separated by ';'" ${DEFAULT_IP_LIST}
-      local OK_CNT=0
-      IFS=';' read -r -a ip_arr <<<"${ANS}"
-      local len=${#ip_arr[@]}
-      for ip in "${ip_arr[@]}"; do
-        if ! valid_ip_address "${ip}"; then
-          err "${ip} is not a valid IP address."
-          break
-        else
-          OK_CNT=$((OK_CNT + 1))
-          nameservers+=("${ip}")
-        fi
-      done
-      if [ $OK_CNT -gt 0 ] && [ $OK_CNT -eq  $len ]; then
+      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" ${DEFAULT_IP_LIST}
+      if valid_ip_address_list "${ANS}"; then
         IP_OK=Y
+        # set IP addr array used in resolv.conf.mustache
+        nameservers=("${VALIDATED_LIST[@]}")
       fi
     done
 
