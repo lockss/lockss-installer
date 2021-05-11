@@ -579,6 +579,36 @@ valid_ip_address() {
   fi
 }
 
+declare -a VALIDATED_LIST
+
+#
+# Usage: valid_ip_address_list ip[;ip...]
+# returns 0 if all elements are valid, and sets the array
+# VALIDATED_LIST to the elements
+#
+valid_ip_address_list() {
+  VALIDATED_LIST=()
+  if [[ -z "${1}" ]] ; then
+    echo "IP address list may not be empty" >&2
+    return 1
+  fi
+
+  if [[ "${1}" =~ " " ]] ; then
+    echo "IP address list may not contain spaces" >&2
+    return 1
+  fi
+  local ip
+  for ip in ${1//;/ }; do
+    if ! valid_ip_address "${ip}" ; then
+      echo "${ip} is not a valid IP address" >&2
+      VALIDATED_LIST=()
+      return 1
+    fi
+    VALIDATED_LIST+=("${ip}")
+  done
+  return 0
+}
+
 #
 # Usage: valid_subnet address
 #
@@ -615,17 +645,28 @@ valid_subnet() {
 
 #
 # Usage: valid_subnet_list subnet[;subnet...]
+# returns 0 if all elements are valid, and sets the array
+# VALIDATED_LIST to the elements
 #
 valid_subnet_list() {
+  VALIDATED_LIST=()
+  if [[ -z "${1}" ]] ; then
+    echo "subnet list may not be empty" >&2
+    return 1
+  fi
+
   if [[ "${1}" =~ " " ]] ; then
     echo "subnet list may not contain spaces" >&2
     return 1
   fi
+  local sub
   for sub in ${1//;/ }; do
     if ! valid_subnet "${sub}" ; then
       echo "${sub} is not a valid subnet" >&2
+      VALIDATED_LIST=()
       return 1
     fi
+    VALIDATED_LIST+=("${sub}")
   done
   return 0
 }
