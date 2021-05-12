@@ -194,7 +194,6 @@ EOF
   if [ $(id -u) -ne ${lockss_uid} ]; then
     $SUDO chown $lockss_uid:$lockss_gid "${1}" ||
     echo "The file ${CONFIG_DIR}/k8s.cfg is not owned by lockss."
-    echo "Please create lockss user and group and chown the file to lockss before running configure-lockss."
   fi
 }
 
