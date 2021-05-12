@@ -247,7 +247,7 @@ Adjust_Firewalld()
   # Return if firewall-cmd is not on the PATH
   command -v firewall-cmd > /dev/null || return 0
   # Return if firewalld is not running
-  [ "$($SUDO firewall-cmd --state)" = 'running' ] || return 0
+  [ "$($SUDO firewall-cmd --state 2>&1)" = 'running' ] || return 0
   # Ask for permission
   echo
   echo "Your system is running firewalld. For K3s to work properly,"
