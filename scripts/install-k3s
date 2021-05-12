@@ -273,7 +273,7 @@ Adjust_Ufw()
   # Return if ufw is not on the PATH
   command -v ufw > /dev/null || return 0
   # Return if ufw is not active
-  [ "$($SUDO ufw status)" = 'Status: active' ] || return 0
+  [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] || return 0
   # Ask for permission
   echo
   echo "Your system is running ufw. For K3s to work properly,"
