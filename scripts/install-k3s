@@ -62,7 +62,6 @@ LOCKSS_ETC_DIR="/etc/lockss"
 LOCKSS_RESOLV_CONF="$LOCKSS_ETC_DIR/resolv.conf"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
-LOOPBACK_REGEX='^[ \t]*nameserver[ \t]+(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$'
 RESOLVE_CONF_CONFIG=""
 K8S_VERSION="1.20"
 K3S_VERSION="v1.20.6+k3s1"
@@ -117,9 +116,9 @@ _EOF_
 
 configure_resolv_conf() {
   # examine the local resolv.conf for loopback address
-  if grep -E -i -q "$LOOPBACK_REGEX" "${RESOLV_CONF}"; then
+  if has_loopback_resolver "${RESOLV_CONF}"; then
     if [ -f "$SYSD_RESOLV_CONF" ]; then
-      if grep -E -i -q "$LOOPBACK_REGEX" "${SYSD_RESOLV_CONF}"; then
+      if has_loopback_resolver "${SYSD_RESOLV_CONF}"; then
         USE_RESOLV_CONF=N
       fi
     else
@@ -132,8 +131,16 @@ configure_resolv_conf() {
     echo "CoreDNS does not allow a loopback address to be assigned to pods."
     echo "Please enter a list of IP addresses of upstream DNS resolvers."
     local IP_OK=N
+    local DEFAULT_IP_LIST=
+    if [ -r "$SYSD_RESOLV_CONF" ]; then
+      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$SYSD_RESOLV_CONF")
+    fi
+    if [ -z "$DEFAULT_IP_LIST" -a -r "$RESOLV_CONF" ]; then
+      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$RESOLV_CONF")
+    fi
+
     until is_yes ${IP_OK}; do
-      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" ${DEFAULT_IP_LIST}
+      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
       if valid_ip_address_list "${ANS}"; then
         IP_OK=Y
         # set IP addr array used in resolv.conf.mustache
