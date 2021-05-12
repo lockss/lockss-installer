@@ -695,3 +695,34 @@ function normalize_path() {
   # Remove final /. sequence.
   echo "${path%%/.}"
 }
+
+# Match /etc/resolv.conf nameserver lines
+NAMESERVER_REGEX='^[ \t]*nameserver[ \t]+'
+
+# Match /etc/resolv.conf loopback nameserver lines
+LOOPBACK_REGEX="${NAMESERVER_REGEX}(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
+
+#
+# Usage: has_loopback_resolver FILE
+#
+# FILE is a file in the format of /etc/resolv.conf
+# return true (0) iff the file specifies at least one nameserver on
+# a loopback address
+#
+has_loopback_resolver() {
+  local file="$1"
+  grep -E -i -q "$LOOPBACK_REGEX" "${file}"
+  return
+}
+
+#
+# Usage: extract_non_loopback_resolvers FILE
+#
+# FILE is a file in the format of /etc/resolv.conf
+# prints a semiconol-separated list of all the non-loopback nameservers
+# specified in the file
+#
+extract_non_loopback_resolvers() {
+  local file="$1"
+  grep -E -i "$NAMESERVER_REGEX" "${file}" | grep -v -E -i "$LOOPBACK_REGEX" | awk '{print $2}' | xargs | tr ' ' ';'
+}
