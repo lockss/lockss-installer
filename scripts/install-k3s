@@ -218,7 +218,7 @@ Adjust_Iptables()
   # Return if the first symlink is not executable or its mode is not nf_tables
   for alt in $alts ; do
     [ -x "${alt}" ] || return 0
-    [ "$($alt | awk '{print $3;exit 0}' | tr -d '()')" = 'nf_tables' ] || return 0
+    [ "$($alt --version | awk '{print $3;exit 0}' | tr -d '()')" = 'nf_tables' ] || return 0
     break
   done
   # Ask for permission
