@@ -91,12 +91,12 @@ kubectl_cmd() {
   if [ -z "${KUBECTL_CMD}" ]; then
     err_exit "Script error: KUBECTL_CMD hasn't been set."
   fi
-  ${KUBECTL_CMD} $@
+  ${KUBECTL_CMD} "$@"
 }
 
 # perform kubectl command in the lockss namespace
 kubectl_lockss() {
-  kubectl_cmd -n lockss $@
+  kubectl_cmd -n lockss "$@"
 }
 
 set_k3s_bin_dir() {
