@@ -13,14 +13,26 @@ setup() {
   assert_equal $(Get_Value foo=1) 1
 }
 
-@test 'valid_ip_address' {
-  refute valid_ip_address ""
-  assert valid_ip_address 1.1.1.1
-  refute valid_ip_address 1.1.1
-  refute valid_ip_address 1.1.1.d
-  refute valid_ip_address 1.1.1.1.d
-  refute valid_ip_address 1.2.3.4.5
-  refute valid_ip_address 1.2.3.400
+@test 'valid_ip4_address' {
+  refute valid_ip4_address ""
+  assert valid_ip4_address 1.1.1.1
+  refute valid_ip4_address 1.1.1
+  refute valid_ip4_address 1.1.1.d
+  refute valid_ip4_address 1.1.1.1.d
+  refute valid_ip4_address 1.2.3.4.5
+  refute valid_ip4_address 1.2.3.400
+  refute valid_ip4_address 2001:0Db8:85a3:0000:0000:8a2e:0370:7334
+  refute valid_ip4_address ::1
+}
+
+@test 'valid_ip6_address' {
+  refute valid_ip6_address ""
+  assert valid_ip6_address 2001:0Db8:85a3:0000:0000:8a2e:0370:7334
+  assert valid_ip6_address fe80::1ff:fe23:4567:890a
+  assert valid_ip6_address 2001:db8::
+  assert valid_ip6_address ::1
+  refute valid_ip6_address 20013:0Db8:85a3:0000:0000:8a2e:0370:7334
+  refute valid_ip6_address "1.2.3.4"
 }
 
 @test 'valid_ip_address_list' {
@@ -44,6 +56,10 @@ setup() {
   assert_equal ${#VALIDATED_LIST[@]} "3"
   refute valid_ip_address_list "1.1.1.1 2.3.4.56;10.0.0.1"
   assert_equal ${#VALIDATED_LIST[@]} "0"
+  assert valid_ip_address_list "1.1.1.1;2001:db8::"
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.1"
+  assert_equal ${VALIDATED_LIST[1]} "2001:db8::"
+  assert_equal ${#VALIDATED_LIST[@]} "2"
   refute valid_ip_address_list "1.1.1.1:2.3.4.56;10.0.0.1"
   refute valid_ip_address_list "1.1.1.1;2.3.4.56;10.0.0.256"
 }
@@ -120,6 +136,7 @@ apply_regex() {
   refute  apply_regex foo bar
 
   assert  apply_regex "nameserver 127.0.0.1" "$LOOPBACK_REGEX"
+  assert  apply_regex "nameserver ::1" "$LOOPBACK_REGEX"
   refute  apply_regex "nameserver 10.0.0.1" "$LOOPBACK_REGEX"
 
 }

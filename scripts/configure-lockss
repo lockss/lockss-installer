@@ -345,7 +345,7 @@ build_config_file() {
     IP_OK=N
     until is_yes ${IP_OK}; do
       ask_for_input "IP address of this machine" ${LOCKSS_IPADDR}
-      if valid_ip_address "${ANS}"; then
+      if valid_ip4_address "${ANS}"; then
         LOCKSS_IPADDR="${ANS}"
         IP_OK=Y
       fi
@@ -359,7 +359,7 @@ build_config_file() {
       EXT_OK=N
       until is_yes ${EXT_OK}; do
         ask_for_input "External IP address for NAT" ${LOCKSS_EXTERNAL_IPADDR}
-        if valid_ip_address ${ANS}; then
+        if valid_ip4_address ${ANS}; then
           LOCKSS_EXTERNAL_IPADDR=${ANS}
           EXT_OK=Y
         fi
