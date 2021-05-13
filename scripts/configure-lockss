@@ -278,7 +278,6 @@ LOCKSS_LOGS_DIR="${LOCKSS_LOGS_DIR}"
 LOCKSS_ADMIN_USER="${LOCKSS_ADMIN_USER}"
 LOCKSS_ADMIN_PASSWD="${LOCKSS_ADMIN_PASSWD}"
 LOCKSS_DB_PASSWD="${LOCKSS_DB_PASSWD}"
-LOCKSS_PROXY_PORT="${LOCKSS_PROXY_PORT}"
 LOCKSS_TMPDIR="${LOCKSS_TMPDIR}"
 LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_SCRIPT_LOG_DIR}"
 LOCKSS_POSTGRES_HOST="${LOCKSS_POSTGRES_HOST}"
@@ -413,13 +412,6 @@ build_config_file() {
     ask_for_input "LCAP V3 protocol port" ${LOCKSS_V3_PORT}
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_V3_PORT="${ANS}"
-    fi
-    if [ "X${LOCKSS_PROXY_PORT}" = X ]; then
-      LOCKSS_PROXY_PORT=24670
-    fi
-    ask_for_input "Proxy port" ${LOCKSS_PROXY_PORT}
-    if [ "X${ANS}" != "X" ]; then
-      LOCKSS_PROXY_PORT="${ANS}"
     fi
     if [ "X${LOCKSS_UI_PORT}" = X ]; then
       LOCKSS_UI_PORT=24600
