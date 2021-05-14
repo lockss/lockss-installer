@@ -674,19 +674,17 @@ case ${OS_TYPE} in
 Linux)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCKSS_TIMEZONE=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 Darwin)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
-  LOCKSS_TIMEZONE=$(readlink /etc/localtime | sed -e 's/^.*zoneinfo\///')
   ;;
 *)
   echo "${OS_TYPE} not supported"
   exit 1
   ;;
 esac
-
+LOCKSS_TIMEZONE=$(Get_Timezone)
 LOCAL_IPADDR=$(guess_ip_address)
 
 declare -i CONFIG_COUNT

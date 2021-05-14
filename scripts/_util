@@ -298,6 +298,28 @@ Get_Value() {
   echo "${PAIR}" | sed -e 's@^[^=]\+=@@'
 }
 
+Get_Timezone() {
+  local timezone="${TZ}"
+
+  if [ -z "${timezone}" ]; then
+    case $(uname -s) in
+      Linux)
+        if which timedatectl &>/dev/null; then
+          timezone=$(timedatectl show --property=Timezone --value)
+        elif -r /etc/timezone; then
+          timezone=$(cat /etc/timezone)
+        elif -r /etc/localtime; then
+          timezone=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
+        fi
+      ;;
+      Darwin)
+        timezone=$(readlink /etc/localtime | sed -e 's/^.*zoneinfo\///')
+      ;;
+    esac
+  fi
+  echo ${timezone}
+}
+
 ##
 ## function Wait_For_200
 ##
