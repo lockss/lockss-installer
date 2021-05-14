@@ -112,14 +112,17 @@ init_params() {
 }
 dashboard_install() {
   init_params
-  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" >/dev/null
+  if kubectl_cmd get ns kubernetes-dashboard ; then
+      kubectl_cmd wait --for=delete kubernetes-dashboard --timeout=60s &>/dev/null
+  fi
+  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" &>/dev/null
   echo "Waiting for pods to be marked 'Ready'..."
   kubectl_cmd -n kubernetes-dashboard wait --for=condition=Ready --all pods
 }
 
 dashboard_remove() {
   echo "Removing kubernetes dashboard and components..."
-  kubectl_cmd wait --for=delete kubernetes-dashboard --timeout=60s >/dev/null
+  kubectl_cmd wait --for=delete kubernetes-dashboard --timeout=60s &>/dev/null
 }
 
 dashboard_update() {
