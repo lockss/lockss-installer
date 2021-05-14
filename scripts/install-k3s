@@ -176,8 +176,9 @@ check_k3s() {
 
 write_config() {
   set_k3s_bin_dir
+  local f_name=${1}
 
-  cat >"${1}" <<EOF
+  cat >"${f_name}" <<EOF
 K8S_FLAVOR="k3s"
 K8S_VERSION="${K8S_VERSION}"
 K3S_VERSION="${K3S_VERSION}"
@@ -192,8 +193,8 @@ EOF
   lockss_gid=$(id -g "${LOCKSS_USER}")
 
   if [ $(id -u) -ne ${lockss_uid} ]; then
-    $SUDO chown $lockss_uid:$lockss_gid "${1}" ||
-    echo "The file ${CONFIG_DIR}/k8s.cfg is not owned by lockss."
+    $SUDO chown $lockss_uid:$lockss_gid "${f_name}" ||
+      echo "The file ${f_name} is not owned by the LOCKSS user."
   fi
 }
 
@@ -234,3 +235,4 @@ install_k3s || error_exit "Attempt to install k3s failed."
 echo "${PROGNAME}: Writing configuration file..."
 write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 
+graceful_exit
