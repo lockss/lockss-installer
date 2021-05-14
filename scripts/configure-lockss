@@ -674,10 +674,12 @@ case ${OS_TYPE} in
 Linux)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
+  READLINK="readlink -f"
   ;;
 Darwin)
   LOCKSS_HOME=
   SHA256SUM=sha256sum
+  READLINK="readlink"
   ;;
 *)
   echo "${OS_TYPE} not supported"

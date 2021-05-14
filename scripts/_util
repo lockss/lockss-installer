@@ -282,7 +282,7 @@ ensure_lockss_user() {
 
 Check_Installed() {
   while [ "X${1}" != "X" ]; do
-    if ! which "${1}" &>/dev/null; then
+    if ! command -v "${1}" &>/dev/null; then
       err_exit "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
     fi
     shift
@@ -302,20 +302,13 @@ Get_Timezone() {
   local timezone="${TZ}"
 
   if [ -z "${timezone}" ]; then
-    case $(uname -s) in
-      Linux)
-        if which timedatectl &>/dev/null; then
-          timezone=$(timedatectl show --property=Timezone --value)
-        elif -r /etc/timezone; then
-          timezone=$(cat /etc/timezone)
-        elif -r /etc/localtime; then
-          timezone=$(readlink -f /etc/localtime | sed -e 's/^.*zoneinfo\///')
-        fi
-      ;;
-      Darwin)
-        timezone=$(readlink /etc/localtime | sed -e 's/^.*zoneinfo\///')
-      ;;
-    esac
+    if command -v timedatectl &>/dev/null; then
+      timezone=$(timedatectl show --property=Timezone --value)
+    elif -r /etc/timezone; then
+      timezone=$(cat /etc/timezone)
+    elif -r /etc/localtime; then
+      timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
+    fi
   fi
   echo ${timezone}
 }

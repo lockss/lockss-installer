@@ -118,11 +118,16 @@ dashboard_install() {
   kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" &>/dev/null
   echo "Waiting for pods to be marked 'Ready'..."
   kubectl_cmd -n kubernetes-dashboard wait --for=condition=Ready --all pods
+  echo "To access the Dashboard you must create a secure channel to your K3s cluster:"
+  echo "type: $KUBECTL_CMD proxy &"
+  echo "The Dashboard is now available at:"
+  echo "http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
+  echo "To sign-in, select 'Token' and copy token output by /scripts/dashboard_util -t"
 }
 
 dashboard_remove() {
   echo "Removing kubernetes dashboard and components..."
-  kubectl_cmd wait --for=delete kubernetes-dashboard --timeout=60s &>/dev/null
+  kubectl_cmd wait --for=delete ns kubernetes-dashboard --timeout=60s &>/dev/null
 }
 
 dashboard_update() {
