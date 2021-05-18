@@ -62,14 +62,19 @@ Configure_Dns()
     fi
   fi
   declare -a nameservers
-  if is_yes "${USE_RESOLV_CONF}" ; then
+  if [ "${FORCE_DNS}" != 'true' ] && is_yes "${USE_RESOLV_CONF}" ; then
     echo 'No special configuration needed; using system resolv.conf files.'
   else
-    echo "Both ${ETC_RESOLV_CONF} and ${SYSTEMD_RESOLV_CONF}"
-    echo 'in your system contains a loopback address. CoreDNS does not allow a'
-    echo 'loopback address to be given to Kubernetes pods as an upstream DNS'
-    echo 'server. Please enter a list of IP addresses of upstream DNS resolvers.'
-    echo
+    if [ "${FORCE_DNS}" = 'true' ] ; then
+      echo "${_0} in forced mode; prompting for IP addresses of DNS servers"
+      echo
+    else
+      echo "Both ${ETC_RESOLV_CONF} and ${SYSTEMD_RESOLV_CONF}"
+      echo 'in your system contains a loopback address. CoreDNS does not allow a'
+      echo 'loopback address to be given to Kubernetes pods as an upstream DNS'
+      echo 'server. Please enter a list of IP addresses of upstream DNS resolvers.'
+      echo
+    fi
 
     local IP_OK='N'
     local DEFAULT_IP_LIST=''
@@ -80,14 +85,19 @@ Configure_Dns()
       DEFAULT_IP_LIST="$(extract_non_loopback_resolvers "${ETC_RESOLV_CONF}")"
     fi
 
-    until is_yes "${IP_OK}" ; do
-      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
-      if valid_ip_address_list "${ANS}" ; then
-        IP_OK='Y'
-        # set IP addr array used in resolv.conf.mustache
-        nameservers=("${VALIDATED_LIST[@]}")
-      fi
-    done
+    if [ "${ASSUME_YES}" = 'true' ] ; then
+      nameservers=("${VALIDATED_LIST[@]}")
+      echo "${_0} in automatic 'yes' mode; using: ${nameservers}"
+    else
+      until is_yes "${IP_OK}" ; do
+        ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
+        if valid_ip_address_list "${ANS}" ; then
+          IP_OK='Y'
+          # set IP addr array used in resolv.conf.mustache
+          nameservers=("${VALIDATED_LIST[@]}")
+        fi
+      done
+    fi
 
     $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || return 1
     local src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
@@ -127,11 +137,16 @@ Exit()
 Help()
 {
   cat <<MyEOF
-  ${_0} [--assume-yes|-y]
+  ${_0} [--assume-yes|-y] [--force|-f]
   ${_0} --help|-help|-h
 
 --assume-yes, -y
-    Assume that the answer to interactive questions is Y for "yes".
+    Assume that the answer to interactive yes/no questions is Y for "yes", and
+    that the answer to other interactive questions is the proposed value. 
+
+--force, -f
+    Disregard resolv.conf files and force the prompting of IP addresses of DNS
+    servers instead.
 
 --help, -help, -h
     Display this message and exit.
@@ -143,6 +158,7 @@ MyEOF
 ##
 
 ASSUME_YES="${ASSUME_YES:-false}"
+FORCE_DNS="${FORCE_DNS:-false}"
 
 USE_RESOLV_CONF='Y'
 SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
@@ -172,6 +188,11 @@ while true ; do
 
     --assume-yes|-y)
       ASSUME_YES='true'
+      shift
+      ;;
+      
+    --force|-f)
+      FORCE_DNS='true'
       shift
       ;;
       

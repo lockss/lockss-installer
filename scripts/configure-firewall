@@ -245,7 +245,7 @@ Help()
   ${_0} --help|-help|-h
 
 --assume-yes, -y
-    Assume that the answer to interactive questions is Y for "yes".
+    Assume that the answer to interactive yes/no questions is Y for "yes".
 
 --help, -help, -h
     Display this message and exit.
