@@ -129,6 +129,7 @@ Configure_Iptables()
 
 Configure_Firewalld()
 {
+  echo
   echo "Configuring firewalld..."
   # Return if firewall-cmd is not on the PATH
   if ! command -v firewall-cmd > /dev/null ; then
@@ -174,6 +175,8 @@ Configure_Firewalld()
 
 Configure_Ufw()
 {
+  echo
+  echo "Configuring ufw..."
   # Return if ufw is not on the PATH
   if ! command -v ufw > /dev/null ; then
     echo 'ufw is not installed; no change needed'
