@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util support
+##
+
+. "${_D0}/_util"
+
+##
+## Configure_Iptables function
+##
+
+Configure_Iptables()
+{
+  echo "Configuring iptables..."
+  # Return if iptables is not on the PATH
+  if ! command -v iptables > /dev/null ; then
+    echo 'iptables is not installed; no change needed'
+    return 0
+  fi
+  # Get the iptables version
+  # Examples of iptables --version:
+  #   iptables v1.8.7 (legacy)
+  #   iptables v1.8.7 (nf_tables)
+  #   iptables v1.4.21
+  local line
+  line="$(iptables --version)" || return 1
+  local ver
+  ver="$(echo "${line}" | awk '{print $2;exit 0}' | tail -c +2)" || return 1
+  # Return if the version is not 1.8.0 or later
+  if [ "$(echo "${ver}" | awk -F. '{print $1;exit 0}')" -lt 1 ] || [ "$(echo "${ver}" | awk -F. '{print $2;exit 0}')" -lt 8 ] ; then
+    echo 'iptables is not version 1.8.0 or later; no change needed'
+    return 0
+  fi
+  # Return if the mode is not nf_tables
+  if [ "$(echo "${line}" | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
+    echo 'iptables is not in nf_tables mode; no change needed'
+    return 0
+  fi
+  # Return if update-alternatives is not on the PATH
+  if ! command -v update-alternatives > /dev/null ; then
+    echo 'iptables is not managed via alternatives; no change needed'
+    return 0
+  fi
+  # Return if the first /etc/alternatives/ip*tables* is not a symlink or not in nf_tables mode
+  for alt in /etc/alternatives/ip*tables* ; do
+    if [ ! -h "${alt}" ] ; then
+      echo 'iptables is not managed via alternatives; no change needed'
+      return 0
+    fi
+    if [ "$($alt --version | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
+      echo 'iptables managed via alternatives is not in nf_tables mode; no change needed'
+      return 0
+    fi
+    break
+  done
+  # Ask for permission
+  echo
+  echo 'Your system is running iptables version 1.8.0 or later, in nf_tables'
+  echo 'mode, via alternatives. For K3s to work properly, it is necessary to'
+  echo 'switch iptables to legacy mode via alternatives. This script can do it'
+  echo 'for you. If you opt out, the script will continue but K3s is likely to'
+  echo 'malfunction without external intervention; see the manual for details.'
+  echo
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_0} in automatic 'yes' mode"
+    ANS=Y
+  else
+    ask_for_input 'Switch iptables to legacy mode via alternatives?' Y
+  fi
+  if ! is_yes "${ANS}" ; then
+    echo 'Leaving iptables unchanged; see manual for details.'
+    return 0
+  fi
+  # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
+  # Verified that doing it twice doesn't hurt (succeeds with no output).
+  echo "Switching iptables to legacy mode via alternatives..."
+  # iptables-legacy and ip6tables-legacy are mandatory, return 1 if it fails
+  $SUDO update-alternatives --set iptables /usr/sbin/iptables-legacy || return 1
+  $SUDO update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || return 1
+  # arptables-legacy and ebtables-legacy are optional, don't return if it fails
+  $SUDO update-alternatives --set arptables /usr/sbin/arptables-legacy
+  $SUDO update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+  # Reload iptables
+  $SUDO iptables --flush || return 1
+  echo 'Done.'
+  return 0
+}
+
+##
+## Configure_Firewalld function
+##
+
+Configure_Firewalld()
+{
+  echo "Configuring firewalld..."
+  # Return if firewall-cmd is not on the PATH
+  if ! command -v firewall-cmd > /dev/null ; then
+    echo 'firewalld is not installed; no change needed'
+    return 0
+  fi
+  # Return if firewalld is not running
+  if [ "$($SUDO firewall-cmd --state 2>&1)" != 'running' ] ; then
+    echo 'firewalld is not running; no change needed'
+    return 0
+  fi
+  # Ask for permission
+  echo
+  echo 'Your system is running firewalld. For K3s to work properly, it is'
+  echo "necessary to add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted"
+  echo 'zone. This script can do it for you. If you opt out, the script will'
+  echo 'continue but K3s is likely to malfunction without external intervention;'
+  echo 'see the manual for details.'
+  echo
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_0} in automatic 'yes' mode"
+    ANS=Y
+  else
+    ask_for_input "Add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone?" Y
+  fi
+  if ! is_yes "${ANS}" ; then
+    echo 'Leaving firewalld unchanged; see manual for details.'
+    return 0
+  fi
+  # Perform change. Verified that doing it twice doesn't hurt (succeeds with
+  # "Warning: ALREADY_ENABLED: 10.42.0.0/16" or similar).
+  echo "Adding 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone..."  
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 || return 1
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 || return 1
+  $SUDO firewall-cmd --reload || return 1  
+  echo 'Done.'
+  return 0
+}
+
+##
+## Configure_Ufw function
+##
+
+Configure_Ufw()
+{
+  # Return if ufw is not on the PATH
+  if ! command -v ufw > /dev/null ; then
+    echo 'ufw is not installed; no change needed'
+    return 0
+  fi
+  # Return if ufw is not active
+  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" != 'Status: active' ] ; then
+    echo 'ufw is not active; no change needed'
+    return 0
+  fi
+  # Ask for permission
+  echo
+  echo 'Your system is running ufw. For K3s to work properly, it is necessary to'
+  echo 'allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw. This script'
+  echo 'can do it for you. If you opt out, the script will continue but K3s is'
+  echo 'likely to malfunction without external intervention; see the manual for'
+  echo 'details.'
+  echo
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_0} in automatic 'yes' mode"
+    ANS=Y
+  else
+    ask_for_input 'Allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw?' Y
+  fi
+  if ! is_yes "${ANS}" ; then
+    echo 'Leaving ufw unchanged; see manual for details.'
+    return 0
+  fi
+  # Perform change. Verified that adding the same rule twice doesn't hurt
+  # (succeeds with "Skipping adding existing rule").
+  echo 'Allowing traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw...'  
+  $SUDO ufw allow from 10.42.0.0/16 to any || return 1
+  $SUDO ufw allow from 10.43.0.0/16 to any || return 1
+  $SUDO ufw reload || return 1  
+  echo 'Done.'
+  return 0
+}
+
+##
+## Error function
+##
+Error()
+{
+  local msg="${1:-error}"
+  local code="${2:-1}"
+  echo "${_0}: ${msg}"
+  exit "${code}"
+}
+
+##
+## Exit function
+##
+Exit()
+{
+  local code="${1:-0}"
+  exit "${code}"
+}
+
+##
+## Help function
+##
+Help()
+{
+  cat <<MyEOF
+  ${_0} [--assume-yes|-y]
+  ${_0} --help|-help|-h
+
+--assume-yes, -y
+    Assume that the answer to interactive questions is Y for "yes".
+
+--help, -help, -h
+    Display this message and exit.
+MyEOF
+}
+
+##
+## Definitions
+##
+
+ASSUME_YES="${ASSUME_YES:-false}"
+
+##
+## Set SUDO
+##
+
+case "$(id -u)" in
+  0) SUDO='' ;;
+  *) SUDO='sudo' ;;
+esac
+
+##
+## Command line parsing loop
+##
+
+while true ; do
+  case "${1}" in
+
+    '')
+      break
+      ;;
+
+    --assume-yes|-y)
+      ASSUME_YES='true'
+      shift
+      ;;
+      
+    --help|-help|-h)
+      Help
+      Exit
+      ;;
+      
+    -*)
+      Error "unknown option: ${1}"
+      ;;
+
+    *)
+      Error "unexpected argument: ${1}"
+      ;;
+  
+  esac
+done
+
+Configure_Iptables || Error 'Attempt to configure iptables failed.'
+
+Configure_Firewalld || Error 'Attempt to configure firewalld failed.'
+
+Configure_Ufw || Error 'Attempt to configure ufw failed.'
+
+Exit 0
+

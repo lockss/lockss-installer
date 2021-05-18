@@ -55,14 +55,11 @@ _D0=$(dirname "${0}")
 ##
 ## Definitions
 ##
-USE_RESOLV_CONF=Y
-SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
-RESOLV_CONF="/etc/resolv.conf"
 LOCKSS_ETC_DIR="/etc/lockss"
 LOCKSS_RESOLV_CONF="$LOCKSS_ETC_DIR/resolv.conf"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
-RESOLVE_CONF_CONFIG=""
+RESOLV_CONF_CONFIG=""
 K8S_VERSION="1.20"
 K3S_VERSION="v1.20.6+k3s1"
 LOCKSS_USER="lockss"
@@ -114,55 +111,13 @@ _EOF_
   return
 }
 
-configure_resolv_conf() {
-  # examine the local resolv.conf for loopback address
-  if has_loopback_resolver "${RESOLV_CONF}"; then
-    if [ -f "$SYSD_RESOLV_CONF" ]; then
-      if has_loopback_resolver "${SYSD_RESOLV_CONF}"; then
-        USE_RESOLV_CONF=N
-      fi
-    else
-      USE_RESOLV_CONF=N
-    fi
-  fi
-  declare -a nameservers
-  if ! is_yes ${USE_RESOLV_CONF}; then
-    echo "The /etc/resolv.conf file in your system contains a loopback address."
-    echo "CoreDNS does not allow a loopback address to be assigned to pods."
-    echo "Please enter a list of IP addresses of upstream DNS resolvers."
-    local IP_OK=N
-    local DEFAULT_IP_LIST=
-    if [ -r "$SYSD_RESOLV_CONF" ]; then
-      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$SYSD_RESOLV_CONF")
-    fi
-    if [ -z "$DEFAULT_IP_LIST" -a -r "$RESOLV_CONF" ]; then
-      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$RESOLV_CONF")
-    fi
-
-    until is_yes ${IP_OK}; do
-      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
-      if valid_ip_address_list "${ANS}"; then
-        IP_OK=Y
-        # set IP addr array used in resolv.conf.mustache
-        nameservers=("${VALIDATED_LIST[@]}")
-      fi
-    done
-
-    src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
-    $SUDO mkdir -p ${LOCKSS_ETC_DIR}
-    dst="${CONFIG_DIR}/resolv.conf"
-    echo "Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
-    echo "Moving file to ${LOCKSS_RESOLV_CONF}"
-    $SUDO cp "${dst}" "${LOCKSS_RESOLV_CONF}"
-    RESOLV_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
-  fi
-}
-
 install_k3s() {
+  local resolv_conf_config=''
+  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
+    resolv_conf_config="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+  fi
   echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLVE_CONF_CONFIG}
-
+  curl -sfL https://get.k3s.io | "INSTALL_K3S_VERSION=${K3S_VERSION}" K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik "${resolv_conf_config}"
 }
 
 check_k3s() {
@@ -198,168 +153,9 @@ EOF
   fi
 }
 
-Configure_Iptables()
-{
-  echo "${PROGNAME}: Configuring iptables..."
-  # Return if iptables is not on the PATH
-  if ! command -v iptables > /dev/null ; then
-    echo 'iptables is not installed; no change needed'
-    return 0
-  fi
-  # Get the iptables version
-  # Examples of iptables --version:
-  #   iptables v1.8.7 (legacy)
-  #   iptables v1.8.7 (nf_tables)
-  #   iptables v1.4.21
-  local line
-  line="$(iptables --version)" || return 1
-  local ver
-  ver="$(echo "${line}" | awk '{print $2;exit 0}' | tail -c +2)" || return 1
-  # Return if the version is not 1.8.0 or later
-  if [ "$(echo "${ver}" | awk -F. '{print $1;exit 0}')" -lt 1 ] || [ "$(echo "${ver}" | awk -F. '{print $2;exit 0}')" -lt 8 ] ; then
-    echo 'iptables is not version 1.8.0 or later; no change needed'
-    return 0
-  fi
-  # Return if the mode is not nf_tables
-  if [ "$(echo "${line}" | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
-    echo 'iptables is not in nf_tables mode; no change needed'
-    return 0
-  fi
-  # Return if update-alternatives is not on the PATH
-  if ! command -v update-alternatives > /dev/null ; then
-    echo 'iptables is not managed via alternatives; no change needed'
-    return 0
-  fi
-  # Return if the first /etc/alternatives/ip*tables* is not a symlink or not in nf_tables mode
-  for alt in /etc/alternatives/ip*tables* ; do
-    if [ ! -h "${alt}" ] ; then
-      echo 'iptables is not managed via alternatives; no change needed'
-      return 0
-    fi
-    if [ "$($alt --version | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
-      echo 'iptables managed via alternatives is not in nf_tables mode; no change needed'
-      return 0
-    fi
-    break
-  done
-  # Ask for permission
-  echo
-  echo 'Your system is running iptables version 1.8.0 or later, in nf_tables'
-  echo 'mode, via alternatives. For K3s to work properly, it is necessary to'
-  echo 'switch iptables to legacy mode via alternatives. This script can do it'
-  echo 'for you. If you opt out, the script will continue but K3s is likely to'
-  echo 'malfunction without external intervention; see the manual for details.'
-  echo
-  if [ "${ASSUME_YES}" = 'true' ] ; then
-    echo "${PROGNAME} in automatic 'yes' mode"
-    ANS=Y
-  else
-    ask_for_input 'Switch iptables to legacy mode via alternatives?' Y
-  fi
-  if ! is_yes "${ANS}" ; then
-    echo 'Leaving iptables unchanged; see manual for details.'
-    return 0
-  fi
-  # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
-  echo "Switching iptables to legacy mode via alternatives..."
-  # iptables-legacy and ip6tables-legacy are mandatory, return 1 if it fails
-  $SUDO update-alternatives --set iptables /usr/sbin/iptables-legacy || return 1
-  $SUDO update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || return 1
-  # arptables-legacy and ebtables-legacy are optional, don't return if it fails
-  $SUDO update-alternatives --set arptables /usr/sbin/arptables-legacy
-  $SUDO update-alternatives --set ebtables /usr/sbin/ebtables-legacy
-  # Reload iptables
-  $SUDO iptables --flush || return 1
-  echo 'Done.'
-  return 0
-}
-
-Configure_Firewalld()
-{
-  echo "${PROGNAME}: Configuring firewalld..."
-  # Return if firewall-cmd is not on the PATH
-  if ! command -v firewall-cmd > /dev/null ; then
-    echo 'firewalld is not installed; no change needed'
-    return 0
-  fi
-  # Return if firewalld is not running
-  if [ "$($SUDO firewall-cmd --state 2>&1)" != 'running' ] ; then
-    echo 'firewalld is not running; no change needed'
-    return 0
-  fi
-  # Ask for permission
-  echo
-  echo 'Your system is running firewalld. For K3s to work properly, it is'
-  echo "necessary to add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted"
-  echo 'zone. This script can do it for you. If you opt out, the script will'
-  echo 'continue but K3s is likely to malfunction without external intervention;'
-  echo 'see the manual for details.'
-  echo
-  if [ "${ASSUME_YES}" = 'true' ] ; then
-    echo "${PROGNAME} in automatic 'yes' mode"
-    ANS=Y
-  else
-    ask_for_input "Add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone?" Y
-  fi
-  if ! is_yes "${ANS}" ; then
-    echo 'Leaving firewalld unchanged; see manual for details.'
-    return 0
-  fi
-  # Perform change
-  echo "Adding 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone..."  
-  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 || return 1
-  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 || return 1
-  $SUDO firewall-cmd --reload || return 1  
-  echo 'Done.'
-  return 0
-}
-
-Configure_Ufw()
-{
-  # Return if ufw is not on the PATH
-  if ! command -v ufw > /dev/null ; then
-    echo 'ufw is not installed; no change needed'
-    return 0
-  fi
-  # Return if ufw is not active
-  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" != 'Status: active' ] ; then
-    echo 'ufw is not active; no change needed'
-    return 0
-  fi
-  # Ask for permission
-  echo
-  echo 'Your system is running ufw. For K3s to work properly, it is necessary to'
-  echo 'allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw. This script'
-  echo 'can do it for you. If you opt out, the script will continue but K3s is'
-  echo 'likely to malfunction without external intervention; see the manual for'
-  echo 'details.'
-  echo
-  if [ "${ASSUME_YES}" = 'true' ] ; then
-    echo "${PROGNAME} in automatic 'yes' mode"
-    ANS=Y
-  else
-    ask_for_input 'Allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw?' Y
-  fi
-  if ! is_yes "${ANS}" ; then
-    echo 'Leaving ufw unchanged; see manual for details.'
-    return 0
-  fi
-  # Perform change
-  echo 'Allowing traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw...'  
-  $SUDO ufw allow from 10.42.0.0/16 to any || return 1
-  $SUDO ufw allow from 10.43.0.0/16 to any || return 1
-  $SUDO ufw reload || return 1  
-  echo 'Done.'
-  return 0
-}
-
 ##
 ## MAIN
 ##
-
-# Intentional '-' not ':-': use ASSUME_YES (if set to anything including null),
-# else default to 'false' (if unset).
-ASSUME_YES="${ASSUME_YES-false}"
 
 # Trap signals
 trap "signal_exit TERM" TERM HUP
@@ -373,9 +169,6 @@ while [[ -n $1 ]]; do
   -h | --help)
     help_message
     graceful_exit
-    ;;
-  -y|--assume-yes)
-    ASSUME_YES='true'
     ;;
   -*)
     usage
@@ -394,14 +187,19 @@ if [ $(id -u) -eq 0 ]; then
     SUDO=
 fi
 
-Configure_Iptables || error_exit "Attempt to configure iptables failed."
+# Call configure-firewall
+CONFIGURE_FIREWALL="${_D0}/configure-firewall"
+if [ ! -x "${CONFIGURE_FIREWALL}" ] ; then
+  error_exit "${CONFIGURE_FIREWALL} not found."
+fi
+$CONFIGURE_FIREWALL
 
-Configure_Firewalld || error_exit "Attempt to configure firewalld failed."
-
-Configure_Ufw || error_exit "Attempt to configure ufw failed."
-
-echo "${PROGNAME}: Setting resolv.conf for container DNS resolution..."
-configure_resolv_conf || error_exit "Unable to obtain valid resolv.conf information."
+# Call configure-dns
+CONFIGURE_DNS="${_D0}/configure-dns"
+if [ ! -x "${CONFIGURE_DNS}" ] ; then
+  error_exit "${CONFIGURE_DNS} not found."
+fi
+$CONFIGURE_DNS
 
 echo "${PROGNAME}: Installing K3s..."
 install_k3s || error_exit "Attempt to install K3s failed."
