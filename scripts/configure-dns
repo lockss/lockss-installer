@@ -49,6 +49,7 @@ _D0=$(dirname "${0}")
 
 Configure_Dns()
 {
+  echo
   echo "Configuring resolv.conf..."
   # Examine the local resolv.conf for loopback address
   if has_loopback_resolver "${ETC_RESOLV_CONF}" ; then
