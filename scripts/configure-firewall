@@ -111,7 +111,14 @@ Configure_Iptables()
   # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
   # Verified that doing it twice doesn't hurt (succeeds with no output).
   echo "Switching iptables to legacy mode via alternatives..."
-  # iptables-legacy and ip6tables-legacy are mandatory, return 1 if it fails
+  # Changing iptables can deactivate ufw
+  local ufw_was_active='false'
+  if Is_Ufw_Active ; then
+    echo "Temporarily deactivating ufw..."
+    ufw_was_active='true'
+    $SUDO ufw disable || return 1
+  fi
+  # iptables-legacy and ip6tables-legacy are mandatory
   $SUDO update-alternatives --set iptables /usr/sbin/iptables-legacy || return 1
   $SUDO update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy || return 1
   # arptables-legacy and ebtables-legacy are optional, don't return if it fails
@@ -119,6 +126,10 @@ Configure_Iptables()
   $SUDO update-alternatives --set ebtables /usr/sbin/ebtables-legacy
   # Reload iptables
   $SUDO iptables --flush || return 1
+  if [ "${ufw_was_active}" = 'true' ] ; then
+    echo "Reactivating ufw..."
+    $SUDO ufw --force enable || return 1
+  fi
   echo 'Done.'
   return 0
 }
@@ -183,7 +194,7 @@ Configure_Ufw()
     return 0
   fi
   # Return if ufw is not active
-  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" != 'Status: active' ] ; then
+  if ! Is_Ufw_Active ; then
     echo 'ufw is not active; no change needed'
     return 0
   fi
@@ -250,6 +261,18 @@ Help()
 --help, -help, -h
     Display this message and exit.
 MyEOF
+}
+
+##
+## Is_Ufw_Active function
+##
+Is_Ufw_Active()
+{
+  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] ; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 ##
