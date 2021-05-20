@@ -75,17 +75,17 @@ Configure_Iptables()
   fi
   # Return if update-alternatives is not on the PATH
   if ! command -v update-alternatives > /dev/null ; then
-    echo 'iptables is not managed via alternatives; no change needed'
+    echo 'iptables is not managed via Alternatives; no change needed'
     return 0
   fi
   # Return if the first /etc/alternatives/ip*tables* is not a symlink or not in nf_tables mode
   for alt in /etc/alternatives/ip*tables* ; do
     if [ ! -h "${alt}" ] ; then
-      echo 'iptables is not managed via alternatives; no change needed'
+      echo 'iptables not managed via Alternatives; no change needed'
       return 0
     fi
     if [ "$($alt --version | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
-      echo 'iptables managed via alternatives is not in nf_tables mode; no change needed'
+      echo 'iptables managed via Alternatives is not in nf_tables mode; no change needed'
       return 0
     fi
     break
@@ -110,7 +110,7 @@ Configure_Iptables()
   fi
   # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
   # Verified that doing it twice doesn't hurt (succeeds with no output).
-  echo "Switching iptables to legacy mode via alternatives..."
+  echo "Switching iptables to legacy mode via Alternatives..."
   # Changing iptables can deactivate ufw
   local ufw_was_active='false'
   if Is_Ufw_Active ; then
