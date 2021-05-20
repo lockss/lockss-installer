@@ -55,14 +55,12 @@ _D0=$(dirname "${0}")
 ##
 ## Definitions
 ##
-USE_RESOLV_CONF=Y
-SYSD_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
-RESOLV_CONF="/etc/resolv.conf"
 LOCKSS_ETC_DIR="/etc/lockss"
 LOCKSS_RESOLV_CONF="$LOCKSS_ETC_DIR/resolv.conf"
+RESOLV_CONF_CONFIG=''
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
-RESOLVE_CONF_CONFIG=""
+RESOLV_CONF_CONFIG=""
 K8S_VERSION="1.20"
 K3S_VERSION="v1.20.6+k3s1"
 LOCKSS_USER="lockss"
@@ -114,55 +112,12 @@ _EOF_
   return
 }
 
-configure_resolv_conf() {
-  # examine the local resolv.conf for loopback address
-  if has_loopback_resolver "${RESOLV_CONF}"; then
-    if [ -f "$SYSD_RESOLV_CONF" ]; then
-      if has_loopback_resolver "${SYSD_RESOLV_CONF}"; then
-        USE_RESOLV_CONF=N
-      fi
-    else
-      USE_RESOLV_CONF=N
-    fi
-  fi
-  declare -a nameservers
-  if ! is_yes ${USE_RESOLV_CONF}; then
-    echo "The /etc/resolv.conf file in your system contains a loopback address."
-    echo "CoreDNS does not allow a loopback address to be assigned to pods."
-    echo "Please enter a list of IP addresses of upstream DNS resolvers."
-    local IP_OK=N
-    local DEFAULT_IP_LIST=
-    if [ -r "$SYSD_RESOLV_CONF" ]; then
-      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$SYSD_RESOLV_CONF")
-    fi
-    if [ -z "$DEFAULT_IP_LIST" -a -r "$RESOLV_CONF" ]; then
-      DEFAULT_IP_LIST=$(extract_non_loopback_resolvers "$RESOLV_CONF")
-    fi
-
-    until is_yes ${IP_OK}; do
-      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
-      if valid_ip_address_list "${ANS}"; then
-        IP_OK=Y
-        # set IP addr array used in resolv.conf.mustache
-        nameservers=("${VALIDATED_LIST[@]}")
-      fi
-    done
-
-    src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
-    $SUDO mkdir -p ${LOCKSS_ETC_DIR}
-    dst="${CONFIG_DIR}/resolv.conf"
-    echo "Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
-    echo "Moving file to ${LOCKSS_RESOLV_CONF}"
-    $SUDO cp "${dst}" "${LOCKSS_RESOLV_CONF}"
+install_k3s() {
+  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
     RESOLV_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
   fi
-}
-
-install_k3s() {
-  echo "${PROGNAME}: Using k3s ${K3S_VERSION} of kubernetes version ${K8S_VERSION}..."
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLVE_CONF_CONFIG}
-
+  echo "${PROGNAME}: Installing K3s ${K3S_VERSION} (Kubernetes ${K8S_VERSION})..."
+  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLV_CONF_CONFIG}
 }
 
 check_k3s() {
@@ -184,26 +139,21 @@ K8S_VERSION="${K8S_VERSION}"
 K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
 EOF
-  if [ -n "${RESOLV_CONF_CONFIG}" ]; then
-    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\""
+  if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
+    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" >>"${f_name}"
   fi
-#  ask_for_input ""User account used to run LOCKSS system?"" "${LOCKSS_USER}"
-#  LOCKSS_USER=${ANS}
-  lockss_uid=$(id -u "${LOCKSS_USER}")
-  lockss_gid=$(id -g "${LOCKSS_USER}")
-
-  if [ $(id -u) -ne ${lockss_uid} ]; then
-    $SUDO chown $lockss_uid:$lockss_gid "${f_name}" ||
-      echo "The file ${f_name} is not owned by the LOCKSS user."
-  fi
+  $SUDO chown "${LOCKSS_USER}:${LOCKSS_USER}" "${f_name}" ||
+      echo "Warning: the file ${f_name} is not owned by user lockss."
 }
 
 ##
 ## MAIN
 ##
+
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
+
 umask 002
 
 # Parse command-line
@@ -213,7 +163,7 @@ while [[ -n $1 ]]; do
     help_message
     graceful_exit
     ;;
-  -* | --*)
+  -*)
     usage
     error_exit "Unknown option $1"
     ;;
@@ -223,16 +173,29 @@ while [[ -n $1 ]]; do
   esac
   shift
 done
-# --- use SUDO if we are not already root ---
-SUDO=sudo
-if [ $(id -u) -eq 0 ]; then
-    SUDO=
-fi
-echo "${PROGNAME}: Setting resolv.conf for container dns usage..."
-configure_resolv_conf || error_exit "Unable obtain valid resolv.conf information."
-echo "${PROGNAME}: Installing k3s kubernetes..."
-install_k3s || error_exit "Attempt to install k3s failed."
-echo "${PROGNAME}: Writing configuration file..."
-write_config ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 
-graceful_exit
+# --- use SUDO if we are not already root ---
+SUDO='sudo'
+if [ $(id -u) -eq 0 ]; then
+    SUDO=''
+fi
+
+# Call configure-firewall
+CONFIGURE_FIREWALL="${_D0}/configure-firewall"
+if [ ! -x "${CONFIGURE_FIREWALL}" ] ; then
+  error_exit "${CONFIGURE_FIREWALL} not found."
+fi
+$CONFIGURE_FIREWALL || error_exit "${CONFIGURE_FIREWALL} failed."
+
+# Call configure-dns
+CONFIGURE_DNS="${_D0}/configure-dns"
+if [ ! -x "${CONFIGURE_DNS}" ] ; then
+  error_exit "${CONFIGURE_DNS} not found."
+fi
+$CONFIGURE_DNS || error_exit "${CONFIGURE_DNS} failed."
+
+echo "${PROGNAME}: Installing K3s..."
+install_k3s || error_exit 'Attempt to install K3s failed.'
+
+echo "${PROGNAME}: Writing configuration file..."
+write_config ${K8S_CONF_FILE} || error_exit "Attempt to write ${K8S_CONF_FILE} failed."

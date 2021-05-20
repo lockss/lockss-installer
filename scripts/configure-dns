@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util and mustache template support
+##
+
+. "${_D0}/_util"
+. "${_D0}/lib/mo"
+
+##
+## Configure_Dns function
+##
+
+Configure_Dns()
+{
+  echo
+  echo "Configuring resolv.conf..."
+  # Examine the local resolv.conf for loopback address
+  if has_loopback_resolver "${ETC_RESOLV_CONF}" ; then
+    if [ -f "${SYSTEMD_RESOLV_CONF}" ] ; then
+      if has_loopback_resolver "${SYSTEMD_RESOLV_CONF}" ; then
+        USE_RESOLV_CONF='N'
+      fi
+    else
+      USE_RESOLV_CONF='N'
+    fi
+  fi
+  declare -a nameservers
+  if [ "${FORCE_DNS}" != 'true' ] && is_yes "${USE_RESOLV_CONF}" ; then
+    echo 'No special configuration needed; using system resolv.conf files.'
+  else
+    if [ "${FORCE_DNS}" = 'true' ] ; then
+      echo "${_0} in forced mode; prompting for IP addresses of DNS servers"
+      echo
+    else
+      echo "Both ${ETC_RESOLV_CONF} and ${SYSTEMD_RESOLV_CONF}"
+      echo 'in your system contains a loopback address. CoreDNS does not allow a'
+      echo 'loopback address to be given to Kubernetes pods as an upstream DNS'
+      echo 'server. Please enter a list of IP addresses of upstream DNS resolvers.'
+      echo
+    fi
+
+    local IP_OK='N'
+    local DEFAULT_IP_LIST=''
+    if [ -r "${SYSTEMD_RESOLV_CONF}" ] ; then
+      DEFAULT_IP_LIST="$(extract_non_loopback_resolvers "${SYSTEMD_RESOLV_CONF}")"
+    fi
+    if [ -z "${DEFAULT_IP_LIST}" ] && [ -r "${ETC_RESOLV_CONF}" ] ; then
+      DEFAULT_IP_LIST="$(extract_non_loopback_resolvers "${ETC_RESOLV_CONF}")"
+    fi
+
+    if [ "${ASSUME_YES}" = 'true' ] ; then
+      nameservers=("${VALIDATED_LIST[@]}")
+      echo "${_0} in automatic 'yes' mode; using: ${nameservers}"
+    else
+      until is_yes "${IP_OK}" ; do
+        ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${DEFAULT_IP_LIST}"
+        if valid_ip_address_list "${ANS}" ; then
+          IP_OK='Y'
+          # set IP addr array used in resolv.conf.mustache
+          nameservers=("${VALIDATED_LIST[@]}")
+        fi
+      done
+    fi
+
+    $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || return 1
+    local src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
+    local dst="${CONFIG_DIR}/resolv.conf"
+    echo "Rendering ${src} to ${dst}..."
+    mo "${src}" > "${dst}" || return 1
+    echo "Moving file to ${LOCKSS_RESOLV_CONF}"
+    $SUDO cp "${dst}" "${LOCKSS_RESOLV_CONF}" || return 1
+    echo 'Done.'
+  fi
+  return 0
+}
+
+##
+## Error function
+##
+Error()
+{
+  local msg="${1:-error}"
+  local code="${2:-1}"
+  echo "${_0}: ${msg}"
+  exit "${code}"
+}
+
+##
+## Exit function
+##
+Exit()
+{
+  local code="${1:-0}"
+  exit "${code}"
+}
+
+##
+## Help function
+##
+Help()
+{
+  cat <<MyEOF
+  ${_0} [--assume-yes|-y] [--force|-f]
+  ${_0} --help|-help|-h
+
+--assume-yes, -y
+    Assume that the answer to interactive yes/no questions is Y for "yes", and
+    that the answer to other interactive questions is the proposed value. 
+
+--force, -f
+    Disregard resolv.conf files and force the prompting of IP addresses of DNS
+    servers instead.
+
+--help, -help, -h
+    Display this message and exit.
+MyEOF
+}
+
+##
+## Definitions
+##
+
+ASSUME_YES="${ASSUME_YES:-false}"
+FORCE_DNS="${FORCE_DNS:-false}"
+
+USE_RESOLV_CONF='Y'
+SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
+ETC_RESOLV_CONF='/etc/resolv.conf'
+LOCKSS_ETC_DIR='/etc/lockss'
+LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
+
+##
+## Set SUDO
+##
+
+case "$(id -u)" in
+  0) SUDO='' ;;
+  *) SUDO='sudo' ;;
+esac
+
+##
+## Command line parsing loop
+##
+
+while true ; do
+  case "${1}" in
+
+    '')
+      break
+      ;;
+
+    --assume-yes|-y)
+      ASSUME_YES='true'
+      shift
+      ;;
+      
+    --force|-f)
+      FORCE_DNS='true'
+      shift
+      ;;
+      
+    --help|-help|-h)
+      Help
+      Exit
+      ;;
+      
+    -*)
+      Error "unknown option: ${1}"
+      ;;
+
+    *)
+      Error "unexpected argument: ${1}"
+      ;;
+  
+  esac
+done
+
+Configure_Dns || Error 'Attempt to configure DNS failed.'
+
+Exit 0
