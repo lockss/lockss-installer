@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+BUSYBOX_VERSION="${BUSYBOX_VERSION:-1.28}"
+
+Fail()
+{
+  echo 'FAIL'
+  for line in "$@" ; do
+    echo "${line}"
+  done
+  if [ "${KEEP_GOING}" = 'true' ] ; then
+    FAILURES="$(expr "${FAILURES}" + 1)"
+  else
+    exit 1
+  fi 
+}
+
+Heading()
+{
+  printf '  * %s: ' "${1}" 
+}
+
+Pass()
+{
+  echo 'pass'
+}
+
+Retrying()
+{
+  printf 'retrying... '
+  sleep $WAIT
+}
+
+FAILURES='0'
+WAIT='10'
+
+K8S_FILE="$(realpath "${_D0}/../config/k8s.cfg")"
+
+Heading "$(basename "${K8S_FILE}") is present"
+[ -f "${K8S_FILE}" ] && Pass || Fail "$(ls -l "${K8S_FILE}" 2>&1)"
+
+. <( grep ^KUBECTL_CMD= "${K8S_FILE}" )
+
+Heading "KUBECTL_CMD is set in $(basename "${K8S_FILE}")"
+[ -n "${KUBECTL_CMD}" ] && Pass || Fail "Contents of ${K8S_FILE}:" "$(cat "${K8S_FILE}")"
+
+K3S_CMD=''
+for word in $KUBECTL_CMD ; do
+  K3S_CMD="${word}"
+  break
+done
+
+Heading 'K3s command in KUBECTL_CMD is on the PATH'
+command -v "${K3S_CMD}" > /dev/null && Pass || Fail "${K3S_CMD} not on the PATH" "PATH=${PATH}"
+
+Heading 'K3s server is running'
+OUT="$($KUBECTL_CMD version 2>&1)" && Pass || Fail "${OUT}"
+
+Heading 'K3s node is ready'
+until OUT="$($KUBECTL_CMD get node 2>&1 | tail -n +2)" &&
+      echo "${OUT}" | awk '$2 == "Ready" { exit 0 } { exit 1 }' ; do
+  Retrying
+done && Pass
+
+# See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-dns-pods-are-running
+Heading 'CoreDNS pod is running and ready'
+until OUT="$($KUBECTL_CMD -n kube-system get pods -l k8s-app=kube-dns 2>&1 | tail -n +2)" &&
+      echo "${OUT}" | awk '$3 == "Running" && $2 == "1/1" { exit 0 } { exit 1 }' ; do
+  Retrying
+done && Pass
+
+K3S_CLUSTER_IP='10.43.0.10'
+
+# See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-the-dns-service-is-present-with-the-correct-cluster-ip
+Heading 'Kube-DNS is present with the correct cluster IP'
+OUT="$($KUBECTL_CMD -n kube-system get svc -l k8s-app=kube-dns | tail -n +2)" &&
+      [ "$(echo "${OUT}" | awk '$1 == "kube-dns" && $2 == "ClusterIP" { print $3 ; exit 0 } { exit 1 }')" = "${K3S_CLUSTER_IP}" ] &&
+      Pass || Fail "${OUT}"
+
+# See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-domain-names-are-resolving
+for host in kubernetes.default props.lockss.org ; do
+  Heading "${host} resolves correctly"
+  until OUT="$($KUBECTL_CMD run -it --rm --restart=Never "busybox-${RANDOM}" "--image=busybox:${BUSYBOX_VERSION}" -- nslookup "${host}" 2>&1)" ; do
+    Retrying
+  done && Pass
+done
