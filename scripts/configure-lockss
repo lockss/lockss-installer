@@ -480,7 +480,7 @@ build_config_file() {
     until is_yes ${DATA_PATHS_OK}; do
       ask_for_input "Root path for primary content data storage directories" ${LOCKSS_DATA_DIR}
       if [ "X${ANS}" != X ]; then
-        LOCKSS_DATA_DIR="${ANS}"
+        LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
       fi
     done
@@ -502,7 +502,7 @@ build_config_file() {
         if [ "X${ANS}" = Xq ]; then
           done=Y
         elif [ -n "${ANS}" ]; then
-          curPaths[count]=${ANS}
+          curPaths[count]="$(normalize_path ${ANS})"
           repoDirs[count]="/data$count"
           count=$((count+1))
         fi
@@ -527,7 +527,7 @@ build_config_file() {
     until is_yes ${LOG_PATHS_OK}; do
       ask_for_input "Root path for service logs directories" ${log_dir_default}
       if [ "X${ANS}" != X ]; then
-        LOCKSS_LOGS_DIR="${ANS}"
+        LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
       fi
     done
@@ -535,12 +535,12 @@ build_config_file() {
       LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}
     fi
     ask_for_input "Root path for temporary storage directories (local storage preferred)" ${LOCKSS_TMPDIR}
-    LOCKSS_TMPDIR="${ANS}"
+    LOCKSS_TMPDIR="$(normalize_path ${ANS})"
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
     fi
     ask_for_input "Directory for storing install script logs" ${LOCKSS_SCRIPT_LOG_DIR}
-    LOCKSS_SCRIPT_LOG_DIR="${ANS}"
+    LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
     USER_OK=N
     until is_yes ${USER_OK}; do
       ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"

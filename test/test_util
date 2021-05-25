@@ -125,6 +125,14 @@ setup() {
   assert_equal "$v" "/a/b/c/"
   local v=$(normalize_path a/b/..c/d/..)
   assert_equal "$v" "a/b/..c/"
+  local v=$(normalize_path ./foo/bar)
+  assert_equal "$v" "./foo/bar"
+  local v=$(normalize_path ./foo/./bar)
+  assert_equal "$v" "./foo/bar"
+  local v=$(normalize_path .)
+  assert_equal "$v" "."
+  local v=$(normalize_path ./)
+  assert_equal "$v" "./"
 }
 
 apply_regex() {
