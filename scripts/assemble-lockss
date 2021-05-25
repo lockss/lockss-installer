@@ -319,6 +319,34 @@ check_stack_solr() {
       error_exit "Unable to install solr security file exiting..."
 }
 
+check_stack_poller() {
+  local stack=$1
+
+  local KEYS_SRC_PATH="${CONFIG_DIR}/keys"
+  local KEYS_DST_PATH="${LOCKSS_DATA_DIR}/${stack}-pol-data/keys"
+  local KEYS_LOAD_PATH="/data/keys"
+  local PRIV_KEYSTORE="${LOCKSS_HOSTNAME}.jceks"
+  local PRIV_PASSFILE="${LOCKSS_HOSTNAME}.pass"
+  local PUB_KEYSTORE="pub-keystore.jceks"
+
+  if [ -r "${KEYS_SRC_PATH}/${PRIV_KEYSTORE}" -a -r "${KEYS_SRC_PATH}/${PRIV_PASSFILE}" ]; then
+    if mkdir --mode=700 -p ${KEYS_DST_PATH}; then
+      logger_debug "Enabling SSL for LCAP"
+      cp "${KEYS_SRC_PATH}/${PRIV_KEYSTORE}" \
+         "${KEYS_SRC_PATH}/${PRIV_PASSFILE}" \
+         "${KEYS_SRC_PATH}/${PUB_KEYSTORE}" \
+         "${KEYS_DST_PATH}" || ( logger_warn "Unable to copy keys file(s), not enabling SSL" && return )
+      export LCAP_KEYSTORE_FILE="${KEYS_LOAD_PATH}/${PRIV_KEYSTORE}"
+      export LCAP_PASSWORD_FILE="${KEYS_LOAD_PATH}/${PRIV_PASSFILE}"
+      export LCAP_PUB_KEYSTORE_FILE="${KEYS_LOAD_PATH}/${PUB_KEYSTORE}"
+      # LCAP_USE_SSL must be undefined (not "false") if SSL not in use
+      export LCAP_USE_SSL=true
+    else
+      logger_warn "Unable to create keys dir: ${KEYS_DST_PATH}, not enabling SSL"
+    fi
+  fi
+}
+
 # Create a mount points for each stack
 add_stack_volumes() {
   local stack=$1
@@ -328,11 +356,11 @@ add_stack_volumes() {
  for svc in "${svcs[@]}"; do
     logger_debug "Creating data and log volumes for $stack-${svc}..."
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
-    mkdir -p ${mtpoint} || error_exit "unable to create data dir: ${mtpoint}"
+    mkdir -p ${mtpoint} || error_exit "Unable to create data dir: ${mtpoint}"
     mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    mkdir -p ${mtpoint} || error_exit "unable to create logs dir: ${mtpoint}"
+    mkdir -p ${mtpoint} || error_exit "Unable to create logs dir: ${mtpoint}"
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
-    mkdir --mode=1777 -p ${mtpoint} || error_exit "unable to create tmp dir: ${mtpoint}"
+    mkdir --mode=1777 -p ${mtpoint} || error_exit "Unable to create tmp dir: ${mtpoint}"
   done
   add_additional_stack_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
@@ -390,6 +418,8 @@ generate_lockss() {
     local stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
     logger_debug "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
     mkdir -p "${STACK_CONFIG_DIR}"
+
+    check_stack_poller "${STACK_NAME}"
 
     logger_debug "Generating the stack env.sh file..."
     mo "${ENV_TMPL}" >"${stack_env_file}"
