@@ -211,8 +211,8 @@ done
 Heading 'CoreDNS pod is running and ready'
 ACC=''
 COUNT=1
-until OUT="$($KUBECTL_CMD --namespace=kube-system get pods --selector=k8s-app=kube-dns 2>&1 | tail -n +2)" &&
-      echo "${OUT}" | awk '$3 == "Running" && $2 == "1/1" { exit 0 } { exit 1 }' &&
+until OUT="$($KUBECTL_CMD --namespace=kube-system get pods --selector=k8s-app=kube-dns 2>&1)" &&
+      echo "${OUT}" | tail -n +2 | awk '$3 == "Running" && $2 == "1/1" { exit 0 } { exit 1 }' &&
       Pass ; do
   ACC="$(printf '%s\n%s' "${ACC}" "${OUT}")"
   Retrying "${COUNT}" && Fail "${ACC}" && break
@@ -223,8 +223,8 @@ K3S_CLUSTER_IP='10.43.0.10'
 
 # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-the-dns-service-is-present-with-the-correct-cluster-ip
 Heading 'Kube-DNS is present with the correct cluster IP'
-OUT="$($KUBECTL_CMD --namespace=kube-system get services --selector=k8s-app=kube-dns | tail -n +2)" &&
-      [ "$(echo "${OUT}" | awk '$1 == "kube-dns" && $2 == "ClusterIP" { print $3 ; exit 0 } { exit 1 }')" = "${K3S_CLUSTER_IP}" ] &&
+OUT="$($KUBECTL_CMD --namespace=kube-system get services --selector=k8s-app=kube-dns)" &&
+      [ "$(echo "${OUT}" | tail -n +2 | awk '$1 == "kube-dns" && $2 == "ClusterIP" { print $3 ; exit 0 } { exit 1 }')" = "${K3S_CLUSTER_IP}" ] &&
       Pass || Fail "${OUT}"
 
 # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-domain-names-are-resolving
