@@ -117,7 +117,13 @@ install_k3s() {
     RESOLV_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
   fi
   echo "${PROGNAME}: Installing K3s ${K3S_VERSION} (Kubernetes ${K8S_VERSION})..."
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" K3S_KUBECONFIG_MODE=644 sh -s - --disable traefik ${RESOLV_CONF_CONFIG}
+  curl -sfL https://get.k3s.io | \
+      INSTALL_K3S_VERSION="${K3S_VERSION}" \
+      sh -s - \
+      --write-kubeconfig-mode 644 \
+      --disable-cloud-controller \
+      --disable traefik \
+      ${RESOLV_CONF_CONFIG}
 }
 
 check_k3s() {
