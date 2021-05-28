@@ -18,3 +18,4 @@
 /scripts/logs/
 /scripts/script_tester.sh
 /config/*.bak
+config/keys
