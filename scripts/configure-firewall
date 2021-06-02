@@ -252,11 +252,12 @@ Exit()
 Help()
 {
   cat <<MyEOF
-  ${_0} [--assume-yes|-y]
-  ${_0} --help|-help|-h
+${_0} [--assume-yes|-y]
+${_0} --help|-help|-h
 
---assume-yes, -y
-    Assume that the answer to interactive yes/no questions is Y for "yes".
+--assume-yes, -assume-yes, -y
+    Assume that the answer to interactive yes/no questions is Y for "yes". Also
+    by setting the environment variable ASSUME_YES to true.
 
 --help, -help, -h
     Display this message and exit.
@@ -294,14 +295,10 @@ esac
 ## Command line parsing loop
 ##
 
-while true ; do
+while [ "$#" -gt 0 ] ; do
   case "${1}" in
 
-    '')
-      break
-      ;;
-
-    --assume-yes|-y)
+    --assume-yes|-assume-yes|-y)
       ASSUME_YES='true'
       shift
       ;;
@@ -316,7 +313,7 @@ while true ; do
       ;;
 
     *)
-      Error "unexpected argument: ${1}"
+      Error "unexpected argument: ${1:-empty string}"
       ;;
   
   esac
