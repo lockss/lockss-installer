@@ -67,8 +67,9 @@ Heading()
 Help()
 {
   cat <<MyEOF
-  ${_0} [--keep-going|-keep-going|-k] [--wait=SEC|-wait SEC|-w SEC]
-  ${_0} --help|-help|-h
+${_0} [--keep-going|-keep-going|-k] [--wait=SEC|-wait SEC|-w SEC]
+    [--retries=RET|-retries RET|-r RET]
+${_0} --help|-help|-h
 
 --help, -help, -h
     Display this message and exit.
@@ -126,20 +127,16 @@ WAIT="${DEFAULT_WAIT}"
 ## Command line parsing
 ##
 
-while true ; do
+while [ "$#" -gt 0 ] ; do
   case "${1}" in
   
-    '')
-      break
-      ;;
-
     --help|-help|-h)
       Help
       exit 0
       ;;
     
     --keep-going|-keep-going|-k)
-      KEEP_GOING=-'true'
+      KEEP_GOING='true'
       shift
       ;;
 
@@ -167,7 +164,7 @@ while true ; do
       ;;
 
     *)
-      echo "unexpected argument: ${1}"
+      echo "unexpected argument: ${1:-empty string}"
       exit 1
       ;;
   
