@@ -65,6 +65,10 @@ K8S_VERSION="1.20"
 K3S_VERSION="v1.20.6+k3s1"
 LOCKSS_USER="lockss"
 
+ASSUME_YES="${ASSUME_YES:-false}"
+K3S_DATA_DIR=''
+DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
+
 clean_up() { # Perform pre-exit housekeeping
   return
 }
@@ -95,27 +99,53 @@ signal_exit() { # Handle trapped signals
   esac
 }
 
-usage() {
-  echo -e "Usage: $PROGNAME [-h|--help]"
-}
-
 help_message() {
-  cat <<-_EOF_
-  $PROGNAME ver. $VERSION
-  Deploy the lockss stacks to docker.
+  cat <<MyEOF
+${_0} [--assume-yes|-assume-yes|-y] [--k3s-data-dir=DIR|-k3s-data-dir DIR|-k DIR]
+${_0} --help|-help|-h
+  
+--assume-yes, -assume-yes, -y
+    Assume that the answer to interactive yes/no questions is Y for "yes", and
+    that the answer to other interactive questions is the proposed value. 
 
-  $(usage)
+--help, -help, -h
+    Display this help message and exit.
 
-  Options:
-  -h, --help  Display this help message and exit.
-_EOF_
-  return
+--k3s-data-dir=DIR, -k3s-data-dir DIR, -d DIR
+    Directory to hold K3s state data (default: ${DEFAULT_K3S_DATA_DIR}). Should
+    be used if /var is space-limited.
+MyEOF
 }
 
 install_k3s() {
-  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
-    RESOLV_CONF_CONFIG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+  # DATA_DIR_ARG is for --k3s-data-dir
+  local _top="/$(echo "${DEFAULT_K3S_DATA_DIR}" | cut -d/ -f2)" # here /var
+  echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
+  echo "${_top} is space-limited, you should specify a different directory."
+  echo
+  if [ -n "${K3S_DATA_DIR}" ] ; then
+    echo "K3s state data directory specified: ${K3S_DATA_DIR}"
+    DATA_DIR_ARG="--data-dir ${K3S_DATA_DIR}"
+  elif [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_0} in automatic 'yes' mode; assuming ${DEFAULT_K3S_DATA_DIR}"
+    DATA_DIR_ARG="--data-dir ${DEFAULT_K3S_DATA_DIR}"
+  else
+    while true ; do
+      ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+      if [ -d "${ANS}" ] ; then
+        DATA_DIR_ARG="--data-dir ${ANS}"
+        break
+      fi
+      echo "Invalid directory: ${ANS}"
+    done
   fi
+
+  # RESOLV_CONF_ARG is for --resolv-conf
+  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
+    RESOLV_CONF_ARG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+  fi
+
+  # Invoke Rancher's installer
   echo "${PROGNAME}: Installing K3s ${K3S_VERSION} (Kubernetes ${K8S_VERSION})..."
   curl -sfL https://get.k3s.io | \
       INSTALL_K3S_VERSION="${K3S_VERSION}" \
@@ -123,17 +153,9 @@ install_k3s() {
       --write-kubeconfig-mode 644 \
       --disable-cloud-controller \
       --disable traefik \
-      ${RESOLV_CONF_CONFIG}
+      ${RESOLV_CONF_ARG} \
+      ${DATA_DIR_ARG}
 }
-
-check_k3s() {
-  if k3s check-config; then
-    echo "The configuration check completed successfully."
-  else
-    echo "The configuration check failed a test, please fix before running the lockss stack."
-  fi
-}
-
 
 write_config() {
   set_k3s_bin_dir
@@ -162,46 +184,82 @@ trap "signal_exit INT" INT
 
 umask 002
 
-# Parse command-line
-while [[ -n $1 ]]; do
-  case $1 in
-  -h | --help)
-    help_message
-    graceful_exit
-    ;;
-  -*)
-    usage
-    error_exit "Unknown option $1"
-    ;;
-  *)
-    logger_debug "Argument $1 to process..."
-    ;;
+##
+## Parse command-line
+##
+
+while [ "$#" -gt 0 ] ; do
+  case "${1}" in
+
+    --assume-yes|-assume-yes|-y)
+      ASSUME_YES='true'
+      shift
+      ;;
+
+    --k3s-data-dir=*)
+      K3S_DATA_DIR="${1#*=}"
+      shift
+      ;;
+    -k3s-data-dir|-d)
+      K3S_DATA_DIR="${2}"
+      shift ; shift
+      ;;
+
+    --help|-help|-h)
+      help_message
+      graceful_exit
+      ;;
+
+    -*)
+      error_exit "Unknown option: ${1}"
+      ;;
+
+    *)
+      error_exit "Unexpected argument: ${1:-empty string}"
+      ;;
+
   esac
-  shift
 done
 
-# --- use SUDO if we are not already root ---
-SUDO='sudo'
-if [ $(id -u) -eq 0 ]; then
-    SUDO=''
-fi
+##
+## Set SUDO
+##
 
-# Call configure-firewall
+case "$(id -u)" in
+  0) SUDO='' ;;
+  *) SUDO='sudo' ;;
+esac
+
+##
+## Invoke configure-firewall
+##
+
 CONFIGURE_FIREWALL="${_D0}/configure-firewall"
 if [ ! -x "${CONFIGURE_FIREWALL}" ] ; then
   error_exit "${CONFIGURE_FIREWALL} not found."
 fi
-$CONFIGURE_FIREWALL || error_exit "${CONFIGURE_FIREWALL} failed."
+ASSUME_YES=${ASSUME_YES} $CONFIGURE_FIREWALL || error_exit "${CONFIGURE_FIREWALL} failed."
 
-# Call configure-dns
+##
+## Invoke configure-dns
+##
+
 CONFIGURE_DNS="${_D0}/configure-dns"
 if [ ! -x "${CONFIGURE_DNS}" ] ; then
   error_exit "${CONFIGURE_DNS} not found."
 fi
-$CONFIGURE_DNS || error_exit "${CONFIGURE_DNS} failed."
+ASSUME_YES=${ASSUME_YES} $CONFIGURE_DNS || error_exit "${CONFIGURE_DNS} failed."
+
+##
+## Install K3s
+##
 
 echo "${PROGNAME}: Installing K3s..."
 install_k3s || error_exit 'Attempt to install K3s failed.'
+
+##
+## Write Kubernetes config file
+##
 
 echo "${PROGNAME}: Writing configuration file..."
 write_config ${K8S_CONF_FILE} || error_exit "Attempt to write ${K8S_CONF_FILE} failed."
