@@ -119,26 +119,22 @@ MyEOF
 
 install_k3s() {
   # DATA_DIR_ARG is for --k3s-data-dir
+  local _dir=''
   local _top="/$(echo "${DEFAULT_K3S_DATA_DIR}" | cut -d/ -f2)" # here /var
   echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
   echo "${_top} is space-limited, you should specify a different directory."
   echo
   if [ -n "${K3S_DATA_DIR}" ] ; then
     echo "K3s state data directory specified: ${K3S_DATA_DIR}"
-    DATA_DIR_ARG="--data-dir ${K3S_DATA_DIR}"
+    _dir="${K3S_DATA_DIR}"
   elif [ "${ASSUME_YES}" = 'true' ] ; then
     echo "${_0} in automatic 'yes' mode; assuming ${DEFAULT_K3S_DATA_DIR}"
-    DATA_DIR_ARG="--data-dir ${DEFAULT_K3S_DATA_DIR}"
+    _dir="${DEFAULT_K3S_DATA_DIR}"
   else
-    while true ; do
-      ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
-      if [ -d "${ANS}" ] ; then
-        DATA_DIR_ARG="--data-dir ${ANS}"
-        break
-      fi
-      echo "Invalid directory: ${ANS}"
-    done
+    ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+    _dir="${ANS}"
   fi
+  DATA_DIR_ARG="--data-dir ${_dir}"
 
   # RESOLV_CONF_ARG is for --resolv-conf
   if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
