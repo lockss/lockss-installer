@@ -137,14 +137,15 @@ Exit()
 Help()
 {
   cat <<MyEOF
-  ${_0} [--assume-yes|-y] [--force|-f]
-  ${_0} --help|-help|-h
+${_0} [--assume-yes|-assume-yes|-y] [--force|-force|-f]
+${_0} --help|-help|-h
 
---assume-yes, -y
+--assume-yes, -assume-yes, -y
     Assume that the answer to interactive yes/no questions is Y for "yes", and
-    that the answer to other interactive questions is the proposed value. 
+    that the answer to other interactive questions is the proposed value. Also
+    by setting the environment variable ASSUME_YES to true.
 
---force, -f
+--force, -force, -f
     Disregard resolv.conf files and force the prompting of IP addresses of DNS
     servers instead.
 
@@ -179,19 +180,15 @@ esac
 ## Command line parsing loop
 ##
 
-while true ; do
+while [ "$#" -gt 0 ] ; do
   case "${1}" in
 
-    '')
-      break
-      ;;
-
-    --assume-yes|-y)
+    --assume-yes|-assume-yes|-y)
       ASSUME_YES='true'
       shift
       ;;
       
-    --force|-f)
+    --force|-force|-f)
       FORCE_DNS='true'
       shift
       ;;
@@ -206,7 +203,7 @@ while true ; do
       ;;
 
     *)
-      Error "unexpected argument: ${1}"
+      Error "unexpected argument: ${1:-empty string}"
       ;;
   
   esac
