@@ -358,7 +358,11 @@ add_stack_volumes() {
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     mkdir -p ${mtpoint} || error_exit "Unable to create data dir: ${mtpoint}"
     mtpoint=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    mkdir -p ${mtpoint} || error_exit "Unable to create logs dir: ${mtpoint}"
+    if [ "postgres" == "$svc" ]; then
+      mkdir --mode=777 -p ${mtpoint} || error_exit "Unable to create logs dir: ${mtpoint}"
+    else
+      mkdir -p ${mtpoint} || error_exit "Unable to create logs dir: ${mtpoint}"
+    fi
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || error_exit "Unable to create tmp dir: ${mtpoint}"
   done

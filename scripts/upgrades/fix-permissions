@@ -39,7 +39,16 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
+. "${_D0}/../_util"
+
+COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+LIB_DIR="${SCRIPTS_DIR}/lib"
+UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 ##
 ## Definitions
@@ -181,6 +190,8 @@ fix_directory_permissions() {
     sudo chmod 750  "${LOCKSS_LOGS_DIR}/$stack-${svc}-logs"
     sudo chmod 1777 "${LOCKSS_TMPDIR}/$stack-${svc}-tmp"
   done
+  # fix ownership of the lockss postgres directory
+  sudo chmod 777 "${LOCKSS_LOGS_DIR}/$stack-postgres-logs"
 }
 
 ##
