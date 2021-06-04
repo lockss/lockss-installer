@@ -131,7 +131,7 @@ ensure_kubernetes() {
   else
     err "${K8S_CONF_FILE} file does not exist, looking for kubectl command on path..."
   fi
-  Check_K8S_COMMAND || error_exit "No kubectl command available on path."
+  Check_K8s_Command || error_exit "No kubectl command available on path."
 
   if ! ${KUBECTL_CMD} get node | grep -q "Ready"; then
     err "${_0}: No available kubernetes node. Please start kubernetes node"
