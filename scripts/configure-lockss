@@ -622,7 +622,7 @@ build_config_file() {
 }
 
 setup_k8s_cmd() {
-  Check_K8S_COMMAND
+  Check_K8s_Command
   KUBCTL_OK=false
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
