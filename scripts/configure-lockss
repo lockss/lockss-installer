@@ -622,18 +622,7 @@ build_config_file() {
 }
 
 setup_k8s_cmd() {
-  if [ "X${KUBECTL_CMD}" = X ]; then
-    if kubepath=$(command -v k3s); then
-      KUBECTL_CMD="${kubepath} kubectl"
-      K8S_FLAVOR=k3s
-    elif kubepath=$(command -v microk8s); then
-      KUBECTL_CMD="${kubepath} kubectl"
-      K8S_FLAVOR=microk8s
-    elif kubepath=$(command -v kubectl); then
-      KUBECTL_CMD="${kubepath}"
-      K8S_FLAVOR=k8s
-    fi
-  fi
+  Check_K8S_COMMAND
   KUBCTL_OK=false
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"

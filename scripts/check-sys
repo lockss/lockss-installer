@@ -50,7 +50,6 @@ _D0=$(dirname "${0}")
 
 OS_TYPE=$(uname -s)
 LOCKSS_USER=lockss
-SOLR_USER=solr
 LOCAL_HOSTNAME=$(uname -n)
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
@@ -125,28 +124,19 @@ ensure_lockss_user() {
 }
 
 ensure_kubernetes() {
-  local instr_link=""
+  KUBECTL_CMD=""
   # look for the k8s.cfg file and use it if possible
   if [ -r "${K8S_CONF_FILE}" ]; then
     read_config ${K8S_CONF_FILE}
+  else
+    err "${K8S_CONF_FILE} file does not exist, looking for kubectl command on path..."
   fi
-  if [ "X${KUBECTL_CMD}" = X ]; then
-    set_k3s_bin_dir
-    if kubepath=$(command -v ${K3S_BIN_DIR}/k3s); then
-      KUBECTL_CMD="${kubepath} kubectl"
-    elif kubepath=$(command -v microk8s); then
-      KUBECTL_CMD="${kubepath} kubectl"
-    elif kubepath=$(command -v kubectl); then
-      KUBECTL_CMD="${kubepath}"
-    else
-      err "${_0}: kubectl is not found on the PATH (${PATH})"
-      error_exit "${_0}: LOCKSS requires kubectl to run."
-    fi
-  fi
+  Check_K8S_COMMAND || error_exit "No kubectl command available on path."
+
   if ! ${KUBECTL_CMD} get node | grep -q "Ready"; then
     err "${_0}: No available kubernetes node. Please start kubernetes node"
   fi
-  if ! ${KUBECTL_CMD} get pod coredns -n kube-system
+  ${KUBECTL_CMD} get pod coredns -n kube-system || err "coredns is not available for pod communication"
 }
 
 # Trap signals

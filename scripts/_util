@@ -139,6 +139,20 @@ Check_Configured() {
 #TODO: Add container subnet change check
 }
 
+Check_K8s_Command() {
+    if [ "X${KUBECTL_CMD}" = X ]; then
+    if kubepath=$(command -v k3s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=k3s
+    elif kubepath=$(command -v microk8s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=microk8s
+    elif kubepath=$(command -v kubectl); then
+      KUBECTL_CMD="${kubepath}"
+      K8S_FLAVOR=k8s
+    fi
+  fi
+}
 Check_LOCKSS_User() {
   if ! id "lockss" >/dev/null; then
     err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
