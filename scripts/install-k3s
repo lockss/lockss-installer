@@ -62,7 +62,8 @@ K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
 RESOLV_CONF_CONFIG=""
 K8S_VERSION="1.20"
-K3S_VERSION="v1.20.6+k3s1"
+K3S_VERSION="${K3S_VERSION:-v1.20.6+k3s1}"
+DEFAULT_K3S_VERSION='v1.20.6+k3s1'
 LOCKSS_USER="lockss"
 
 ASSUME_YES="${ASSUME_YES:-false}"
@@ -114,6 +115,9 @@ ${_0} --help|-help|-h
 --k3s-data-dir=DIR, -k3s-data-dir DIR, -d DIR
     Directory to hold K3s state data (default: ${DEFAULT_K3S_DATA_DIR}). Should
     be used if /var is space-limited.
+
+--k3s-version=VER, -k3s-version VER, -v VER
+    Install K3s version VER (default: ${DEFAULT_K3S_VERSION}).
 MyEOF
 }
 
@@ -198,6 +202,15 @@ while [ "$#" -gt 0 ] ; do
       ;;
     -k3s-data-dir|-d)
       K3S_DATA_DIR="${2}"
+      shift ; shift
+      ;;
+
+    --k3s-version=*)
+      K3S_VERSION="${1#*=}"
+      shift
+      ;;
+    -k3s-version|-v)
+      K3S_VERSION="${2}"
       shift ; shift
       ;;
 
