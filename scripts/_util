@@ -557,6 +557,25 @@ check_writable() {
   return 1
 }
 
+# find_first_file list prefix suffix
+
+# return the first element in list such that the file
+# ${prefix}${elem}${suffif} exists.  (I.e., it returns just the list
+# element, not the entire filename).
+find_first_file() {
+  local list="$1"
+  local pre="$2"
+  local suff="$3"
+  local probe
+  for x in ${list}; do
+    probe=${pre}${x}${suff}
+    if [ -e "${probe}" ]; then
+        echo "${x}"
+        return
+    fi
+  done
+}
+
 #parse_ip4_address inp
 parse_ip4_address() {
   local INP=$1
