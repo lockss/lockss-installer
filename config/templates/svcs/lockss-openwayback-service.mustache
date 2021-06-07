@@ -134,6 +134,8 @@ spec:
           name: lockss-openwb-data
         - mountPath: /tmp
           name: lockss-openwb-tmp
+        - mountPath: /var/log/lockss
+          name: lockss-openwb-logs
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -149,3 +151,6 @@ spec:
       - name: lockss-openwb-tmp
         persistentVolumeClaim:
           claimName: lockss-openwb-tmp-pvc
+      - name: lockss-openwb-logs
+        persistentVolumeClaim:
+          claimName: lockss-openwb-logs-pvc

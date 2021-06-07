@@ -126,6 +126,8 @@ spec:
           name: lockss-pywb-data
         - mountPath: /tmp
           name: lockss-pywb-tmp
+        - mountPath: /var/log/lockss
+          name: lockss-pywb-logs
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -141,3 +143,6 @@ spec:
       - name: lockss-pywb-tmp
         persistentVolumeClaim:
           claimName: lockss-pywb-tmp-pvc
+      - name: lockss-pywb-logs
+        persistentVolumeClaim:
+          claimName: lockss-pywb-logs-pvc
