@@ -400,10 +400,14 @@ ask_for_input() {
 
 ask_for_input_shadow() {
   echo -n "$1: "
-  local STTY_ORIG=$(stty -g)
-  stty -echo
-  read ANS
-  stty "$STTY_ORIG"
+  if [[ $- == *i* ]] ; then
+    local STTY_ORIG=$(stty -g)
+    stty -echo
+    read ANS
+    stty "$STTY_ORIG"
+  else
+    read ANS
+  fi
   echo
 }
 
