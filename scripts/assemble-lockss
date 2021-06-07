@@ -319,15 +319,19 @@ check_stack_solr() {
       error_exit "Unable to install solr security file exiting..."
 }
 
+KEYSTORE_EXTS=".pkcs12 .jceks .jks"
+
 check_stack_poller() {
   local stack=$1
 
   local KEYS_SRC_PATH="${CONFIG_DIR}/keys"
   local KEYS_DST_PATH="${LOCKSS_DATA_DIR}/${stack}-pol-data/keys"
   local KEYS_LOAD_PATH="/data/keys"
-  local PRIV_KEYSTORE="${LOCKSS_HOSTNAME}.jceks"
+  local PRIV_EXT=$(find_first_file "${KEYSTORE_EXTS}" "${KEYS_SRC_PATH}/${LOCKSS_HOSTNAME}")
+  local PRIV_KEYSTORE="${LOCKSS_HOSTNAME}${PRIV_EXT}"
   local PRIV_PASSFILE="${LOCKSS_HOSTNAME}.pass"
-  local PUB_KEYSTORE="pub-keystore.jceks"
+  local PUB_EXT=$(find_first_file "${KEYSTORE_EXTS}" "${KEYS_SRC_PATH}/pub-keystore")
+  local PUB_KEYSTORE="pub-keystore${PUB_EXT}"
 
   if [ -r "${KEYS_SRC_PATH}/${PRIV_KEYSTORE}" -a -r "${KEYS_SRC_PATH}/${PRIV_PASSFILE}" ]; then
     if mkdir --mode=700 -p ${KEYS_DST_PATH}; then
