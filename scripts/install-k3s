@@ -145,9 +145,18 @@ install_k3s() {
     RESOLV_CONF_ARG="--resolv-conf ${LOCKSS_RESOLV_CONF}"
   fi
 
+  # Curl or Wget
+  if command -v curl > /dev/null ; then
+    DOWNLOADER='curl -sfL'
+  elif command -v wget > /dev/null ; then
+    DOWNLOADER='wget -qO -'
+  else
+    error_exit "curl or wget are required on the PATH"
+  fi
+
   # Invoke Rancher's installer
   echo "${PROGNAME}: Installing K3s ${K3S_VERSION} (Kubernetes ${K8S_VERSION})..."
-  curl -sfL https://get.k3s.io | \
+  $DOWNLOADER https://get.k3s.io | \
       INSTALL_K3S_VERSION="${K3S_VERSION}" \
       sh -s - \
       --write-kubeconfig-mode 644 \
