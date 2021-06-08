@@ -336,7 +336,17 @@ build_config_file() {
     if [ "X${LOCKSS_HOSTNAME}" = X ]; then
       LOCKSS_HOSTNAME=${LOCAL_HOSTNAME}
     fi
-    ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}"
+    HOSTNAME_OK=N
+    until is_yes ${HOSTNAME_OK}; do
+      ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}"
+      if valid_hostname "${ANS}"; then
+        LOCKSS_HOSTNAME="${ANS}"
+        HOSTNAME_OK=Y
+      else
+        echo "Illegal hostname: ${ANS}"
+      fi
+    done
+
     LOCKSS_HOSTNAME=${ANS}
     if [ "X${LOCKSS_IPADDR}" = X ]; then
       LOCKSS_IPADDR=${LOCAL_IPADDR}
@@ -347,6 +357,8 @@ build_config_file() {
       if valid_ip4_address "${ANS}"; then
         LOCKSS_IPADDR="${ANS}"
         IP_OK=Y
+      else
+        echo "Illegal IPv4 address: ${ANS}"
       fi
     done
     NAT=N
