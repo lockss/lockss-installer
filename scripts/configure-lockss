@@ -653,7 +653,7 @@ if [ -z "${LOCKSS_TEAM}" ]; then
 fi
 umask 002
 LOCKSS_USER="lockss"
-LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || $(uname -n 2>/dev/null)
+LOCAL_HOSTNAME=$(hostname -f 2>/dev/null || uname -n 2>/dev/null)
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
