@@ -219,3 +219,15 @@ EOF
   f=$(find_first_file "$list" $dir/bar)
   assert_equal "$f" ""
 }
+
+@test 'valid_hostname' {
+  assert valid_hostname a
+  assert valid_hostname a.b
+  assert valid_hostname a434.b.com
+  assert valid_hostname 5a5
+  refute valid_hostname ""
+  refute valid_hostname .
+  refute valid_hostname
+  refute valid_hostname -no
+  refute valid_hostname un_der
+}
