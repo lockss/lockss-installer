@@ -123,6 +123,8 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: LOCKSS_IS_POLLER
+          value: "true"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
@@ -192,9 +194,11 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
+{{#LCAP_USE_SSL}}
         - mountPath: /run/secrets/lcap-ssl-pass
           name: lcap-ssl-pass
           subPath: lcap-ssl-pass
+{{/LCAP_USE_SSL}}
         - mountPath: /data
           name: lockss-pol-data
         - mountPath: /var/log/lockss
@@ -237,12 +241,14 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
+{{#LCAP_USE_SSL}}
       - name: lcap-ssl-pass
         secret:
           secretName: lcap-ssl-pass
           items:
           - key: lcap-ssl-pass
             path: lcap-ssl-pass
+{{/LCAP_USE_SSL}}
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data-pvc
