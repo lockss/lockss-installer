@@ -606,7 +606,7 @@ guess_ip_address() {
   local all_ips=
   case $(uname -s) in
     Linux)
-      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
+      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null) || all_ips=$(ip route get 1 | sed 's/^.*src \([^ ]*\).*$/\1/;q')
       # remove IPv6 addresses
       all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
 
