@@ -236,6 +236,7 @@ services:
       - lockss-pol-data:/data
       - lockss-pol-logs:/var/log/lockss
     environment:
+      - "LOCKSS_IS_POLLER=true"
       - "LOCKSS_CONFIG_URL={{CFG_URL}}"
       - "LOCKSS_ADMIN_USER={{LOCKSS_ADMIN_USER}}"
       - "LOCKSS_WAIT_FOR_PORT={{REPO_HOST}}:{{REPO_DEFAULT_REST_PORT}} {{CFG_HOST}}:{{CFG_DEFAULT_REST_PORT}}"
@@ -245,6 +246,7 @@ services:
     secrets:
       - lockss_ui_pass
       - lockss-auth
+      - lcap-ssl-pass
     networks:
       - host-network
 {{/USE_LOCKSS_POL}}

@@ -192,6 +192,9 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
+        - mountPath: /run/secrets/lcap-ssl-pass
+          name: lcap-ssl-pass
+          subPath: lcap-ssl-pass
         - mountPath: /data
           name: lockss-pol-data
         - mountPath: /var/log/lockss
@@ -234,6 +237,12 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
+      - name: lcap-ssl-pass
+        secret:
+          secretName: lcap-ssl-pass
+          items:
+          - key: lcap-ssl-pass
+            path: lcap-ssl-pass
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data-pvc

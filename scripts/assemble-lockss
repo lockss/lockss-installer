@@ -337,11 +337,13 @@ check_stack_poller() {
     if mkdir --mode=700 -p ${KEYS_DST_PATH}; then
       logger_debug "Enabling SSL for LCAP"
       cp "${KEYS_SRC_PATH}/${PRIV_KEYSTORE}" \
-         "${KEYS_SRC_PATH}/${PRIV_PASSFILE}" \
          "${KEYS_SRC_PATH}/${PUB_KEYSTORE}" \
          "${KEYS_DST_PATH}" || ( logger_warn "Unable to copy keys file(s), not enabling SSL" && return )
+      local private_password=$(<"${KEYS_SRC_PATH}/${PRIV_PASSFILE}")
+      Store_Secret lcap-ssl-pass "${private_password}"
+
       export LCAP_KEYSTORE_FILE="${KEYS_LOAD_PATH}/${PRIV_KEYSTORE}"
-      export LCAP_PASSWORD_FILE="${KEYS_LOAD_PATH}/${PRIV_PASSFILE}"
+      export LCAP_PASSWORD_FILE="/run/secrets/lcap-ssl-pass"
       export LCAP_PUB_KEYSTORE_FILE="${KEYS_LOAD_PATH}/${PUB_KEYSTORE}"
       # LCAP_USE_SSL must be undefined (not "false") if SSL not in use
       export LCAP_USE_SSL=true
