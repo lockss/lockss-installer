@@ -113,8 +113,8 @@ spec:
           value: {{OPENWB_HOST}}
         - name: WAYBACK_URL_PORT
           value: '{{OPENWB_PORT}}'
-        - name: WAYBACK_URL_PREFIX
-          value: http://{{LOCKSS_HOSTNAME}}:{{OPENWB_PORT}}
+#        - name: WAYBACK_URL_PREFIX
+#          value: http://{{OPENWB_HOST}}:{{OPENWB_PORT}}
         - name: WAYBACK_BASEDIR
           value: /data
         image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
