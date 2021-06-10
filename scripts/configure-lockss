@@ -490,7 +490,7 @@ build_config_file() {
     LOCKSS_PRESERVATION_GROUP="${ANS}"
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for primary content data storage directories" ${LOCKSS_DATA_DIR}
+      ask_for_input "Root path for primary content data storage" ${LOCKSS_DATA_DIR}
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
@@ -510,7 +510,7 @@ build_config_file() {
     if is_yes "${ANS}"; then
       count=1
       until is_yes "${done}"; do
-        ask_for_input "Enter root path $count to additional content storage directories (q to quit)" ${prevPaths[count]}
+        ask_for_input "Root path for additional content data storage $count (q to quit)" ${prevPaths[count]}
         if [ "X${ANS}" = Xq ]; then
           done=Y
         elif [ -n "${ANS}" ]; then
@@ -537,7 +537,7 @@ build_config_file() {
       log_dir_default="${LOCKSS_DATA_DIR}"
     fi
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for service logs directories" ${log_dir_default}
+      ask_for_input "Root path for log data storage" ${log_dir_default}
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
@@ -546,7 +546,7 @@ build_config_file() {
     if [ "X${LOCKSS_TMPDIR}" = X ]; then
       LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}
     fi
-    ask_for_input "Root path for temporary storage directories (local storage preferred)" ${LOCKSS_TMPDIR}
+    ask_for_input "Root path for temporary data storage (local storage preferred)" ${LOCKSS_TMPDIR}
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
