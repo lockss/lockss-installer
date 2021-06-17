@@ -551,8 +551,8 @@ build_config_file() {
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
     fi
-    ask_for_input "Directory for storing install script logs" ${LOCKSS_SCRIPT_LOG_DIR}
-    LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
+#     ask_for_input "Directory for storing install script logs" ${LOCKSS_SCRIPT_LOG_DIR}
+#     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
     USER_OK=N
     until is_yes ${USER_OK}; do
       ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
