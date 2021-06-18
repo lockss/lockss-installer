@@ -183,7 +183,7 @@ done
 echo "If you installed Snap solely to run MicroK8s, you may want to uninstall it."
 if [ "${ID}" = 'ubuntu' ] ; then
   echo "However, on Ubuntu, Snap is used natively and should not be uninstalled."
-  UNINSTALL_SNAP='false"
+  UNINSTALL_SNAP='false'
 else
   UNINSTALL_SNAP='true'
 fi
