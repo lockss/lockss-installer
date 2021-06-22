@@ -136,7 +136,8 @@ ensure_kubernetes() {
   if ! ${KUBECTL_CMD} get node | grep -q "Ready"; then
     err "${_0}: No available kubernetes node. Please start kubernetes node"
   fi
-  ${KUBECTL_CMD} get pod coredns -n kube-system || err "coredns is not available for pod communication"
+  ${KUBECTL_CMD} rollout status deployment coredns -n kube-system ||
+    error_exit "coredns is not available for pod communication"
 }
 
 # Trap signals

@@ -175,12 +175,19 @@ sudo snap remove microk8s
 echo "Removing microk8s group..."
 sudo groupdel microk8s
 
-echo "If you installed snapd solely to run microk8s, you may want to uninstall it."
+echo "Flushing Kubernetes-related iptables rules..."
+for chain in KUBE-FIREWALL KUBE-FORWARD KUBE-ROUTER-FORWARD KUBE-ROUTER-INPUT KUBE-ROUTER-OUTPUT KUBE-SERVICES ; do
+  sudo iptables --flush "${chain}" 2> /dev/null
+done
+
+echo "If you installed Snap solely to run MicroK8s, you may want to uninstall it."
 if [ "${ID}" = 'ubuntu' ] ; then
-  echo "However, on Ubuntu, snapd is used natively and should not be uninstalled."
+  echo "However, on Ubuntu, Snap is used natively and should not be uninstalled."
+  UNINSTALL_SNAP='false'
+else
+  UNINSTALL_SNAP='true'
 fi
-UNINSTALL_SNAP="false"
-ask_for_input "Uninstall snapd?" $(to_yes_no ${UNINSTALL_SNAP})
+ask_for_input "Uninstall Snap?" $(to_yes_no ${UNINSTALL_SNAP})
 if is_yes "${ANS}"; then
   uninstall_snap
 fi
