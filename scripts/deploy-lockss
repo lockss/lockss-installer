@@ -220,7 +220,11 @@ deploy_stack() {
   logger_info "Deploying services and deployments for stack $stack"
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
-    kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" | logger_debug
+    if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" >/dev/null ; then
+      popd &>/dev/null
+      logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
+      error_exit "Fix the error then run scripts/restart-lockss."
+    fi
 #    kubectl_cmd expose deployment $svc
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
