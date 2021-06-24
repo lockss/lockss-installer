@@ -586,14 +586,15 @@ build_config_file() {
         echo "Config not installed, left in ${TMP_CONFIG}"
         exit 1
       fi
+      rm -f ${TMP_CONFIG}
       Store_All_Secrets
+      echo "Configuration stored"
 
       local STORAGE_ERRORS=
       setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
 
-      rm -f ${TMP_CONFIG}
-      echo Done
       CONFIG_OK=Y
+
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
@@ -618,9 +619,9 @@ build_config_file() {
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
       echo
-      echo "Storage directories have not been set up correctly.  Please"
-      echo "fix the problems and run setup-storage before attempting to"
-      echo "start the services."
+      echo "Storage directories have not been set up correctly.  Please either"
+      echo " fix the ownership/permission problems then run scripts/setup-storage, or"
+      echo " rerun scripts/configure-lockss and specify different directories."
       return 1
   fi
 }
@@ -724,6 +725,8 @@ if build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT} ; then
     echo "$(date) Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
     exit 0
 else
-  echo "Exiting with errors"
+  echo
+  echo "Some problems were encountered.  They must be fixed before launching the"
+  echo " LOCKSS stack with scripts/start-lockss"
   exit 1
 fi

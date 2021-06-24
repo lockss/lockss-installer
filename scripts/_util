@@ -496,7 +496,7 @@ is_pos() {
 setup_storage_dirs() {
   local CONF_FILE="$1"
   local USER="$2"
-  local ERRORS=""
+  local ERRORS="0"
   echo "Checking content storage directory(s)"
   read_config ${CONF_FILE}
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
@@ -525,13 +525,7 @@ setup_storage_dirs() {
         ERRORS=1
       fi
   fi
-  if [ -n "$ERRORS" ]; then
-      echo "Some directories could not be set up correctly.  Please either" >&2
-      echo " rerun configure-lockss and specify different directories, or" >&2
-      echo " fix the ownership/permission problems then run setup-storage." >&2
-      return 1
-  fi
-  return 0
+  return $ERRORS
 }
 
 # init_one_dir dir user mode

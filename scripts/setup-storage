@@ -55,5 +55,10 @@ _D0=$(dirname "${0}")
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 CONFIG_USER=$(whoami)
 
-
-setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER}
+if ! setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} ; then
+    echo "Some directories could not be set up correctly.  Please either" >&2
+    echo " fix the ownership/permission problems then rerun scripts/setup-storage, or" >&2
+    echo " rerun scripts/configure-lockss and specify different directories." >&2
+    exit 1
+fi
+exit 0
