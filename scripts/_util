@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -381,7 +381,7 @@ read_config() {
   IFS='
 '
   for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1); do
+\1=\2/' "${FILE}"); do
     eval "$A"
   done
   IFS="${OLD_IFS}"
@@ -491,6 +491,43 @@ is_pos() {
   return $?
 }
 
+# setup_storage_dirs CONF_FILE CONFIG_USER
+# return nonzero if any errors
+setup_storage_dirs() {
+  local CONF_FILE="$1"
+  local USER="$2"
+  local ERRORS="0"
+  echo "Checking content storage directory(s)"
+  read_config ${CONF_FILE}
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+
+  for dir in "${repoPaths[@]}"; do
+    if ! init_one_dir "${dir}" ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+    fi
+  done
+  if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_LOGS_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_TMPDIR} ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  return $ERRORS
+}
+
 # init_one_dir dir user mode
 init_one_dir() {
   local DIR="$1"
@@ -523,9 +560,10 @@ init_one_dir() {
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
   else
-    ask_for_input "${DIR} is not writable; shall I chown it?" Y
+    ask_for_input "${DIR} is not writable; shall I chown/chmod it?" Y
     if is_yes "${ANS}"; then
       chown ${USER} "${DIR}"
+      chmod ${MODE} "${DIR}"
       if check_writable "${DIR}" $USER; then
         return 0
       else
@@ -537,6 +575,7 @@ init_one_dir() {
       echo "Please ensure that ${DIR} is writable by user ${USER};"
       echo " LOCKSS will not run properly without it."
     fi
+    return 1
   fi
 }
 
