@@ -36,3 +36,19 @@ org.lockss.scomm.enabled=true
 org.lockss.scomm.maxMessageSize=33554430
 org.lockss.scomm.timeout.connect=15s
 
+#wait file
+org.lockss.app.touchWhenStarted=/data/{{LOCKSS_WAIT_FILE}}
+
+{{#LCAP_USE_SSL}}
+org.lockss.scomm.v3OverSsl={{LCAP_USE_SSL}}
+org.lockss.scomm.sslClientAuth={{LCAP_USE_SSL}}
+org.lockss.scomm.sslPrivateKeystoreName=v3PrivateKey
+org.lockss.scomm.sslPublicKeystoreName=v3PubKeys
+
+org.lockss.keyMgr.keystore.priv.file={{LCAP_KEYSTORE_FILE}}
+org.lockss.keyMgr.keystore.priv.keyPasswordFile={{LCAP_PASSWORD_FILE}}
+org.lockss.keyMgr.keystore.priv.name=v3PrivateKey
+
+org.lockss.keyMgr.keystore.pub.file={{LCAP_PUB_KEYSTORE_FILE}}
+org.lockss.keyMgr.keystore.pub.name=v3PubKeys
+{{/LCAP_USE_SSL}}

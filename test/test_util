@@ -1,0 +1,233 @@
+#!/usr/bin/env bats
+
+# tests for lockss-installer utilities - lockss-installer/scripts/_util
+
+load "${BATS_LIBEXEC}/../bats-support/load.bash"
+load "${BATS_LIBEXEC}/../bats-assert/load.bash"
+
+setup() {
+  . ../scripts/_util
+}
+
+# this doesn't work - tmpfiles has no value either here or immediately
+# after a call to maketemp
+tmpfiles=""
+teardown() {
+  for x in ${tmpfiles}; do
+    rm -rf ${s}
+  done
+}
+
+maketemp() {
+  local t=$(mktemp "$@")
+  tmpfiles="${tmpfiles} $t"
+  echo $t
+}
+
+@test 'Get_Value' {
+  assert_equal $(Get_Value foo=1) 1
+}
+
+@test 'valid_ip4_address' {
+  refute valid_ip4_address ""
+  assert valid_ip4_address 1.1.1.1
+  refute valid_ip4_address 1.1.1
+  refute valid_ip4_address 1.1.1.d
+  refute valid_ip4_address 1.1.1.1.d
+  refute valid_ip4_address 1.2.3.4.5
+  refute valid_ip4_address 1.2.3.400
+  refute valid_ip4_address 2001:0Db8:85a3:0000:0000:8a2e:0370:7334
+  refute valid_ip4_address ::1
+}
+
+@test 'valid_ip6_address' {
+  refute valid_ip6_address ""
+  assert valid_ip6_address 2001:0Db8:85a3:0000:0000:8a2e:0370:7334
+  assert valid_ip6_address fe80::1ff:fe23:4567:890a
+  assert valid_ip6_address 2001:db8::
+  assert valid_ip6_address ::1
+  refute valid_ip6_address 20013:0Db8:85a3:0000:0000:8a2e:0370:7334
+  refute valid_ip6_address "1.2.3.4"
+}
+
+@test 'valid_ip_address_list' {
+  refute valid_ip_address_list ""
+  assert_equal ${#VALIDATED_LIST[@]} "0"
+  assert valid_ip_address_list 1.1.1.1
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.1"
+  assert_equal ${#VALIDATED_LIST[@]} "1"
+  refute valid_ip_address_list 1.1.1.d
+  assert_equal ${#VALIDATED_LIST[@]} "0"
+  assert valid_ip_address_list "1.1.1.1;2.3.4.56"
+  # doesn't work, don't know why:
+  # assert_equal ${VALIDATED_LIST[@]} "(1.1.1.1 2.3.4.56)"
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.1"
+  assert_equal ${VALIDATED_LIST[1]} "2.3.4.56"
+  assert_equal ${#VALIDATED_LIST[@]} "2"
+  assert valid_ip_address_list "1.1.1.1;2.3.4.56;10.0.0.1"
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.1"
+  assert_equal ${VALIDATED_LIST[1]} "2.3.4.56"
+  assert_equal ${VALIDATED_LIST[2]} "10.0.0.1"
+  assert_equal ${#VALIDATED_LIST[@]} "3"
+  refute valid_ip_address_list "1.1.1.1 2.3.4.56;10.0.0.1"
+  assert_equal ${#VALIDATED_LIST[@]} "0"
+  assert valid_ip_address_list "1.1.1.1;2001:db8::"
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.1"
+  assert_equal ${VALIDATED_LIST[1]} "2001:db8::"
+  assert_equal ${#VALIDATED_LIST[@]} "2"
+  refute valid_ip_address_list "1.1.1.1:2.3.4.56;10.0.0.1"
+  refute valid_ip_address_list "1.1.1.1;2.3.4.56;10.0.0.256"
+}
+
+@test 'valid_subnet' {
+  refute valid_subnet ""
+  assert valid_subnet 1.2.3.4
+  refute valid_subnet 1.2.3
+  refute valid_subnet 1.2.3.4.5
+
+  assert valid_subnet 1.1.1.0/24
+  refute valid_subnet 1.1.1.0/33
+  refute valid_subnet 1.1.1.0/123
+  refute valid_subnet 1.1.1/24
+  refute valid_subnet "1.1.1.1.1/24"
+  refute valid_subnet 172.16.0.0/123
+  refute valid_subnet "1.1.1.0/55"
+
+  assert valid_subnet "10.*.*.*"
+  assert valid_subnet "10.1.*.*"
+  assert valid_subnet "10.1.1.*"
+  refute valid_subnet "10.1.1.1.*"
+  assert valid_subnet "10.1.1.*.*"
+  assert valid_subnet "10.1.1.**"
+
+  refute valid_subnet "1.1.1.0/24;1.2.3.4/31"
+  refute valid_subnet "1.1.1.0/24:1.2.3.4/31"
+}
+
+@test 'valid_subnet_list' {
+  refute valid_subnet_list ""
+  assert_equal ${#VALIDATED_LIST[@]} "0"
+  assert valid_subnet_list 10.1.1.0/24
+  assert_equal ${VALIDATED_LIST[0]} "10.1.1.0/24"
+  assert_equal ${#VALIDATED_LIST[@]} "1"
+  assert valid_subnet_list "10.0.0.0/8;192.168.0.0/16"
+  assert_equal ${VALIDATED_LIST[0]} "10.0.0.0/8"
+  assert_equal ${VALIDATED_LIST[1]} "192.168.0.0/16"
+  assert_equal ${#VALIDATED_LIST[@]} "2"
+  assert valid_subnet_list "10.0.0.0/8;192.168.0.0/16;172.16.0.0/12"
+  refute valid_subnet_list "10.0.0.0/8;192:168.0.0/16;172.16.0.0/123"
+  assert_equal ${#VALIDATED_LIST[@]} "0"
+  refute valid_subnet_list "10.0.0.0/8;192 168.0.0/16"
+  refute valid_subnet_list "10.0.0.0/8;192.168.0.0/33"
+
+  assert valid_subnet_list "1.1.1.*"
+  assert_equal ${VALIDATED_LIST[0]} "1.1.1.*"
+  assert_equal ${#VALIDATED_LIST[@]} "1"
+  assert valid_subnet_list "10.0.0.0/8;1.1.*.*"
+  assert_equal ${VALIDATED_LIST[0]} "10.0.0.0/8"
+  assert_equal ${VALIDATED_LIST[1]} "1.1.*.*"
+  assert_equal ${#VALIDATED_LIST[@]} "2"
+  refute valid_subnet_list "10.0.0.0/8 1.1.*.*"
+
+  refute valid_subnet_list "1.1.1.1.1/24"
+  refute valid_subnet_list "1.1.1.0/55"
+}
+
+@test 'normalize_path' {
+  local v=$(normalize_path /a/b/c)
+  assert_equal "$v" "/a/b/c"
+  local v=$(normalize_path /a/./b//d/../c/xx/..)
+  assert_equal "$v" "/a/b/c/"
+  local v=$(normalize_path a/b/..c/d/..)
+  assert_equal "$v" "a/b/..c/"
+  local v=$(normalize_path ./foo/bar)
+  assert_equal "$v" "./foo/bar"
+  local v=$(normalize_path ./foo/./bar)
+  assert_equal "$v" "./foo/bar"
+  local v=$(normalize_path .)
+  assert_equal "$v" "."
+  local v=$(normalize_path ./)
+  assert_equal "$v" "./"
+}
+
+apply_regex() {
+  echo "$1" | grep -E "$2"
+}
+
+@test 'LOOPBACK_REGEX' {
+  assert  apply_regex foo "f[o]+"
+  refute  apply_regex foo bar
+
+  assert  apply_regex "nameserver 127.0.0.1" "$LOOPBACK_REGEX"
+  assert  apply_regex "nameserver ::1" "$LOOPBACK_REGEX"
+  refute  apply_regex "nameserver 10.0.0.1" "$LOOPBACK_REGEX"
+
+}
+
+@test 'has_loopback_resolver' {
+  local f=$(maketemp)
+  cat >$f <<EOF
+# Dynamic resolv.conf(5) file for glibc resolver(3) generated by resolvconf(8)
+#     DO NOT EDIT THIS FILE BY HAND -- YOUR CHANGES WILL BE OVERWRITTEN
+#nameserver 127.0.1.1
+nameserver 10.0.4.4
+nameserver 10.0.4.1
+search example.com lockss.org
+EOF
+  refute has_loopback_resolver "$f"
+
+  cat >$f <<EOF
+nameserver 10.0.4.4
+nameserver 127.0.0.1
+nameserver 10.0.4.1
+search pss.com lockss.org
+EOF
+  assert has_loopback_resolver "$f"
+}
+
+@test 'extract_non_loopback_resolvers' {
+  local f=$(maketemp)
+  cat >$f <<EOF
+# Dynamic resolv.conf(5) file for glibc resolver(3) generated by resolvconf(8)
+#     DO NOT EDIT THIS FILE BY HAND -- YOUR CHANGES WILL BE OVERWRITTEN
+nameserver 127.0.1.1  # loopback
+nameserver 10.0.4.4   # non-loopback
+nameserver ::1        # loopback
+nameserver 10.0.4.1   # non-loopback
+search example.com lockss.org
+EOF
+  local v=$(extract_non_loopback_resolvers $f)
+  assert_equal "$v" "10.0.4.4;10.0.4.1"
+}
+
+@test 'find_first_file' {
+  local dir=$(maketemp -d)
+  local list=".pkcs12 .jceks .jks"
+
+  touch $dir/foo.jks
+  local f=$(find_first_file "$list" $dir/foo)
+  assert_equal "$f" ".jks"
+
+  touch $dir/foo.jceks
+  f=$(find_first_file "$list" $dir/foo)
+  assert_equal "$f" ".jceks"
+
+  touch $dir/foo.pkcs12
+  f=$(find_first_file "$list" $dir/foo)
+  assert_equal "$f" ".pkcs12"
+
+  f=$(find_first_file "$list" $dir/bar)
+  assert_equal "$f" ""
+}
+
+@test 'valid_hostname' {
+  assert valid_hostname a
+  assert valid_hostname a.b
+  assert valid_hostname a434.b.com
+  assert valid_hostname 5a5
+  refute valid_hostname ""
+  refute valid_hostname .
+  refute valid_hostname
+  refute valid_hostname -no
+  refute valid_hostname un_der
+}

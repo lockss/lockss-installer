@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+#---------------------------------------------------------------------------
+# uninstall-microk8s - Remove microk8s install and delete snap if requested..
+
+# Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors1
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: uninstall-microk8s [-h|--help]
+#
+# Revision history:
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/../_util"
+
+SCRIPTS_DIR="${_D0}/../"
+
+clean_up() { # Perform pre-exit housekeeping
+  return
+}
+
+error_exit() {
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<-_EOF_
+  $PROGNAME ver. $VERSION
+  Uninstall microk8s.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+  NOTE: You must be the superuser to run this script.
+
+_EOF_
+  return
+}
+
+uninstall_snap() {
+  echo "Removing snap software..."
+  sudo systemctl disable --now snapd
+  case "${ID}" in
+    "alpine")
+    sudo apk del snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    ;;
+    "centos" | "fedora")
+    if [ ${VERSION_ID} -ge 8 ]; then
+      sudo dnf remove snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    else
+      sudo yum erase snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    fi
+    ;;
+    "debian" | "ubuntu")
+    sudo apt purge snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    ;;
+    "arch")
+    sudo pacman -Rcns snapd || error_exit "snapd uninstall failed, see manual for uninstall instructions"
+    ;;
+    *)
+     error_exit "Unable to uninstall snapd, see manual for uninstall instructions"
+     ;;
+  esac
+  rm -rf ~/snap
+  sudo rm -rf /snap /var/snap /var/lib/snapd /var/cache/snapd /usr/lib/snapd
+}
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+
+# Read os-release
+read_config "/etc/os-release"
+
+# Parse command-line
+while [[ -n $1 ]]; do
+  case $1 in
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  -* | --*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    echo "Argument $1 to process..."
+    ;;
+  esac
+  shift
+done
+
+# Main logic
+
+# if no microk8s exit
+if ! command -v microk8s &>/dev/null; then
+  err_exit "${_0}: Unable to uninstall microk8s, it is not found or not on path."
+fi
+
+echo "Uninstalling the existing lockss stack from microk8s install..."
+"${SCRIPTS_DIR}"/uninstall-lockss
+
+echo "Stopping microk8s..."
+microk8s stop
+
+echo "Removing microk8s from snapd..."
+sudo snap remove microk8s
+
+echo "Removing microk8s group..."
+sudo groupdel microk8s
+
+echo "Flushing Kubernetes-related iptables rules..."
+for chain in KUBE-FIREWALL KUBE-FORWARD KUBE-ROUTER-FORWARD KUBE-ROUTER-INPUT KUBE-ROUTER-OUTPUT KUBE-SERVICES ; do
+  sudo iptables --flush "${chain}" 2> /dev/null
+done
+
+echo "If you installed Snap solely to run MicroK8s, you may want to uninstall it."
+if [ "${ID}" = 'ubuntu' ] ; then
+  echo "However, on Ubuntu, Snap is used natively and should not be uninstalled."
+  UNINSTALL_SNAP='false'
+else
+  UNINSTALL_SNAP='true'
+fi
+ask_for_input "Uninstall Snap?" $(to_yes_no ${UNINSTALL_SNAP})
+if is_yes "${ANS}"; then
+  uninstall_snap
+fi

@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Copyright (c) 2000-2018, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -46,35 +46,113 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
+##
+## Logging and messaging utilities.
+##
+log_script_entry() {
+  logger_debug "Running script ${1}"
+}
+
+log_script_exit() {
+  logger_debug "Exiting script ${1}"
+}
+
+logger_init() {
+  if [ -r ${LIB_DIR}/log4sh ]; then
+    if [ -z "$LOCKSS_SCRIPT_LOG_DIR" ]; then
+      err "LOCKSS_SCRIPT_LOG_DIR is not defined."
+      err_exit "Run scripts/configure-lockss to assign value."
+    else
+      LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
+    fi
+    . ${LIB_DIR}/log4sh
+    logger_info "$(${SCRIPTS_DIR}/installer-version)"
+    echo "-------------------------------------------------------------"
+  else
+    err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
+  fi
+}
+
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+  echo "$*" >&2
 }
 
 err_exit() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+  echo "$*" >&2
   exit 1
 }
 
 msg() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
+
+# perform a kubectl command using whichever flavor of k8s that's installed
+kubectl_cmd() {
+  if [ -z "${KUBECTL_CMD}" ]; then
+    err_exit "Script error: KUBECTL_CMD hasn't been set."
+  fi
+  ${KUBECTL_CMD} "$@"
+}
+
+# perform kubectl command in the lockss namespace
+kubectl_lockss() {
+  kubectl_cmd -n lockss "$@"
+}
+
+set_k3s_bin_dir() {
+  K3S_BIN_DIR="/usr/local/bin"
+  if [ -n "${INSTALL_K3S_BIN_DIR}" ]; then
+    if [ -x "${INSTALL_K3S_BIN_DIR}"/k3s ]; then
+      K3S_BIN_DIR=${INSTALL_K3S_BIN_DIR}
+    fi
+  else
+    if [ -x /usr/local/bin/k3s ]; then
+      K3S_BIN_DIR=/usr/local/bin
+    elif [ -x /opt/bin/k3s ]; then
+      K3S_BIN_DIR=/opt/bin
+    fi
+  fi
+}
+
 
 #Check_Runnable()
 #{
-#  Check_Installed 'microk8s'
+#  Check for an available kubernetes node.
 #  Create Namespace
 #}
 Check_Runnable() {
   Check_LOCKSS_User
-  Check_Installed 'microk8s'
-  if ! microk8s status | grep "microk8s is running"; then
-    err_exit "microk8s is not running. Please run: microk8s start"
+  if ! kubectl_cmd get node | grep -q "Ready"; then
+    err_exit "No available kubernetes node. Please start kubernetes node"
   fi
-  if ! microk8s kubectl get namespace "lockss" &>/dev/null; then
-    microk8s kubectl create namespace "lockss"
+  if ! kubectl_cmd get namespace "lockss" &>/dev/null; then
+    kubectl_cmd create namespace "lockss" >/dev/null || err_exit "Unable to create lockss namespace."
   fi
 }
 
+Check_Configured() {
+  Check_VarDef "LOCKSS_SOLR_USER"
+  Check_VarDef "LOCKSS_SOLR_PASSWD"
+  Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
+  Check_VarDef "KUBECTL_CMD"
+#TODO: Add container subnet change check
+}
+
+Check_K8s_Command() {
+    if [ "X${KUBECTL_CMD}" = X ]; then
+    if kubepath=$(command -v k3s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=k3s
+    elif kubepath=$(command -v microk8s); then
+      KUBECTL_CMD="${kubepath} kubectl"
+      K8S_FLAVOR=microk8s
+    elif kubepath=$(command -v kubectl); then
+      KUBECTL_CMD="${kubepath}"
+      K8S_FLAVOR=k8s
+    fi
+  fi
+}
 Check_LOCKSS_User() {
   if ! id "lockss" >/dev/null; then
     err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
@@ -95,35 +173,68 @@ Check_Docker() {
 ## Check For installed secret
 ##
 Check_Secret() {
-  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
+  if ! kubectl_cmd get secret -n lockss ${1} &>/dev/null; then
     err "${1}: Kubernetes Secret does not exist"
-    err_exit "     Run scripts/configure-lockss."
+    err_exit "Run scripts/configure-lockss."
   fi
 
 }
 
+Check_VarDef() {
+  local env_var="${1}"
+  if [ -z "$env_var" ]; then
+      err "$env_var is not defined."
+      err_exit "Run scripts/configure-lockss to assign value."
+  fi
+}
+
 ##
-## Add a kubernetes secret, deleting existing secret if it exists.
+## Store a kubernetes secret, deleting existing secret if it exists.
+##
+Store_Secret() {
+  local NAME="${1}"
+  local VALUE="${2}"
+  kubectl_cmd delete secret "${NAME}" -n lockss &>/dev/null
+  echo "Storing ${NAME} as a kubernetes secret .."
+  if ! kubectl_cmd create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
+    err_exit "Kubernetes secret creation failed for ${NAME}"
+  else
+    return 0
+  fi
+}
+
+declare -A secrets_to_store
+
+##
+## Remember a kubernetes secret to be stored later
 ##
 Add_Secret() {
   local NAME="${1}"
   local VALUE="${2}"
+  secrets_to_store["${NAME}"]="${VALUE}"
+}
 
-  microk8s kubectl delete secret "${NAME}" -n lockss &>/dev/null
-  echo "Storing ${NAME} as a kubernetes secret .."
-  if ! microk8s kubectl create secret generic "${NAME}" --from-literal="${NAME}"="${VALUE}" -n lockss; then
-    err "Kubernetes secret creation failed for ${NAME}"
-    return 1
-  else
-    return 0
-  fi
+##
+## Clear the saved secrets array
+##
+Clear_Secrets() {
+  secrets_to_store=()
+}
+
+##
+## Store the secrets to k8s
+##
+Store_All_Secrets() {
+  for x in ${!secrets_to_store[@]}; do
+    Store_Secret "${x}" "${secrets_to_store[${x}]}"
+  done
 }
 
 ##
 ## Check for an installed lockss secret, return 0 if found 1 otherwise.
 ##
 Is_Secret_Installed() {
-  if ! microk8s kubectl get secret -n lockss ${1} &>/dev/null; then
+  if ! kubectl_cmd get secret -n lockss ${1} &>/dev/null; then
     return 1
   else
     return 0
@@ -134,7 +245,7 @@ Is_Secret_Installed() {
 ## Return 0 iff all secrets in arglist are installed.
 ##
 Are_Secrets_Installed() {
-  for s in $@; do
+  for s in "$@"; do
     if ! Is_Secret_Installed "${s}"; then
       return 1
     fi
@@ -144,19 +255,17 @@ Are_Secrets_Installed() {
 
 Check_Volume() {
   #    if ! docker volume inspect ${1} &> /dev/null; then
-  if ! microk8s kubectl get pv ${1} &>/dev/null; then
+  if ! kubectl_cmd get pv ${1} &>/dev/null; then
     err "${1}: Docker Volume has not been installed."
-    err "${1}: Run lockss-install script."
-    exit 1
+    err_exit "${1}: Run lockss-install script."
   fi
 }
 
 Check_Config() {
   #    if ! docker config inspect ${1} &> /dev/null; then
-  if ! microk8s kubectl get config ${1} &>/dev/null; then
+  if ! kubectl_cmd get config ${1} &>/dev/null; then
     err "${1}: Config file is missing. Run configure and install scripts.."
-    err "${1}: Run lockss-install script."
-    exit 1
+    err_exit "${1}: Run lockss-install script."
   fi
 }
 
@@ -176,7 +285,7 @@ ensure_lockss_user() {
     fi
     ;;
   *)
-    error_exit "Unsupported system. Please create a user 'lockss' before continuing."
+    err_exit "Unsupported system. Please create a user 'lockss' before continuing."
     ;;
   esac
 }
@@ -187,9 +296,8 @@ ensure_lockss_user() {
 
 Check_Installed() {
   while [ "X${1}" != "X" ]; do
-    if ! which "${1}" &>/dev/null; then
-      err "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
-      exit 1
+    if ! command -v "${1}" &>/dev/null; then
+      err_exit "${_0}: ${1} must be on lockss user's PATH.  Please fix and rerun."
     fi
     shift
   done
@@ -202,6 +310,21 @@ Check_Installed() {
 Get_Value() {
   local PAIR="${1}"
   echo "${PAIR}" | sed -e 's@^[^=]\+=@@'
+}
+
+Get_Timezone() {
+  local timezone="${TZ}"
+
+  if [ -z "${timezone}" ]; then
+    if command -v timedatectl &>/dev/null; then
+      timezone=$(timedatectl show --property=Timezone --value)
+    elif -r /etc/timezone; then
+      timezone=$(cat /etc/timezone)
+    elif -r /etc/localtime; then
+      timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
+    fi
+  fi
+  echo ${timezone}
 }
 
 ##
@@ -245,7 +368,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(microk8s kubectl get pods -n 'lockss' | grep 'lockss-configuration-service')" ]
+  [ "$(kubectl_lockss get pods | grep 'lockss-configuration-service')" ]
 }
 
 #
@@ -258,26 +381,33 @@ read_config() {
   IFS='
 '
   for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1); do
+\1=\2/' "${FILE}"); do
     eval "$A"
   done
   IFS="${OLD_IFS}"
 }
 
 ask_for_input() {
-  echo -n "$1: [$2] "
+  case "${1}" in
+    *\?) echo -n "${1} [${2}] "  ;;
+    *)   echo -n "${1}: [${2}] " ;;
+  esac
   read ANS
-  if [ "X${ANS}" = "X" ]; then
-    ANS=$2
+  if [ -z "${ANS}" ]; then
+    ANS="${2}"
   fi
 }
 
 ask_for_input_shadow() {
   echo -n "$1: "
-  local STTY_ORIG=$(stty -g)
-  stty -echo
-  read ANS
-  stty "$STTY_ORIG"
+  if test -t 0 ; then
+    local STTY_ORIG=$(stty -g)
+    stty -echo
+    read ANS
+    stty "$STTY_ORIG"
+  else
+    read ANS
+  fi
   echo
 }
 
@@ -361,47 +491,91 @@ is_pos() {
   return $?
 }
 
-# init_one_dir dir user
+# setup_storage_dirs CONF_FILE CONFIG_USER
+# return nonzero if any errors
+setup_storage_dirs() {
+  local CONF_FILE="$1"
+  local USER="$2"
+  local ERRORS="0"
+  echo "Checking content storage directory(s)"
+  read_config ${CONF_FILE}
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+
+  for dir in "${repoPaths[@]}"; do
+    if ! init_one_dir "${dir}" ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+    fi
+  done
+  if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_LOGS_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_TMPDIR} ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  return $ERRORS
+}
+
+# init_one_dir dir user mode
 init_one_dir() {
   local DIR="$1"
+  local USER="$2"
+  local MODE="$3"
+  if [ -z "${MODE}" ]; then
+      MODE="750"
+  fi
   if [ ! -d "${DIR}" ]; then
-    ask_for_input "${DIR} does not exist; shall I create it" Y
+    ask_for_input "${DIR} does not exist; shall I create it?" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
-      if [ "X${CONFIG_USER}" != "X${2}" ]; then
-        chown ${2} "${DIR}"
+      if [ "X${CONFIG_USER}" != "X${USER}" ]; then
+        chown ${USER} "${DIR}"
       fi
-      chmod 750 "${DIR}"
-      if check_writable "${DIR}" ${2}; then
+      chmod "${MODE}" "${DIR}"
+      if check_writable "${DIR}" ${USER}; then
         return 0
       else
-        echo "${DIR} not writable by user ${2}"
+        echo "${DIR} not writable by user ${USER}"
         echo " Please make it so (check parent dir execute bits)"
         echo " LOCKSS will not run properly without it."
       fi
     else
-      echo "Please create ${DIR} and make it writable by user ${2};"
+      echo "Please create ${DIR} and make it writable by user ${USER};"
       echo " LOCKSS will not run properly without it."
     fi
     return 0
   fi
-  if check_writable "${DIR}" $2; then
-    echo "${DIR} exists and is writable by ${2}"
+  if check_writable "${DIR}" $USER; then
+    echo "${DIR} exists and is writable by ${USER}"
   else
-    ask_for_input "${DIR} is not writable; shall I chown it" Y
+    ask_for_input "${DIR} is not writable; shall I chown/chmod it?" Y
     if is_yes "${ANS}"; then
-      chown ${2} "${DIR}"
-      if check_writable "${DIR}" $2; then
+      chown ${USER} "${DIR}"
+      chmod ${MODE} "${DIR}"
+      if check_writable "${DIR}" $USER; then
         return 0
       else
-        echo "${DIR} still not writable by user ${2}"
+        echo "${DIR} still not writable by user ${USER}"
         echo " Please make it so (check parent dir execute bits)"
         echo " LOCKSS will not run properly without it."
       fi
     else
-      echo "Please ensure that ${DIR} is writable by user ${2};"
+      echo "Please ensure that ${DIR} is writable by user ${USER};"
       echo " LOCKSS will not run properly without it."
     fi
+    return 1
   fi
 }
 
@@ -422,8 +596,27 @@ check_writable() {
   return 1
 }
 
-#parse_ip_address inp
-parse_ip_address() {
+# find_first_file list prefix suffix
+
+# return the first element in list such that the file
+# ${prefix}${elem}${suffif} exists.  (I.e., it returns just the list
+# element, not the entire filename).
+find_first_file() {
+  local list="$1"
+  local pre="$2"
+  local suff="$3"
+  local probe
+  for x in ${list}; do
+    probe=${pre}${x}${suff}
+    if [ -e "${probe}" ]; then
+        echo "${x}"
+        return
+    fi
+  done
+}
+
+#parse_ip4_address inp
+parse_ip4_address() {
   local INP=$1
   local OLD_IFS="${IFS}"
   IFS="."
@@ -452,7 +645,7 @@ guess_ip_address() {
   local all_ips=
   case $(uname -s) in
     Linux)
-      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null)
+      all_ips=$(hostname -I 2>/dev/null) || all_ips=$(hostname -i 2>/dev/null) || all_ips=$(ip route get 1 | sed 's/^.*src \([^ ]*\).*$/\1/;q')
       # remove IPv6 addresses
       all_ips=$(echo ${all_ips} | sed -r 's/[^ ]*:[^ ]* *//g')
 
@@ -467,22 +660,17 @@ guess_ip_address() {
   esac
 }
 
-# read_config file
-read_config() {
-  local FILE="$1"
-  local OLD_IFS="${IFS}"
-  IFS='
-'
-  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
-\1=\2/' $1); do
-    eval "$A"
-  done
-  IFS="${OLD_IFS}"
+HOSTNAME_REGEX="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
+
+# valid_hostname hostname
+valid_hostname() {
+  ( echo "$1" | grep -E -q -e "${HOSTNAME_REGEX}" )
 }
 
-# valid_ip_address address
-valid_ip_address() {
-  local IPADDR=$(parse_ip_address "$1")
+
+# valid_ip4_address address
+valid_ip4_address() {
+  local IPADDR=$(parse_ip4_address "$1")
   if [ ${IPADDR} -eq 0 ]; then
     return 1
   else
@@ -490,59 +678,172 @@ valid_ip_address() {
   fi
 }
 
+# IPv6 regex from https://github.com/labbots/bash-utility?
+
+IPV6_REGEX="^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|\
+([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|\
+([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|\
+([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|\
+:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|\
+::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|\
+(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|\
+(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
+
+# Usage: valid_ip6_address address
+valid_ip6_address() {
+  [[ "$1" =~ $IPV6_REGEX ]] && return 0 || return 1
+}
+
+# Usage: valid_ip_address address
+valid_ip_address() {
+  ( valid_ip4_address "$1" || valid_ip6_address "$1" ) && return 0 || return 1
+}
+
+
+declare -a VALIDATED_LIST
+
+#
+# Usage: valid_ip_address_list ip[;ip...]
+# returns 0 if all elements are valid, and sets the array
+# VALIDATED_LIST to the elements
+#
+valid_ip_address_list() {
+  VALIDATED_LIST=()
+  if [[ -z "${1}" ]] ; then
+    echo "IP address list may not be empty" >&2
+    return 1
+  fi
+
+  if [[ "${1}" =~ " " ]] ; then
+    echo "IP address list may not contain spaces" >&2
+    return 1
+  fi
+  local ip
+  for ip in ${1//;/ }; do
+    if ! valid_ip_address "${ip}" ; then
+      echo "${ip} is not a valid IP address" >&2
+      VALIDATED_LIST=()
+      return 1
+    fi
+    VALIDATED_LIST+=("${ip}")
+  done
+  return 0
+}
+
 #
 # Usage: valid_subnet address
 #
 valid_subnet() {
-  local INP=$1
-  if ! echo ${INP} | grep -s '/' >/dev/null; then
-    oct='[0-9]{1,3}'
-    if echo $1 | egrep -s "^(($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*))$" >/dev/null; then
+  local INP="$1"
+  local oct='[0-9]{1,3}'
+  if valid_ip4_address "${INP}"; then
+    return 0
+  elif [[ "${INP}" =~ ^($oct\.$oct\.$oct\.\*)|($oct\.$oct\.\*.\*)|($oct\.\*.\*.\*)$ ]]; then
+    return 0
+  elif [[ "${INP}" =~ ^([^/]+)/([^/]+)$ ]]; then
+    local NET="${BASH_REMATCH[1]}"
+    local MASK="${BASH_REMATCH[2]}"
+    if ! valid_ip4_address "${NET}"; then
+      return 1
+    fi
+    if valid_ip4_address "${MASK}"; then
+      local MASKADDR=$(parse_ip4_address "${MASK}")
+      if [[ ${MASKADDR} -eq 0 ]]; then
+        return 1
+      fi
+      # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
       return 0
-    fi
-    return 1
-  fi
-  local NET=$(echo ${INP} | sed 's/\/.*//')
-  local MASK=$(echo ${INP} | sed 's/.*\///')
-  local NETADDR=$(parse_ip_address "${NET}")
-  if [ ${NETADDR} -eq 0 ]; then
-    return 1
-  fi
-  if echo ${MASK} | grep -s '\.' >/dev/null; then
-    local MASKADDR=$(parse_ip_address "${MASK}")
-    if [ ${MASKADDR} -eq 0 ]; then
+    elif [[ "${MASK}" -ge 0 && "${MASK}" -le 32 ]]; then
+      # should check legal cidr
+      return 0
+    else
       return 1
     fi
-    # should check that (${MASKADDR}|(-${MASKADDR})) == ${MASKADDR}
-    return 0
   else
-    if ! expr ${MASK} + 1 >/dev/null 2>&1; then
-      return 1
-    fi
-    if [ ${MASK} -lt 0 -o ${MASK} -gt 32 ]; then
-      return 1
-    fi
-    # should check legal cidr
-    return 0
+    return 1
   fi
+}
+
+#
+# Usage: valid_subnet_list subnet[;subnet...]
+# returns 0 if all elements are valid, and sets the array
+# VALIDATED_LIST to the elements
+#
+valid_subnet_list() {
+  VALIDATED_LIST=()
+  if [[ -z "${1}" ]] ; then
+    echo "subnet list may not be empty" >&2
+    return 1
+  fi
+
+  if [[ "${1}" =~ " " ]] ; then
+    echo "subnet list may not contain spaces" >&2
+    return 1
+  fi
+  local sub
+  for sub in ${1//;/ }; do
+    if ! valid_subnet "${sub}" ; then
+      echo "${sub} is not a valid subnet" >&2
+      VALIDATED_LIST=()
+      return 1
+    fi
+    VALIDATED_LIST+=("${sub}")
+  done
+  return 0
 }
 
 #
 # Usage: normalize_path PATH
 #
-# Remove /./ and dir/.. sequences from a pathname and write result to stdout.
-# from https://www.linuxjournal.com/content/normalizing-path-names-bash
+# Remove /./ and dir/.. sequences and replace // with / and write result to
+# stdout.
 #
 function normalize_path() {
   # Remove all /./ sequences.
   local path=${1//\/.\//\/}
 
-  # Remove first dir/.. sequence.
-  local npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  # Replace all // sequences with /
+  path=${path//\/\//\/}
 
-  # Remove remaining dir/.. sequence.
-  while [[ $npath != $path ]]; do
-    path=$npath
-    npath=$(echo $path | sed -e 's;[^/][^/]*/\.\./;;')
+  # Remove dir/.. sequences.
+  while [[ $path =~ ([^/][^/]*/\.\./) ]]; do
+    path=${path/${BASH_REMATCH[0]}/}
   done
+  # Remove final dir/.. sequence.
+  if [[ $path =~ ([^/][^/]*/\.\.$) ]]; then
+    path=${path/${BASH_REMATCH[0]}/}
+  fi
+  # Remove final /. sequence.
+  echo "${path%%/.}"
+}
+
+# Match /etc/resolv.conf nameserver lines
+NAMESERVER_REGEX='^[ \t]*nameserver[ \t]+'
+
+# Match /etc/resolv.conf loopback nameserver lines
+LOOPBACK_REGEX="${NAMESERVER_REGEX}(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
+
+#
+# Usage: has_loopback_resolver FILE
+#
+# FILE is a file in the format of /etc/resolv.conf
+# return true (0) iff the file specifies at least one nameserver on
+# a loopback address
+#
+has_loopback_resolver() {
+  local file="$1"
+  grep -E -i -q "$LOOPBACK_REGEX" "${file}"
+  return
+}
+
+#
+# Usage: extract_non_loopback_resolvers FILE
+#
+# FILE is a file in the format of /etc/resolv.conf
+# prints a semiconol-separated list of all the non-loopback nameservers
+# specified in the file
+#
+extract_non_loopback_resolvers() {
+  local file="$1"
+  grep -E -i "$NAMESERVER_REGEX" "${file}" | grep -v -E -i "$LOOPBACK_REGEX" | awk '{print $2}' | xargs | tr ' ' ';'
 }

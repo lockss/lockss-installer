@@ -116,10 +116,15 @@ spec:
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-poller-service
     spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: LOCKSS_IS_POLLER
+          value: "true"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
@@ -132,6 +137,14 @@ spec:
           value: "{{REPO_HOST}}:{{REPO_REST_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
+        - name: LOCKSS_UID
+          value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
+        - name: LOCKSS_GID
+          value: '{{LOCKSS_GID}}'
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
@@ -181,6 +194,11 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
+{{#LCAP_USE_SSL}}
+        - mountPath: /run/secrets/lcap-ssl-pass
+          name: lcap-ssl-pass
+          subPath: lcap-ssl-pass
+{{/LCAP_USE_SSL}}
         - mountPath: /data
           name: lockss-pol-data
         - mountPath: /var/log/lockss
@@ -191,7 +209,7 @@ spec:
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:
-        - "{{LOCKSS_HOSTNAME}}"
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
       volumes:
       - configMap:
           items:
@@ -223,6 +241,14 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
+{{#LCAP_USE_SSL}}
+      - name: lcap-ssl-pass
+        secret:
+          secretName: lcap-ssl-pass
+          items:
+          - key: lcap-ssl-pass
+            path: lcap-ssl-pass
+{{/LCAP_USE_SSL}}
       - name: lockss-pol-data
         persistentVolumeClaim:
           claimName: lockss-pol-data-pvc

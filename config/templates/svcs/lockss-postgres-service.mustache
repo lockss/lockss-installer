@@ -96,7 +96,8 @@ spec:
         io.kompose.service: lockss-postgres-service
     spec:
       containers:
-      - env:
+      - command: ["docker-entrypoint.sh", "-c", "logging_collector=on", "-c", "log_directory=/logs"]
+        env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: PGDATA
@@ -115,7 +116,7 @@ spec:
         ports:
         - name: "postgres-port"
           containerPort: {{POSTGRES_DEFAULT_PORT}}
-#          hostPort: {{POSTGRES_PORT}}
+          hostPort: {{POSTGRES_PORT}}
           protocol: TCP
         resources: {}
         volumeMounts:
@@ -124,7 +125,7 @@ spec:
           subPath: lockss-postgres-pass
         - mountPath: /data
           name: lockss-postgres-data
-        - mountPath: /var/logs/postgres
+        - mountPath: /logs
           name: lockss-postgres-logs
         - mountPath: /tmp
           name: lockss-postgres-tmp
@@ -132,7 +133,7 @@ spec:
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:
-        - "{{LOCKSS_HOSTNAME}}"
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
       volumes:
       - name: lockss-postgres-pass
         secret:

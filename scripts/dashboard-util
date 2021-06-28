@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# dashboard-util - Support for the Kubernetes Dashboard
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# Usage: dashboard-util [-h|--help] [-i|--install] [-r|--remove] [-u|--update] [-t|--token]
+
+# Revision history:
+# 2021-05-11 Created by new_script ver. 3.3
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
+
+K8S_CONF_DIR="${CONFIG_DIR}/k8s"
+
+clean_up() { # Perform pre-exit housekeeping
+  return
+}
+
+error_exit() {
+  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    echo -e "\n$PROGNAME: Program terminated" >&2
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  echo "Usage:"
+  echo "    $PROGNAME [-i|--install] [-r|--remove] [-u|--update]"
+  echo "    $PROGNAME [-U|--url] [-t|--token]"
+  echo "    $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Utility to support Kubernetes Dashboard
+
+  $(usage)
+
+  Options:
+  -h, --help     display this help message and exit
+  -i, --install  install the Kubernetes Dashboard
+  -r, --remove   remove the Kubernetes Dashboard
+  -u, --update   update the Kubernetes Dashboard
+  -U, --url      return the URL to sign in to the Kubernetes Dashboard
+  -t, --token    return the bearer token to sign in to the Kubernetes Dashboard
+
+_EOF_
+  return
+}
+init_params() {
+  GITHUB_URL="https://github.com/kubernetes/dashboard/releases"
+  echo "Finding Kubernetes Dashboard version..."
+  VERSION_KUBE_DASHBOARD=$(curl -w '%{url_effective}' -I -L -s -S ${GITHUB_URL}/latest -o /dev/null | sed -e 's|.*/||')
+  RECOMMENDED_DASHBOARD_URL="https://raw.githubusercontent.com/kubernetes/dashboard/${VERSION_KUBE_DASHBOARD}/aio/deploy/recommended.yaml"
+}
+dashboard_install() {
+  init_params
+  if kubectl_cmd get ns kubernetes-dashboard ; then
+      kubectl_cmd delete all --all -n kubernetes-dashboard >/dev/null
+  fi
+  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" &>/dev/null
+  echo "Waiting for pods to be marked 'Ready'..."
+  kubectl_cmd -n kubernetes-dashboard wait --for=condition=Ready --all pods
+  echo
+  echo "To access the Dashboard, create a secure channel to your K3s cluster:"
+  echo "$KUBECTL_CMD proxy &"
+  echo
+  echo "The Dashboard is available at:"
+  dashboard_url
+  echo
+  echo "To sign-in, select 'Token' and use the bearer token:"
+  dashboard_token
+}
+
+dashboard_url() {
+  echo "http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
+}
+
+dashboard_remove() {
+  echo "Removing Kubernetes Dashboard and components..."
+  kubectl_cmd delete all --all -n kubernetes-dashboard >/dev/null
+}
+
+dashboard_update() {
+  dashboard_remove
+  dashboard_install
+}
+
+dashboard_token() {
+  kubectl_cmd -n kubernetes-dashboard describe secret admin-user-token | grep '^token:' | awk '{print $2}'
+}
+
+##
+## MAIN
+##
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+
+if [ -r "${K8S_CONF_FILE}" ]; then
+  read_config "${K8S_CONF_FILE}"
+else
+  error_exit "${K8S_CONF_FILE} not found.  Run scripts/configure-lockss first."
+fi
+
+if ! kubectl_cmd get node | grep -q "Ready"; then
+  err_exit "No available Kubernetes node. Please start Kubernetes node"
+fi
+
+# Parse command-line
+case $1 in
+  -h | --help)
+    help_message; graceful_exit ;;
+  -i | --install)
+    dashboard_install; graceful_exit ;;
+  -r | --remove)
+    dashboard_remove; graceful_exit ;;
+  -u | --update)
+    dashboard_update; graceful_exit ;;
+  -U | --url)
+    dashboard_url; graceful_exit ;;
+  -t | --token)
+    dashboard_token; graceful_exit ;;
+  -*)
+    usage; error_exit "Unknown option: $1" ;;
+  *)
+    usage; graceful_exit ;;
+esac
+
+graceful_exit

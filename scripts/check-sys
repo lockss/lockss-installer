@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # check-sys - Check the host system for all necessary components for running LOCKSS stack.
 #
@@ -50,8 +50,8 @@ _D0=$(dirname "${0}")
 
 OS_TYPE=$(uname -s)
 LOCKSS_USER=lockss
-SOLR_USER=solr
 LOCAL_HOSTNAME=$(uname -n)
+K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -123,33 +123,21 @@ ensure_lockss_user() {
   esac
 }
 
-ensure_snap() {
-  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/snap"
-  if ! which snap &> /dev/null; then
-      err "${_0}: Snap not found on path."
-      err "${_0}: Snap is used to install microk8s."
-        echo "To complete your install see: ${instr_link}"
+ensure_kubernetes() {
+  KUBECTL_CMD=""
+  # look for the k8s.cfg file and use it if possible
+  if [ -r "${K8S_CONF_FILE}" ]; then
+    read_config ${K8S_CONF_FILE}
+  else
+    err "${K8S_CONF_FILE} file does not exist, looking for kubectl command on path..."
   fi
-}
-ensure_microk8s() {
-  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/microk8s"
-  if ! which microk8s &> /dev/null; then
-      err "${_0}: Mircok8s not found on the PATH (${PATH})"
-      err "${_0}: LOCKSS requires Microk8s to run."
-      error_exit "See instructions: ${instr_link}"
-  fi
-}
+  Check_K8s_Command || error_exit "No kubectl command available on path."
 
-ensure_lockss_access() {
-  local instr_link="https://lockss.github.io/administrators/manual/2.0-alpha3/installing/user"
-  if ! sudo -l -U lockss sudo &> /dev/null; then
-      err "${_0}: The lockss user requires sudo privileges."
-      error_exit "See instructions: ${instr_link}"
+  if ! ${KUBECTL_CMD} get node | grep -q "Ready"; then
+    err "${_0}: No available kubernetes node. Please start kubernetes node"
   fi
-  if !  grep '^microk8s:.*$' /etc/group | cut -d: -f4 | grep lockss &> /dev/null; then
-      err "${_0}: The lockss user should be a member of the group 'microk8s'."
-      error_exit "See instructions: ${instr_link}"
-  fi
+  ${KUBECTL_CMD} rollout status deployment coredns -n kube-system ||
+    error_exit "coredns is not available for pod communication"
 }
 
 # Trap signals
@@ -178,12 +166,8 @@ done
 echo "${_0}: Checking for lockss user..."
 ensure_lockss_user
 echo "${_0}: User lockss exists."
-echo "${_0}: Checking snapd install..."
-ensure_snap
-echo "${_0}: snapd is installed."
-echo "${_0}: Checking for microk8s..."
-ensure_microk8s
-echo "${_0}: microk8s is installed."
-echo "${_0}: Checking lockss groups and permissions.."
-ensure_lockss_access
+echo "${_0}: Checking for kubernetes..."
+ensure_kubernetes
+echo "${_0}: kubernetes is installed and has a active node."
+echo "${_0}: The lockss user has appropriate permissions.."
 graceful_exit

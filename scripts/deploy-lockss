@@ -57,22 +57,22 @@ _D0=$(dirname "${0}")
 ##
 
 # Files
-DOCKER_COMPOSE_FILE="docker-compose.yml"
-SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 #Data
 declare -a deploy_service_names
 declare -a svcs
 declare -A svc_port_map
 STACK_PREFIX="lockss-stack"
-KUBECTL="microk8s kubectl -n lockss"
 
 clean_up() { # Perform pre-exit housekeeping
-  return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-  echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  logger_fatal "${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
 }
@@ -85,20 +85,20 @@ graceful_exit() {
 signal_exit() { # Handle trapped signals
   case $1 in
   INT)
-    error_exit "Program interrupted by user"
+    logger_info "Program interrupted by user"
     ;;
   TERM)
-    echo -e "\n$PROGNAME: Program terminated" >&2
+    logger_error "Program terminated"
     graceful_exit
     ;;
   *)
-    error_exit "$PROGNAME: Terminating on unknown signal"
+    error_exit "Terminating on unknown signal"
     ;;
   esac
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
@@ -110,7 +110,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
+  -w, --wait Use a wait file to signal stack ready.
+  -a, --args ARGS_ADDITIONAL  Add additional runtime options.
     Where 'ARGS_ADDITIONAL' is the additional arguments.
 
 _EOF_
@@ -172,36 +173,61 @@ init_service_arrays() {
 
 # Check our secrets
 check_installed_secrets() {
-  echo "checking installed secrets..."
+  logger_info "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
+  Check_Secret 'solr-auth'
 }
 
 check_installed_volumes() {
   local stack=$1
+  local wait_file
   # Check the mountpoints
   for svc in "${svcs[@]}"; do
-    echo "checking docker mountpoints for $stack-${svc}..."
-    Check_Volume "$stack-${svc}-data"
-    Check_Volume "$stack-${svc}-logs  "
+    logger_debug "clearing  wait file in ${LOCKSS_DATA_DIR}/$stack-${svc}-data"
+    wait_file="${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}"
+    if [ -f $wait_file ]; then
+      rm "${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}" >/dev/null ||
+        logger_warn "Unable to delete file $wait_file"
+    fi
   done
+}
+
+wait_for_ready() {
+  local wait_for_file=$1
+  logger_info "Waiting for pods to be marked 'Ready'..."
+  kubectl_lockss wait --for=condition=Ready --all pods --timeout=90s | logger_info
+  if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
+    logger_info "waiting for LOCKSS wait file..."
+    while [ ! -f $wait_for_file ]
+    do
+      sleep 2
+    done
+    logger_info "LOCKSS services are now ready for use."
+  fi
 }
 
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-
   # Source config.info and env.sh
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
   set +a
+  check_installed_volumes $stack
   pushd . &>/dev/null
+  logger_info "Deploying services and deployments for stack $stack"
   for svc in "${deploy_service_names[@]}"; do
-    echo "Deploying service from ${svc}..."
-    $KUBECTL apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-#ß    $KUBECTL expose deployment $svc
+    logger_trace "Deploying service from ${svc}..."
+    if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" >/dev/null ; then
+      popd &>/dev/null
+      logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
+      error_exit "Fix the error then run scripts/restart-lockss."
+    fi
+#    kubectl_cmd expose deployment $svc
   done
+  wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null
 }
 
@@ -211,46 +237,53 @@ deploy_stack() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
+#init the logger and mark script entry
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
 
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
 NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 ARGS_ADDITIONAL=""
 # Parse command-line
-while [[ -n $1 ]]; do
-  case $1 in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
   -h | --help)
     help_message
     graceful_exit
     ;;
   -a | --args)
-    shift
-    export ARGS_ADDITIONAL="$1"
-    msg "Adding additional runtime args $ARGS_ADDITIONAL"
+    export ARGS_ADDITIONAL="$2"
+    logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
+    shift; shift
+    ;;
+  -w | --wait)
+    CHECK_WAIT_FILE="TRUE"
+    logger_debug "Using wait file to check ready"
     shift
     ;;
   [1-9])
     STACK_NUM=$1
+    shift
     ;;
   -* | --*)
     usage
     error_exit "Unknown option $1"
     ;;
   *)
-    echo "Argument $1 to process..."
+    logger_trace "Argument $1 to process..."
+    shift
     ;;
   esac
-  shift
 done
 
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
+# Sanity checks
+logger_info "Checking system..."
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
-umask 002
 Check_Runnable
 
 init_service_arrays
@@ -260,8 +293,9 @@ if [ ${NUM_STACKS} -eq 0 ]; then
 elif [ ${NUM_STACKS} -eq 1 ]; then
   deploy_stack ""
 elif [ ${STACK_NUM} -eq 0 ]; then
-  echo "Installing ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
-  for ((num = 1; num <= $NUM_STACKS; num++)); do
+  logger_info "Deploying ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
+  deploy_stack ""
+  for ((num = 1; num < $NUM_STACKS; num++)); do
     deploy_stack $num
   done
 elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then

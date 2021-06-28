@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# uninstall-lockss - Undeploy all stacks and remove all installed stack info..
+# stop-lockss - Stop LOCKSS stack and containers.
 #
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,17 +31,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Usage: uninstall-lockss [-h|--help]
+# Usage: stop-lockss [-h|--help]
 #
 # Revision history:
 # 2019-04-18 version 1
 # ---------------------------------------------------------------------------
 PROGNAME=${0##*/}
 VERSION="1.0"
-
-##
-## Relative paths
-##
 
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
@@ -52,42 +48,54 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
+
+
+declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
+
+STACK_PREFIX="lockss-stack"
+
 clean_up() { # Perform pre-exit housekeeping
-  unalias xargs
-	return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  logger_error "${1:-"Unknown Error"}"
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
-	clean_up
-	exit
+  clean_up
+  exit
 }
 
 signal_exit() { # Handle trapped signals
-	case $1 in
-		INT)
-			error_exit "Program interrupted by user" ;;
-		TERM)
-			echo -e "\n$PROGNAME: Program terminated" >&2
-			graceful_exit ;;
-		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
-	esac
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    error_exit "Terminating on unknown signal"
+    ;;
+  esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+  echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
-  cat <<- _EOF_
+  cat <<-_EOF_
   $PROGNAME ver. $VERSION
-  Undeploy all stacks and remove all installed stack info.
+  Stop LOCKSS stack and containers.
 
   $(usage)
 
@@ -97,57 +105,71 @@ help_message() {
 _EOF_
   return
 }
+
 ##
 ## MAIN
 ##
 # Trap signals
 trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT"  INT
+trap "signal_exit INT" INT
 
+undeploy_stack() {
+  local stack=${STACK_PREFIX}$1
+  # Source config.info and env.sh
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
+  logger_info "Undeploying stack $stack"
+  # make the stack unreachable on the network
+  kubectl_lockss delete -l lockss-stack-id=${stack} services | logger_debug
+  # remove the the spec that controls the number of expected pods
+  kubectl_lockss delete -l lockss-stack-id=${stack} deployments | logger_debug
+  # wait until all pods are deleted
+  logger_info "Waiting for pods to complete shutdown..."
+  kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s | logger_info
+  logger_debug "Removing all configmaps $stack."
+  kubectl_lockss delete --all configmaps | logger_debug
+  wait
+}
+
+# Source system config file
+logger_init
+
+log_script_entry "${PROGNAME}"
+umask 002
+
+STACK_NUM=0
 
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
+  -h | --help)
+    help_message
+    graceful_exit
+    ;;
+  [1-9])
+    STACK_NUM=$1
+    ;;
+  -*)
+    usage
+    error_exit "Unknown option $1"
+    ;;
+  *)
+    logger_debug "Argument $1 to process..."
+    ;;
   esac
   shift
 done
 
+
 # Sanity checks
-Check_Docker
+Check_Runnable
+Check_Configured
 
-echo "Preparing to uninstall all lockss docker components."
-if which "gxargs" &> /dev/null; then
-  alias xargs='gxargs -r'
+if [[ ${STACK_NUM} -eq 0 ]]; then
+  undeploy_stack ""
 else
-  alias xargs='xargs -r'
-fi
-
-if [[ $# -eq 0 ]]; then
-  echo "Stopping all docker containers..."
-  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container stop
-
-  # Make sure we stop any running service by calling remove all stacks
-  echo "Remvoing existing lockss stacks..."
-  docker stack ls | grep 'lockss-stack' | awk '{print $1}' | xargs docker stack rm &> /dev/null
-  echo "Removing all lockss containers..."
-  docker ps -a | grep 'lockss' | awk '{print $1}' | xargs docker container rm &> /dev/null
-  echo "Removing all installed lockss config..."
-  docker config ls | grep 'lockss' | awk '{print $1}' | xargs docker config rm &> /dev/null
-  echo "Removing all docker mount points for lockss volumes..."
-  docker volume ls | grep 'lockss' | awk '{print $2}' | xargs docker volume rm &> /dev/null
-  echo "Removing all docker networks for lockss stacks..."
-  docker network ls | grep 'lockss' | awk '{print $1}' | xargs docker network rm &> /dev/null
-  echo "Clearing lockss image cache..."
-  docker image ls | grep 'lockss' | awk '{print $3}' | xargs docker image rm &> /dev/null
-  echo ""
-  echo "Successfully removed all docker files and info."
+  undeploy_stack ${STACK_NUM}
 fi
 
 graceful_exit

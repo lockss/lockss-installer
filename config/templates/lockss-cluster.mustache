@@ -43,7 +43,14 @@ org.lockss.db.databaseNamePrefix={{LOCKSS_DBNAME_PREFIX}}
 # UI and service bindings
 org.lockss.ui.start=yes
 org.lockss.ui.authType=Form
-org.lockss.app.serviceBindings=cfg={{CFG_HOST}}:{{CFG_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{CFG_UI_PORT}};poller={{POL_HOST}}:{{POL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{POL_UI_PORT}};crawler={{POL_HOST}}:{{POL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{POL_UI_PORT}};mdx={{MDX_HOST}}:{{MDX_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{MDX_UI_PORT}};mdq={{MDQ_HOST}}:{{MDQ_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{MDQ_UI_PORT}};repo={{REPO_HOST}}:{{REPO_REST_PORT}}
+org.lockss.app.serviceBindings=\
+{{#HAS_CFG}}cfg={{CFG_HOST}}:{{CFG_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{CFG_UI_PORT}};{{/HAS_CFG}}\
+{{#HAS_POL}}poller={{POL_HOST}}:{{POL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{POL_UI_PORT}};{{/HAS_POL}}\
+{{#HAS_POL}}crawler={{POL_HOST}}:{{POL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{POL_UI_PORT}};{{/HAS_POL}}\
+{{#HAS_MDX}}mdx={{MDX_HOST}}:{{MDX_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{MDX_UI_PORT}};{{/HAS_MDX}}\
+{{#HAS_MDQ}}mdq={{MDQ_HOST}}:{{MDQ_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{MDQ_UI_PORT}};{{/HAS_MDQ}}\
+{{#HAS_REPO}}repo={{REPO_HOST}}:{{REPO_REST_PORT}}{{/HAS_REPO}}
+
 # determines which component crawls plugin registries
 org.lockss.daemon.pluginsCrawler=cfg
 # default no crawls

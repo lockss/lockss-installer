@@ -112,7 +112,7 @@ spec:
         - name: WAYBACK_URL_HOST
           value: {{OPENWB_HOST}}
         - name: WAYBACK_URL_PORT
-          value: '{{OPENWB_PORT}}'
+          value: '{{OPENWB_DEFAULT_PORT}}'
         - name: WAYBACK_URL_PREFIX
           value: http://{{LOCKSS_HOSTNAME}}:{{OPENWB_PORT}}
         - name: WAYBACK_BASEDIR
@@ -134,11 +134,13 @@ spec:
           name: lockss-openwb-data
         - mountPath: /tmp
           name: lockss-openwb-tmp
+        - mountPath: /var/log/lockss
+          name: lockss-openwb-logs
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:
-        - "{{LOCKSS_HOSTNAME}}"
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
       volumes:
       - name: lockss-auth
         secret:
@@ -149,3 +151,6 @@ spec:
       - name: lockss-openwb-tmp
         persistentVolumeClaim:
           claimName: lockss-openwb-tmp-pvc
+      - name: lockss-openwb-logs
+        persistentVolumeClaim:
+          claimName: lockss-openwb-logs-pvc

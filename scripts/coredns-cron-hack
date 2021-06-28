@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# k3s' default DNS cache timeout is 30 seconds, which results in enough
+# repetitive upstream queries to trigger alarms at some institutions.  This
+# script sets the timeout to 30 minutes.  The recommended use is to copy it
+# to a root-owned file in /etc/cron.hourly .
+
+# With k3s, changes made to CoreDNS's configmap with kubectl apply don't
+# persist, because the configmap is constantly reloaded from
+# /var/lib/rancher/k3s/server/manifests/coredns.yaml .  So this script
+# changes that file.  Unfortunately, k3s overwrites the file with the
+# defaults at startup, so the changes there aren't really persistent
+# either.  This script should be run once, as root, after each time k3s
+# starts.  Absent a good way to do that, it's harmless to run it
+# periodically from  root's cronjob.
+
+YAML_FILE="/var/lib/rancher/k3s/server/manifests/coredns.yaml"
+CACHE_VALUE=1800
+
+if grep -q -e "\bcache\s\s*30\b" "${YAML_FILE}"; then
+   echo "Updating cache timeout in CoreDNS configmap file"
+   sed -i.back -e "s/cache [0-9][0-9]*/cache ${CACHE_VALUE}/" "${YAML_FILE}"
+fi

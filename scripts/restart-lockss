@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # restart-lockss - "Restart the running LOCKSS stack."
 # Copyright (c) 2019, Board of Trustees of Leland Stanford Jr. University
@@ -46,17 +46,23 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
+# Source system config file
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
+
 
 UPDATE_ARG=""
+WAIT_ARG=""
 
 clean_up() { # Perform pre-exit housekeeping
-	return
+  log_script_exit  "${PROGNAME}"
 }
 
 error_exit() {
-	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-	clean_up
-	exit 1
+  logger_fatal "${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
 }
 
 graceful_exit() {
@@ -77,7 +83,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
@@ -89,7 +95,8 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
-  -u, --update  force update of LOCKSS docker images
+  -u, --update  Force update of LOCKSS docker images
+  -w, --wait Use a wait file to signal stack ready.
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -102,46 +109,52 @@ trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
 
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
+
 ARGS_ADDITIONAL=""
 # Parse command-line
-while [[ -n $1 ]]; do
+while [[ $# -gt 0 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
-      msg "Forcing update of LOCKSS docker images"
+      logger_info "Forcing update of LOCKSS docker images"
+      shift
+      ;;
+    -w | --wait)
+      WAIT_ARG="-w"
+      logger_info "Setting wait for file on deploy."
+      shift
       ;;
     -a | --args)
-      shift
-      export ARGS_ADDITIONAL="$1"
-      echo "Adding additional runtime args $ARGS_ADDITIONAL";
+      export ARGS_ADDITIONAL="$2"
+      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
+      shift; shift
     ;;
     -*)
       usage
       error_exit "Unknown option $1" ;;
     *)
-      echo "Argument $1 to process..." ;;
+      logger_debug "Argument $1 to process..."
+      shift
+      ;;
   esac
-  shift
 done
 
 # Main logic
 Check_Runnable
+Check_Configured
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-
-"${SCRIPTS_DIR}"/shutdown-lockss &&
-if [ -n "${UPDATE_ARG}" ]; then
-  "${SCRIPTS_DIR}"/generate-lockss ${UPDATE_ARG} &&
-  "${SCRIPTS_DIR}"/assemble-lockss &&
-  "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-else
-  "${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL"
-fi
+"${SCRIPTS_DIR}"/stop-lockss || error_exit "An error occured while stopping running stack."
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || error_exit "Stack reassembly failed."
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || error_exit "Attempt to redeploy stack failed"
 
 graceful_exit
 

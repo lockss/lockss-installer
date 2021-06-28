@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 # ---------------------------------------------------------------------------
 # _utils_solr: utility functions to access the java SolrArtifactIndexAdmin tool.
 #  These routines should not be called while solr is running.
