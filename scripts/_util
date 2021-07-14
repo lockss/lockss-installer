@@ -317,8 +317,16 @@ Get_Timezone() {
 
   if [ -z "${timezone}" ]; then
     if command -v timedatectl &>/dev/null; then
-      timezone=$(timedatectl show --property=Timezone --value)
-    elif -r /etc/timezone; then
+      # Newer versions of timedatectl have 'show' command
+      timezone=$(timedatectl show --property=Timezone --value 2>/dev/null)
+      # else parse from full status output
+      if [ -z "${timezone}" ]; then
+        timezone=$(timedatectl | sed -n -r "s/.*Time zone: ([^ \t]+).*/\1/p")
+      fi
+    fi
+  fi
+  if [ -z "${timezone}" ]; then
+    if -r /etc/timezone; then
       timezone=$(cat /etc/timezone)
     elif -r /etc/localtime; then
       timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
