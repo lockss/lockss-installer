@@ -250,7 +250,7 @@ add_stack_configs() {
   local stack_path="${DOCKER_CONFIGS_DIR}/$stack"
   local key
   # Create the global configs
-  logger_info "Adding global config files"
+  logger_debug "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
     if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
@@ -261,7 +261,7 @@ add_stack_configs() {
     fi
   done
   # Create the configs for each lockss service
-  logger_info "Adding service config files"
+  logger_debug "Adding service config files"
   for sconf in "${svcs_confs[@]}"; do
     key=${sconf}-service
     logger_debug "adding service config ${key}..."
@@ -297,12 +297,12 @@ check_stack_solr() {
   local OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
 #  local SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
   local SOLR_SECURITY_PLUGIN="security.json"
-  logger_info "Checking solr installation at ${SOLR_HOME_PATH}..."
+  logger_debug "Checking solr installation at ${SOLR_HOME_PATH}..."
 
   if [ -d "${OLD_REPO}" ]; then
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
-  logger_info "Checking solr installation for essential files..."
+  logger_debug "Checking solr installation for essential files..."
 
   if [ ! -e "${SOLR_FILE}" -o ! -e "${CORE_PATH}" ]; then
     logger_info "Preparing solr home '${SOLR_HOME_PATH}' for new install..."
@@ -358,7 +358,7 @@ add_stack_volumes() {
   local stack=$1
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
 
-  logger_info "Creating data and log volumes for $stack"
+  logger_debug "Creating data and log volumes for $stack"
  for svc in "${svcs[@]}"; do
     logger_debug "Creating data and log volumes for $stack-${svc}..."
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
@@ -395,7 +395,7 @@ assemble_stack() {
   ensure_writable_dir $LOCKSS_LOGS_DIR
   ensure_writable_dir $LOCKSS_TMPDIR
   local stack=${STACK_PREFIX}$1
-  logger_info "Assembling stack $stack..."
+  logger_debug "Assembling stack $stack..."
   # Source config.info and env.sh for this stack
   set -a
   . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
@@ -410,9 +410,9 @@ assemble_stack() {
 }
 
 generate_lockss() {
-	logger_info "Removing old generated configuration files..."
+	logger_debug "Removing old generated configuration files..."
 	rm -rf "${DOCKER_CONFIGS_DIR}"
-	logger_info "Generating config files for $STACK_COUNT stacks..."
+	logger_debug "Generating config files for $STACK_COUNT stacks..."
 	for ((num = 1; num <= $STACK_COUNT; num++)); do
 		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
 		if [ ${STACK_COUNT} = 1 ]; then
@@ -420,7 +420,7 @@ generate_lockss() {
 		else
 			STACK_NAME="${STACK_PREFIX}$num"
 		fi
-    logger_info "Generating files for stack $STACK_NAME"
+    logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
     export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
@@ -490,7 +490,7 @@ generate_lockss() {
       fi
     done
   done
-	logger_info "Successfully regenerated stack components."
+	logger_debug "Successfully regenerated stack components."
 }
 
 assemble_lockss() {
@@ -510,7 +510,7 @@ assemble_lockss() {
 	else
 		error_exit "Unable to find generated stack ${STACK_NUM}"
 	fi
-	logger_info "Successfully installed components."
+	logger_debug "Successfully installed components."
 
 }
 
@@ -535,7 +535,7 @@ while [[ -n $1 ]]; do
     ;;
   -u | --update)
     PULL_POLICY="Always"
-    logger_info "Forcing update of LOCKSS docker images"
+    logger_info "Will check for updated LOCKSS docker images"
     ;;
   [1-9])
     STACK_COUNT=$1
@@ -555,7 +555,7 @@ done
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
 fi
-logger_info "Checking system..."
+logger_debug "Checking system..."
 Check_Runnable
 Check_Physical_Volumes
 

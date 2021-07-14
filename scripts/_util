@@ -66,8 +66,10 @@ logger_init() {
       LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
     fi
     . ${LIB_DIR}/log4sh
-    logger_info "$(${SCRIPTS_DIR}/installer-version)"
-    echo "-------------------------------------------------------------"
+    if [ -z "${LOCKSS_LOGGER_INITED}" ]; then
+      logger_info "$(${SCRIPTS_DIR}/installer-version)"
+      export LOCKSS_LOGGER_INITED=1
+    fi
   else
     err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
   fi
@@ -397,7 +399,7 @@ read_config() {
 
 ask_for_input() {
   case "${1}" in
-    *\?) echo -n "${1} [${2}] "  ;;
+    *\?) echo -n "${1} [${2}] " ;;
     *)   echo -n "${1}: [${2}] " ;;
   esac
   read ANS

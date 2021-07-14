@@ -125,8 +125,9 @@ undeploy_stack() {
   # remove the the spec that controls the number of expected pods
   kubectl_lockss delete -l lockss-stack-id=${stack} deployments | logger_debug
   # wait until all pods are deleted
-  logger_info "Waiting for pods to complete shutdown..."
-  kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s | logger_info
+  logger_info "Waiting for pods to shutdown..."
+  kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pods --timeout=60s | logger_debug
+  logger_info "Pod shutdown complete"
   logger_debug "Removing all configmaps $stack."
   kubectl_lockss delete --all configmaps | logger_debug
   wait
