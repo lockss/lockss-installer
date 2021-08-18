@@ -297,22 +297,60 @@ check_stack_solr() {
   local OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
 #  local SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
   local SOLR_SECURITY_PLUGIN="security.json"
-  logger_debug "Checking solr installation at ${SOLR_HOME_PATH}..."
+  logger_debug "Checking Solr installation at ${SOLR_HOME_PATH}..."
 
   if [ -d "${OLD_REPO}" ]; then
     error_exit "You are attempting to run with an older version without updating, please run upgrade script"
   fi
-  logger_debug "Checking solr installation for essential files..."
+
+  logger_debug "Checking Solr installation for essential files..."
+
+  # Read version available from lockss-installer's config directory
+  local NEW_SOLR_HOME_VERSION="`cat ${CONFIG_DIR}/solr/solr-release`"
+  local OLD_SOLR_HOME_VERSION="0.0.0"
+
+  # Read version used for the existing Solr index is it exists
+  if [ -e "${SOLR_HOME_PATH}/solr-release" ]; then
+    OLD_SOLR_HOME_VERSION="`cat ${CONFIG_DIR}/solr/solr-release`"
+  fi
 
   if [ ! -e "${SOLR_FILE}" -o ! -e "${CORE_PATH}" ]; then
-    logger_info "Preparing solr home '${SOLR_HOME_PATH}' for new install..."
+    # Prepare Solr home directory for the first time
+    logger_info "Preparing Solr home '${SOLR_HOME_PATH}' for new install..."
+
+    # Ensure the Solr home directory is writable
     ensure_writable_dir ${SOLR_HOME_PATH} ||
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
-    tar -xzf "${UPDATES_DIR}/solr-home.tar.gz" -C "${SOLR_HOME_PATH}">/dev/null ||
-      error_exit "Unable to install LOCKSS solr files, exiting..."
+
+    # Copy Solr home and configuration
+    cp -r "${CONFIG_DIR}/solr/*" "${SOLR_HOME_PATH}" > /dev/null ||
+      error_exit "Unable to install LOCKSS Solr files, exiting..."
+
+  elif compare_versions ${OLD_SOLR_HOME_VERSION} ${NEW_SOLR_HOME_VERSION}; then
+    # Solr home exists from previous installation but needs an upgrade
+    logger_info "Upgrading Solr home '${SOLR_HOME_PATH}'..."
+
+    # Move existing Solr index out of the way
+    mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
+
+    # Create new Solr home directory and ensure it is writable
+    mkdir ${SOLR_HOME_PATH}
+    ensure_writable_dir ${SOLR_HOME_PATH} ||
+      error_exit "Unable to write to ${SOLR_HOME_PATH}"
+
+    # Copy Solr home and configuration
+    cp -r "${CONFIG_DIR}/solr/*" "${SOLR_HOME_PATH}" > /dev/null ||
+      error_exit "Unable to install LOCKSS Solr files, exiting..."
+
+    # Signal to repository service that a reindex is needed
+    for baseDir in ${LOCKSS_REPO_HOST_DIRS}; do
+      touch $baseDir/state/reindex
+    done
   fi
+
   src_plugin_file="${STACK_CONFIG_DIR}/${SOLR_SECURITY_PLUGIN}"
   dst_plugin_file="${SOLR_HOME_PATH}/${SOLR_SECURITY_PLUGIN}"
+
   ensure_writable_dir ${SOLR_HOME_PATH} ||
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
   cp "${src_plugin_file}" "${dst_plugin_file}" ||
