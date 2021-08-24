@@ -1,0 +1,568 @@
+#!/bin/bash
+
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Version
+#
+
+VERSION='2.0-beta1-dev'
+
+#
+# Program name
+#
+
+_0="$(basename "${0}")"
+_D0="$(cd "$(dirname "${0}")" && pwd)"
+
+#
+# Constants
+#
+
+_MO="${_D0}/lib/mo"
+_UTIL="${_D0}/_util"
+
+LOCKSS_GROUP='lockss'
+LOCKSS_USER='lockss'
+
+LOCKSS_ETC_DIR='/etc/lockss'
+LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
+SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
+ETC_RESOLV_CONF='/etc/resolv.conf'
+
+__BOLD="\033[1m"
+__RESET_BOLD="\033[21m"
+__UNDERLINE="\033[4m"
+__RESET_UNDERLINE="\033[24m"
+__FG_RED="\033[31m"
+__FG_GREEN="\033[32m"
+__FG_YELLOW="\033[33m"
+__RESET_FG="\033[39m"
+__RESET_ALL="\033[0m"
+
+#
+# Begin_Step
+# $1: message
+#
+Begin_Step()
+{
+  if test -t 1 ; then
+    Echo "${__UNDERLINE}${1}...${__RESET_UNDERLINE}"
+  else
+    Echo "${1}..."
+  fi
+}
+
+#
+# Echo
+# $1: optional message
+#
+Echo()
+{
+  if test -t 1 ; then
+    echo -e "${__BOLD}[$_0] ${1}${__RESET_BOLD}"
+  else
+    echo "[$_0] ${1}"
+  fi
+}
+
+#
+# Fatal
+# $1: error message
+#
+Fatal()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_RED}ERROR${__RESET_FG}] ${1}"
+  else
+    Echo "[ERROR] ${1}"
+  fi
+  exit 1
+}
+
+#
+# Success
+# $1: optional message
+#
+Success()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_GREEN}success${__RESET_FG}] ${1}"
+  else
+    Echo "[success] ${1}"
+  fi
+  exit 1
+}
+
+#
+# Warning
+# $1: warning message
+#
+Warning()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_YELLOW}Warning${__RESET_FG}] ${1}"
+  else
+    Echo "[Warning] ${1}"
+  fi
+}
+
+#
+# Check_Command
+# $1: command
+#
+Check_Command()
+{
+  if ! command -v "${1}" > /dev/null ; then
+    Fatal "A dependent utility is not available: ${1}"
+  fi
+}
+
+#
+# Check_System_User
+#
+Check_System_User()
+{
+  # Begin step
+  Begin_Step 'Checking the system user and group'
+  
+  # Skip if --skip-check-system-user
+  if [ "${SKIP_CHECK_SYSTEM_USER}" = 'true' ] ; then
+    Success 'Skipping (--skip-check-system-user)'
+    return
+  fi
+  
+  # Fail if $LOCKSS_USER does not exist
+  Check_Command 'id'
+  if ! id "${LOCKSS_USER}" &> /dev/null ; then
+    Fatal "The ${LOCKSS_USER} user does not exist"
+  fi
+
+  # Fail if $LOCKSS_GROUP does not exist
+  Check_Command 'getent'
+  if ! getent group "${LOCKSS_GROUP}" &> /dev/null ; then
+    Fatal "The ${LOCKSS_GROUP} group does not exist"
+  fi
+  
+  # Success
+  Success 'User and group present'
+}
+
+#
+# Configure_Coredns
+#
+Configure_Coredns()
+{
+  # Begin step
+  Begin_Step "Configuring CoreDNS for K3s"
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-coredns
+  if [ "${SKIP_CONFIGURE_COREDNS}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-coredns)'
+    return
+  fi
+  
+  # Examine local resolv.conf for loopback address
+  local _use_resolv_conf='Y'
+  if has_loopback_resolver "${ETC_RESOLV_CONF}" ; then
+    if [ -f "${SYSTEMD_RESOLV_CONF}" ] ; then
+      if has_loopback_resolver "${SYSTEMD_RESOLV_CONF}" ; then
+        _use_resolv_conf='N'
+      fi
+    else
+      _use_resolv_conf='N'
+    fi
+  fi
+  
+  declare -a nameservers
+  if [ "${FORCE_DNS_PROMPT}" != 'true' ] && is_yes "${_use_resolv_conf}" ; then
+    Success 'Using system resolv.conf files'
+    return
+  fi
+
+  if [ "${FORCE_DNS_PROMPT}" = 'true' ] ; then
+    echo "In forced DNS prompt mode (--force-dns-prompt); prompting for DNS servers"
+    echo
+  else
+    echo "Both ${ETC_RESOLV_CONF} and ${SYSTEMD_RESOLV_CONF}"
+    echo 'in your system contain a loopback address. CoreDNS does not allow a'
+    echo 'loopback address to be given to Kubernetes pods as an upstream DNS'
+    echo 'server. Please enter a list of IP addresses of upstream DNS resolvers.'
+    echo
+  fi
+
+  local _ip_ok='N'
+  local _default_ip_list=''
+  if [ -r "${SYSTEMD_RESOLV_CONF}" ] ; then
+    _default_ip_list="$(extract_non_loopback_resolvers "${SYSTEMD_RESOLV_CONF}")"
+  fi
+  if [ -z "${_default_ip_list}" ] && [ -r "${ETC_RESOLV_CONF}" ] ; then
+    _default_ip_list="$(extract_non_loopback_resolvers "${ETC_RESOLV_CONF}")"
+  fi
+
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    nameservers=("${VALIDATED_LIST[@]}")
+    echo "In automatic 'yes' mode (--assume-yes): ${nameservers}"
+  else
+    until is_yes "${_ip_ok}" ; do
+      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${_default_ip_list}"
+      if valid_ip_address_list "${ANS}" ; then
+        _ip_ok='Y'
+        # set IP addr array used in resolv.conf.mustache
+        nameservers=("${VALIDATED_LIST[@]}")
+      fi
+    done
+  fi
+
+  $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || \
+      Fatal "Could not create ${LOCKSS_ETC_DIR}"
+  local _src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
+  local _dst="${CONFIG_DIR}/resolv.conf"
+  mo "${_src}" > "${_dst}" || \
+      Fatal "Error rendering ${_src} to ${_dst}"
+  $SUDO cp "${_dst}" "${LOCKSS_RESOLV_CONF}" || \
+      Fatal "Could not copy ${_dst} to ${LOCKSS_RESOLV_CONF}"
+
+  # Success
+  Success 'Configured CoreDNS for K3s'
+}
+
+#
+# Configure_Firewalld
+#
+Configure_Firewalld()
+{
+  # Begin step
+  Begin_Step "Configuring firewalld for K3s"
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-firewalld
+  if [ "${SKIP_CONFIGURE_FIREWALLD}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-firewalld)'
+    return
+  fi
+  
+  # Succeed if firewall-cmd not on PATH
+  if ! command -v firewall-cmd > /dev/null ; then
+    Success 'firewall-cmd is not on the PATH'
+    return
+  fi
+  
+  # Succeed if firewalld not running
+  if [ "$($SUDO firewall-cmd --state 2>&1)" != 'running' ] ; then
+    Success 'firewalld is not running'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running firewalld. For K3s to work properly, it is'
+  echo "necessary to add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted"
+  echo 'zone. This script can do it for you. If you opt out, the script will'
+  echo 'continue but K3s is likely to malfunction without external intervention;'
+  echo 'see the manual for details.'
+  echo
+  local _q="Add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone?"
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving firewalld unchanged; see manual for details'
+    return
+  fi
+  
+  # Perform change. Verified that doing it twice doesn't hurt (succeeds with
+  # "Warning: ALREADY_ENABLED: 10.42.0.0/16" or similar).
+  echo "Adding 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone..."  
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 || \
+      Fatal "Could not add 10.42.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 || \
+      Fatal "Could not add 10.43.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --reload || 
+      Fatal 'Could not reload firewalld'
+
+  # Success
+  Success 'Configured firewalld for K3s'
+}
+
+#
+# Configure_Ufw
+#
+Configure_Ufw()
+{
+  # Begin step
+  Begin_Step 'Configuring ufw for K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-ufw
+  if [ "${SKIP_CONFIGURE_UFW}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-ufw)'
+    return
+  fi
+
+  # Succeed if ufw not on PATH
+  if ! command -v ufw > /dev/null ; then
+    Success 'ufw is not on the PATH'
+    return
+  fi
+
+  # Succeed if ufw not active
+  if ! Is_Ufw_Active ; then
+    Success 'ufw is not active'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running ufw. For K3s to work properly, it is necessary to'
+  echo 'allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw. This script'
+  echo 'can do it for you. If you opt out, the script will continue but K3s is'
+  echo 'likely to malfunction without external intervention; see the manual for'
+  echo 'details.'
+  echo
+  local _q='Allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw?'
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving ufw unchanged; see manual for details'
+    return
+  fi
+  
+  # Perform change. Verified that adding the same rule twice doesn't hurt
+  # (succeeds with "Skipping adding existing rule").
+  echo 'Allowing traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw...'
+  $SUDO ufw allow from 10.42.0.0/16 to any || \
+      Fatal 'Could not allow traffic from 10.42.0.0/16 via ufw'
+  $SUDO ufw allow from 10.43.0.0/16 to any || \
+      Fatal 'Could not allow traffic from 10.43.0.0/16 via ufw'
+  $SUDO ufw reload || \
+      Fatal 'Could not reload ufw'
+
+  # Success
+  Success 'Configured ufw for K3s'
+}
+
+#
+# Is_Ufw_Active
+#
+Is_Ufw_Active()
+{
+  Check_Command 'grep'
+  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] ; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+#
+# Parse_Command_Line
+# Must be called with "$@"
+#
+Parse_Command_Line()
+{
+  while [ $# -gt 0 ] ; do
+    case "${1}" in
+
+#      --download-dir=*) Set_Download_Dir "${1#*=}" ; shift ;;
+#      -download-dir|-d) Set_Download_Dir "${2}" ; shift ; shift ;;
+
+      --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
+
+      --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
+
+      --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
+
+      --configure-ufw|-configure-ufw|-U) SINGLE_STEP='Configure_Ufw' ; shift ;;
+
+      --force-dns-prompt|-force-dns-prompt) FORCE_DNS_PROMPT='true' ; shift ;;
+
+      --help|-help|-h) Print_Help ; exit 0 ;;
+        
+      --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
+
+      --skip-configure-coredns|-skip-configure-coredns) SKIP_CONFIGURE_COREDNS='true' ; shift ;;
+
+      --skip-configure-firewalld|-skip-configure-firewalld) SKIP_CONFIGURE_FIREWALLD='true' ; shift ;;
+
+      --skip-configure-ufw|-skip-configure-ufw) SKIP_CONFIGURE_UFW='true' ; shift ;;
+
+      --skip-install-k3s|-skip-install-k3s) SKIP_INSTALL_K3S='true' ; shift ;;
+
+      --version|-version|-V) echo "${VERSION}" ; exit 0 ;;
+
+      -*) Fatal "Unknown option: ${1}" ;;
+
+      *) Fatal "Unexpected argument: ${1:-empty string}" ;;
+
+    esac
+  done
+}
+
+#
+# Print_Help
+#
+Print_Help()
+{
+  cat <<MyEOF
+${_0} version ${VERSION}
+
+Usage:
+
+  ${_0} [--skip-check-system-user|--skip-configure-coredns|
+      --skip-configure-firewalld|--skip-configure-ufw|--skip-install-k3s]
+      [--assume-yes] [--force-dns-prompt]
+  ${_0} [--configure-coredns|--configure-firewalld|--configure-ufw]
+  ${_0} [--help|--version]
+
+Options:
+
+  --assume-yes, -assume-yes, -y
+    Assume that the answer to interactive yes/no questions is Y for "yes", and
+    that the answer to other interactive questions is the proposed value
+
+  --configure-coredns, -configure-coredns, -C
+    Only configure CoreDNS for K3s and exit
+
+  --configure-firewalld, -configure-firewalld, -F
+    Only configure firewalld for K3s and exit
+
+  --configure-ufw, -configure-ufw, -U
+    Only configure ufw for K3s and exit
+
+  --force-dns-prompt, -force-dns-prompt
+    Force prompting for IP addresses of DNS servers while configuring CoreDNS
+    for K3s
+
+  --help, -help, -h
+    Display this message and exit
+
+  --skip-check-system-user, -skip-check-system-user
+    Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
+
+  --skip-configure-coredns, -skip-configure-coredns
+    Skip configuring CoreDNS for K3s
+
+  --skip-configure-firewalld, -skip-configure-firewalld
+    Skip configuring firewalld for K3s
+
+  --skip-configure-ufw, -skip-configure-ufw
+    Skip configuring ufw for K3s
+
+  --skip-install-k3s, -skip-install-k3s
+    Skip installing K3s. Implies --skip-configure-coredns,
+    --skip-configure-firewalld, --skip-configure-ufw.
+
+  --version, -version, -V
+    Display this script's version number and exit
+MyEOF
+}
+
+#
+# Set_Sudo
+#
+Set_Sudo()
+{
+  Check_Command 'id'
+  case "$(id --user)" in
+    0) SUDO='' ;;
+    *) Check_Command 'sudo' ; SUDO='sudo' ;;
+  esac
+}
+
+#
+# Main
+#
+
+ASSUME_YES=''
+CURRENT_STEP='0'
+FORCE_DNS_PROMPT=''
+SINGLE_STEP=''
+SKIP_CHECK_SYSTEM_USER=''
+SKIP_CONFIGURE_COREDNS=''
+SKIP_CONFIGURE_FIREWALLD=''
+SKIP_CONFIGURE_UFW=''
+SKIP_INSTALL_K3S=''
+SUDO=''
+
+for _f in "${_MO}" "${_UTIL}" ; do
+  . "${_f}" || Fatal "A dependent script is not available: ${_f}"
+done
+
+Set_Sudo
+
+Parse_Command_Line "$@"
+
+if [ -n "${SINGLE_STEP}" ] ; then
+  $SINGLE_STEP || Fatal "Unknown single step: ${SINGLE_STEP}"
+  exit 0
+fi
+
+while true ; do
+  case "${CURRENT_STEP}" in
+    '') Fatal "Empty step number" ;;
+    0) Check_System_User ;;
+    1) Configure_Firewalld ;;
+    2) Configure_Ufw ;;
+    3) Configure_Coredns ;;
+    4) break ;;
+    *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
+  esac
+  CURRENT_STEP=$(($CURRENT_STEP + 1))
+done
+
+Success 'Exiting'
