@@ -58,7 +58,7 @@ SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
 ETC_RESOLV_CONF='/etc/resolv.conf'
 
 __BOLD="\033[1m"
-__RESET_BOLD="\033[21m"
+#__RESET_BOLD="\033[21m"
 __UNDERLINE="\033[4m"
 __RESET_UNDERLINE="\033[24m"
 __FG_RED="\033[31m"
@@ -87,7 +87,7 @@ Begin_Step()
 Echo()
 {
   if test -t 1 ; then
-    echo -e "${__BOLD}[$_0] ${1}${__RESET_BOLD}"
+    echo -e "${__BOLD}[$_0] ${1}${__RESET_ALL}"
   else
     echo "[$_0] ${1}"
   fi
@@ -118,7 +118,6 @@ Success()
   else
     Echo "[success] ${1}"
   fi
-  exit 1
 }
 
 #
