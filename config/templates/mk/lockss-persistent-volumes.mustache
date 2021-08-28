@@ -675,6 +675,34 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
+  name: lockss-repo-data-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-repo-data
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_DATA_ROOT}}/{{STACK}}-repo-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
   name: lockss-solr-data-pv
   annotations:
     pv.beta.kubernetes.io/gid: "{{LOCKSS_GID}}"
