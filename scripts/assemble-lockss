@@ -480,17 +480,23 @@ generate_lockss() {
     logger_debug "Getting postgres password..."
     export POSTGRES_PASSWD=$(kubectl_lockss get secret lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
 
+    # The exported variables here are used by Mustache to populate the lockss-persistent-volumes.mustache
+    # and lockss-repostiory-service.mustache and establish the mapping from .../lockss-stack-repo-content
+    # to /contentN within the container.
     IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
     len=${#datadirs[@]}
-    REPO_NUMS[0]=""
-    export REPO_DATA_MAP_=${datadirs[0]}
-    for ((count = 1; count < $len; count++)); do
+    # This is handled separately so that the first directory mapped
+    # into the container is /data (instead of /data0)
+#    REPO_NUMS[0]=""
+#    export REPO_DATA_MAP_=${datadirs[0]}
+    for ((count = 0; count < $len; count++)); do
       REPO_NUMS[${count}]="$count"
       declare REPO_DATA_MAP_${count}=${datadirs[$count]}
       varname=REPO_DATA_MAP_${count}
       export varname
     done
     export REPO_NUMS
+
     logger_debug "Generating the service deployments..."
     mkdir "${STACK_CONFIG_DIR}/svcs"
     for f in ${SERVICES_DIR}/*.mustache; do

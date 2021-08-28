@@ -63,7 +63,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-repository-service
-  name: lockss-repo-data{{.}}-pvc
+  name: lockss-repo-content{{.}}-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -74,7 +74,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-repo-data{{.}}"
+      owner: "lockss-repo-content{{.}}"
 ---
 {{/REPO_NUMS}}
 apiVersion: apps/v1
@@ -166,8 +166,8 @@ spec:
           name: solr-auth
           subPath: solr-auth
 {{#REPO_NUMS}}
-        - mountPath: /data{{.}}
-          name: lockss-repo-data{{.}}
+        - mountPath: /content{{.}}
+          name: lockss-repo-content{{.}}
 {{/REPO_NUMS}}
         - mountPath: /var/log/lockss
           name: lockss-repo-logs
@@ -222,9 +222,9 @@ spec:
           - key: solr-auth
             path: solr-auth
 {{#REPO_NUMS}}
-      - name: lockss-repo-data{{.}}
+      - name: lockss-repo-content{{.}}
         persistentVolumeClaim:
-          claimName: lockss-repo-data{{.}}-pvc
+          claimName: lockss-repo-content{{.}}-pvc
 {{/REPO_NUMS}}
       - name: lockss-repo-logs
         persistentVolumeClaim:

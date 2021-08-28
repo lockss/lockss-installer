@@ -523,7 +523,7 @@ build_config_file() {
     fi
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
-    repoDirs[0]="/data"
+    repoDirs[0]="/content0"
     ask_for_input "Use additional directories for content data storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
     if is_yes "${ANS}"; then
       count=1
@@ -533,7 +533,7 @@ build_config_file() {
           done=Y
         elif [ -n "${ANS}" ]; then
           curPaths[count]="$(normalize_path ${ANS})"
-          repoDirs[count]="/data$count"
+          repoDirs[count]="/content$count"
           count=$((count+1))
         fi
       done
@@ -545,7 +545,7 @@ build_config_file() {
       if test ${#prevPaths[*]} -gt 1; then
         echo "Run repo cache updater."
       fi
-      LOCKSS_REPO_CONTAINER_DIRS="/data"
+      LOCKSS_REPO_CONTAINER_DIRS="/content0"
       LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
