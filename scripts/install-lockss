@@ -57,6 +57,12 @@ LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
 SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
 ETC_RESOLV_CONF='/etc/resolv.conf'
 
+K3S_URL='https://get.k3s.io'
+
+DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
+DEFAULT_K3S_DATA_DIR_ROOT='/var'
+DEFAULT_K3S_VERSION='v1.21.4+k3s1'
+
 __BOLD="\033[1m"
 #__RESET_BOLD="\033[21m"
 __UNDERLINE="\033[4m"
@@ -234,7 +240,7 @@ Configure_Coredns()
 
   if [ "${ASSUME_YES}" = 'true' ] ; then
     nameservers=("${VALIDATED_LIST[@]}")
-    echo "In automatic 'yes' mode (--assume-yes): ${nameservers}"
+    echo "In automatic 'yes' mode (--assume-yes): $(IFS=';' ; echo "${nameservers[*]}")"
   else
     until is_yes "${_ip_ok}" ; do
       ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${_default_ip_list}"
@@ -279,15 +285,15 @@ Configure_Firewalld()
     return
   fi
   
-  # Succeed if firewall-cmd not on PATH
+  # Skip if firewall-cmd not on PATH
   if ! command -v firewall-cmd > /dev/null ; then
-    Success 'firewall-cmd is not on the PATH'
+    Success 'Skipping (firewall-cmd is not on the PATH)'
     return
   fi
   
-  # Succeed if firewalld not running
+  # Skip if firewalld not running
   if [ "$($SUDO firewall-cmd --state 2>&1)" != 'running' ] ; then
-    Success 'firewalld is not running'
+    Success 'Skipping (firewalld is not running)'
     return
   fi
 
@@ -347,15 +353,15 @@ Configure_Ufw()
     return
   fi
 
-  # Succeed if ufw not on PATH
+  # Skip if ufw not on PATH
   if ! command -v ufw > /dev/null ; then
-    Success 'ufw is not on the PATH'
+    Success 'Skipping (ufw is not on the PATH)'
     return
   fi
 
-  # Succeed if ufw not active
+  # Skip if ufw not active
   if ! Is_Ufw_Active ; then
-    Success 'ufw is not active'
+    Success 'Skipping (ufw is not active)'
     return
   fi
 
@@ -396,6 +402,81 @@ Configure_Ufw()
 }
 
 #
+# Download_Url
+# $1: URL
+#
+Download_Url()
+{
+  case "${DOWNLOADER}" in
+    curl) curl -sSfL "${1}" || Fatal "curl failed to fetch ${1}" ;;
+    wget) wget -qO- "${1}" || Fatal "wget failed to fetch ${1}" ;;
+    *) Fatal "Unknown downloader: ${DOWNLOADER}" ;; # shouldn't happen
+  esac
+}
+
+#
+# Install_K3s
+#
+Install_K3s()
+{
+  # Begin step
+  Begin_Step 'Installing K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+
+  # Skip if already present
+  if command -v k3s &> /dev/null ; then
+    # First warn about version differences
+    local _kver=''
+    Check_Command 'awk'
+    _kver="$(k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" || \
+        Fatal "Error parsing K3s version"
+    if [ "${_kver}" != "${K3S_VERSION}" ] ; then
+      Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
+    fi
+    Success 'Skipping (K3s is already present)'
+    return
+  fi
+  
+  echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
+  echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+  echo
+  if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
+    echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
+  elif [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
+  else
+    ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+    K3S_DATA_DIR="${ANS}"
+  fi
+  local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
+
+  local _resolv_conf_args='' 
+  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
+    _resolv_conf_args="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+  fi
+
+  if [ "${K3S_VERSION}" != "${DEFAULT_K3S_VERSION}" ] ; then
+    Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
+  fi 
+
+  # Invoke Rancher's installer
+  Download_Url "${K3S_URL}" | \
+      INSTALL_K3S_VERSION="${K3S_VERSION}" \
+      sh -s - \
+      --write-kubeconfig-mode 644 \
+      --disable-cloud-controller \
+      --disable traefik \
+      ${_resolv_conf_args} \
+      ${_data_dir_args} \
+          || Fatal 'The K3s Installer failed'
+}
+
+#
 # Is_Ufw_Active
 #
 Is_Ufw_Active()
@@ -417,9 +498,6 @@ Parse_Command_Line()
   while [ $# -gt 0 ] ; do
     case "${1}" in
 
-#      --download-dir=*) Set_Download_Dir "${1#*=}" ; shift ;;
-#      -download-dir|-d) Set_Download_Dir "${2}" ; shift ; shift ;;
-
       --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
 
       --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
@@ -432,6 +510,14 @@ Parse_Command_Line()
 
       --help|-help|-h) Print_Help ; exit 0 ;;
         
+      --install-k3s|-install-k3s|-K) SINGLE_STEP='Install_K3s' ; shift ;;
+
+      --k3s-data-dir=*) K3S_DATA_DIR="${1#*=}" ; shift ;;
+      -k3s-data-dir) K3S_DATA_DIR="${2}" ; shift ; shift ;;
+
+      --k3s-version=*) K3S_VERSION="${1#*=}" ; shift ;;
+      -k3s-version) K3S_VERSION="${2}" ; shift ; shift ;;
+
       --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
 
       --skip-configure-coredns|-skip-configure-coredns) SKIP_CONFIGURE_COREDNS='true' ; shift ;;
@@ -464,9 +550,12 @@ Usage:
 
   ${_0} [--skip-check-system-user|--skip-configure-coredns|
       --skip-configure-firewalld|--skip-configure-ufw|--skip-install-k3s]
-      [--assume-yes] [--force-dns-prompt]
-  ${_0} [--configure-coredns|--configure-firewalld|--configure-ufw]
-  ${_0} [--help|--version]
+      [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+      --k3s-data-dir=VER]
+  ${_0} {--configure-coredns|--configure-firewalld|--configure-ufw|
+      --install-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+      --k3s-data-dir=VER]
+  ${_0} {--help|--version}
 
 Options:
 
@@ -490,6 +579,16 @@ Options:
   --help, -help, -h
     Display this message and exit
 
+  --install-k3s, -install-k3s, -K
+    Only install K3s and exit
+
+  --k3s-data-dir=DIR, -k3s-data-dir DIR
+    Directory to hold K3s state data (default: ${DEFAULT_K3S_DATA_DIR}).
+    Should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited.
+
+  --k3s-version=VER, -k3s-version VER
+    Install version VER of K3s (default: ${DEFAULT_K3S_VERSION})
+
   --skip-check-system-user, -skip-check-system-user
     Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
 
@@ -512,6 +611,22 @@ MyEOF
 }
 
 #
+# Set_Downloader
+#
+Set_Downloader()
+{
+  for _d in curl wget ; do
+    if command -v "${_d}" > /dev/null ; then
+      DOWNLOADER="${_d}"
+      break
+    fi
+  done
+  if [ -z "${DOWNLOADER}" ] ; then
+    Fatal 'curl or wget must be on the PATH'
+  fi
+}
+
+#
 # Set_Sudo
 #
 Set_Sudo()
@@ -529,7 +644,10 @@ Set_Sudo()
 
 ASSUME_YES=''
 CURRENT_STEP='0'
+DOWNLOADER=''
 FORCE_DNS_PROMPT=''
+K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
+K3S_VERSION="${DEFAULT_K3S_VERSION}"
 SINGLE_STEP=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
@@ -542,9 +660,10 @@ for _f in "${_MO}" "${_UTIL}" ; do
   . "${_f}" || Fatal "A dependent script is not available: ${_f}"
 done
 
-Set_Sudo
-
 Parse_Command_Line "$@"
+
+Set_Sudo
+Set_Downloader
 
 if [ -n "${SINGLE_STEP}" ] ; then
   $SINGLE_STEP || Fatal "Unknown single step: ${SINGLE_STEP}"
@@ -558,7 +677,8 @@ while true ; do
     1) Configure_Firewalld ;;
     2) Configure_Ufw ;;
     3) Configure_Coredns ;;
-    4) break ;;
+    4) Install_K3s ;;
+    5) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$(($CURRENT_STEP + 1))
