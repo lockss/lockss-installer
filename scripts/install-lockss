@@ -151,6 +151,34 @@ Check_Command()
 }
 
 #
+# Check_K3s_Config
+#
+Check_K3s_Config()
+{
+  # Begin step
+  Begin_Step 'Checking the K3s configuration'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-check-k3s-config
+  if [ "${SKIP_CHECK_K3S_CONFIG}" = 'true' ] ; then
+    Success 'Skipping (--skip-check-k3s-config)'
+    return
+  fi
+  
+  # Run k3s check-config
+  set_k3s_bin_dir # from _util
+  $SUDO "${K3S_BIN_DIR}/k3s" check-config || Fatal "k3s check-config failed"
+  
+  # Success
+  Success 'Checked the K3s configuration'
+}  
+
+#
 # Check_System_User
 #
 Check_System_User()
@@ -186,7 +214,7 @@ Check_System_User()
 Configure_Coredns()
 {
   # Begin step
-  Begin_Step "Configuring CoreDNS for K3s"
+  Begin_Step 'Configuring CoreDNS for K3s'
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -239,7 +267,7 @@ Configure_Coredns()
   fi
 
   if [ "${ASSUME_YES}" = 'true' ] ; then
-    nameservers=("${VALIDATED_LIST[@]}")
+    nameservers=("${_default_ip_list[@]}")
     echo "In automatic 'yes' mode (--assume-yes): $(IFS=';' ; echo "${nameservers[*]}")"
   else
     until is_yes "${_ip_ok}" ; do
@@ -474,6 +502,28 @@ Install_K3s()
       ${_resolv_conf_args} \
       ${_data_dir_args} \
           || Fatal 'The K3s Installer failed'
+
+  # Store k8s.cfg
+  set_k3s_bin_dir # from _util
+  local _f="${CONFIG_DIR}/k8s.cfg"
+  local _k8sver=''
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2;exit 0}{print;exit 1}')" || \
+      Fatal "Could not infer the Kubernetes version"
+  cat >"${_f}" <<MyEOF || Fatal "Could not write to ${_f}"
+K8S_FLAVOR="k3s"
+K8S_VERSION="${_k8sver}"
+K3S_VERSION="${K3S_VERSION}"
+KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
+MyEOF
+  if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
+    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" >>"${_f}" || \
+        Fatal "Could not append to ${_f}"
+  fi
+  $SUDO chown "${LOCKSS_USER}:${LOCKSS_GROUP}" "${_f}" ||
+      Fatal "${_f} is not owned by ${LOCKSS_USER}:${LOCKSS_GROUP}"
+      
+  # Success
+  Success 'Installed K3s'
 }
 
 #
@@ -500,7 +550,9 @@ Parse_Command_Line()
 
       --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
 
-      --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
+      --check-k3s-config|-check-k3s-config|-C) SINGLE_STEP='Check_K3s_Config' ; shift ;;
+
+      --configure-coredns|-configure-coredns|-D) SINGLE_STEP='Configure_Coredns' ; shift ;;
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
 
@@ -517,6 +569,8 @@ Parse_Command_Line()
 
       --k3s-version=*) K3S_VERSION="${1#*=}" ; shift ;;
       -k3s-version) K3S_VERSION="${2}" ; shift ; shift ;;
+
+      --skip-check-k3s-config|-skip-check-k3s-config) SKIP_CHECK_K3S_CONFIG='true' ; shift ;;
 
       --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
 
@@ -548,13 +602,13 @@ ${_0} version ${VERSION}
 
 Usage:
 
-  ${_0} [--skip-check-system-user|--skip-configure-coredns|
-      --skip-configure-firewalld|--skip-configure-ufw|--skip-install-k3s]
-      [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
-      --k3s-data-dir=VER]
-  ${_0} {--configure-coredns|--configure-firewalld|--configure-ufw|
-      --install-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
-      --k3s-data-dir=VER]
+  ${_0} [--skip-check-k3s-config|--skip-check-system-user|
+      --skip-configure-coredns|--skip-configure-firewalld|--skip-configure-ufw|
+      --skip-install-k3s] [--assume-yes] [--force-dns-prompt]
+      [--k3s-data-dir=DIR|--k3s-version=VER]
+  ${_0} {--check-k3s-config|--configure-coredns|--configure-firewalld|
+      --configure-ufw|--install-k3s} [--assume-yes] [--force-dns-prompt]
+      [--k3s-data-dir=DIR|--k3s-data-dir=VER]
   ${_0} {--help|--version}
 
 Options:
@@ -563,7 +617,10 @@ Options:
     Assume that the answer to interactive yes/no questions is Y for "yes", and
     that the answer to other interactive questions is the proposed value
 
-  --configure-coredns, -configure-coredns, -C
+  --check-k3s-config, -check-k3s-config, -C
+    Only check the K3s configuration and exit
+
+  --configure-coredns, -configure-coredns, -D
     Only configure CoreDNS for K3s and exit
 
   --configure-firewalld, -configure-firewalld, -F
@@ -589,6 +646,9 @@ Options:
   --k3s-version=VER, -k3s-version VER
     Install version VER of K3s (default: ${DEFAULT_K3S_VERSION})
 
+  --skip-check-k3s-config, -skip-check-k3s-config
+    Skip checking the K3s configuration.
+
   --skip-check-system-user, -skip-check-system-user
     Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
 
@@ -602,8 +662,9 @@ Options:
     Skip configuring ufw for K3s
 
   --skip-install-k3s, -skip-install-k3s
-    Skip installing K3s. Implies --skip-configure-coredns,
-    --skip-configure-firewalld, --skip-configure-ufw.
+    Skip installing K3s. Implies --skip-check-k3s-config,
+      --skip-configure-coredns, --skip-configure-firewalld,
+      --skip-configure-ufw.
 
   --version, -version, -V
     Display this script's version number and exit
@@ -649,6 +710,7 @@ FORCE_DNS_PROMPT=''
 K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
 K3S_VERSION="${DEFAULT_K3S_VERSION}"
 SINGLE_STEP=''
+SKIP_CHECK_K3S_CONFIG=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
@@ -678,7 +740,8 @@ while true ; do
     2) Configure_Ufw ;;
     3) Configure_Coredns ;;
     4) Install_K3s ;;
-    5) break ;;
+    5) Check_K3s_Config ;;
+    6) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$(($CURRENT_STEP + 1))
