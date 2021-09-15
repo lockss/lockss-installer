@@ -801,7 +801,7 @@ Test_K3s()
     _x="$($_kubectl_cmd get node --output=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' 2>&1)" \
         && Pass "${_x}" || Fail "${_x}"
     [ $? = 0 ] || Fatal 'Command failed (kubectl get node)'
-    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of K3s nodes'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of K3s nodes'
     [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$2=="True"{exit 0}{exit 1}' <<<"${_x}" && break
     sleep "${WAIT}"
     _count=$((_count + 1))
@@ -816,7 +816,7 @@ Test_K3s()
     _x="$($_kubectl_cmd --namespace=kube-system get pod --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}' 2>&1)" \
         && Pass "${_x}" || Fail "${_x}"
     [ $? -eq 0 ] || Fatal 'Command failed (kubectl get pod)'
-    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of CoreDNS pods'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of CoreDNS pods'
     [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$3=="Running"{exit 0}{exit 1}' <<<"${_x}" && break
     sleep "${WAIT}"
     _count=$((_count + 1))
@@ -833,7 +833,7 @@ Test_K3s()
     _x="$($_kubectl_cmd --namespace=kube-system get service --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.spec.type}{"\t"}{.spec.clusterIP}{"\n"}{end}' 2>&1)" \
         && Pass "${_x}" || Fail "${_x}"
     [ $? -eq 0 ] || Fatal 'Command failed (kubectl get service)'
-    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of kube-dns services'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of kube-dns services'
     if [ "$(wc -l <<<"${_x}")" -eq 1 ] ; then
       awk -F"\t" '$3=="ClusterIP"{exit 0}{exit 1}' <<<"${_x}" || Fatal 'Unexpected kube-dns service type'
       _cluster_ip="$(awk -F"\t" '{print $4}' <<<"${_x}")"
