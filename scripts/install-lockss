@@ -459,9 +459,9 @@ Install_K3s()
     return
   fi
 
-  # Skip if already present
+  # Check if K3s already present
   if command -v k3s &> /dev/null ; then
-    # First warn about version differences
+    # K3s already present
     local _kver=''
     Check_Command 'awk'
     _kver="$(k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" || \
@@ -469,42 +469,42 @@ Install_K3s()
     if [ "${_kver}" != "${K3S_VERSION}" ] ; then
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
     fi
-    Success 'Skipping (K3s is already present)'
-    return
-  fi
-  
-  echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
-  echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
-  echo
-  if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
-    echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
-  elif [ "${ASSUME_YES}" = 'true' ] ; then
-    echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
+    Warning 'K3s is already installed; skipping the K3s Installer'
   else
-    ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
-    K3S_DATA_DIR="${ANS}"
-  fi
-  local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
-
-  local _resolv_conf_args='' 
-  if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
-    _resolv_conf_args="--resolv-conf ${LOCKSS_RESOLV_CONF}"
-  fi
-
-  if [ "${K3S_VERSION}" != "${DEFAULT_K3S_VERSION}" ] ; then
-    Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
-  fi 
-
-  # Invoke Rancher's installer
-  Download_Url "${K3S_URL}" | \
-      INSTALL_K3S_VERSION="${K3S_VERSION}" \
-      sh -s - \
-      --write-kubeconfig-mode 644 \
-      --disable-cloud-controller \
-      --disable traefik \
-      ${_resolv_conf_args} \
-      ${_data_dir_args} \
-          || Fatal 'The K3s Installer failed'
+    # Install K3s
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
+    echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo
+    if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
+      echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
+    elif [ "${ASSUME_YES}" = 'true' ] ; then
+      echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
+    else
+      ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+      K3S_DATA_DIR="${ANS}"
+    fi
+    local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
+  
+    local _resolv_conf_args='' 
+    if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
+      _resolv_conf_args="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+    fi
+  
+    if [ "${K3S_VERSION}" != "${DEFAULT_K3S_VERSION}" ] ; then
+      Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
+    fi 
+  
+    # Invoke Rancher's installer
+    Download_Url "${K3S_URL}" | \
+        INSTALL_K3S_VERSION="${K3S_VERSION}" \
+        sh -s - \
+        --write-kubeconfig-mode 644 \
+        --disable-cloud-controller \
+        --disable traefik \
+        ${_resolv_conf_args} \
+        ${_data_dir_args} \
+            || Fatal 'The K3s Installer failed'
+    fi
 
   # Store k8s.cfg
   set_k3s_bin_dir # from _util
