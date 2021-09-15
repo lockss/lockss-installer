@@ -851,11 +851,15 @@ Test_K3s()
     _count=0
     while true ; do
       [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for DNS resolution'
-      _x="$($_kubectl_cmd run --tty --stdin --rm --restart=Never "busybox-${RANDOM}" --image=busybox:1.28 -- nslookup "${_host}" 2>&1)" \
+      _x="$($_kubectl_cmd run --quiet --tty --stdin --rm --restart=Never "busybox-${RANDOM}" --image=busybox:1.28 -- nslookup "${_host}" 2>&1)" \
           && Pass "${_x}" || Fail "${_x}"
       if [ $? = 0 ] ; then
-        awk '$1=="Server:"&&$2=="'"${_cluster_ip}"'"{exit 0}{exit 1}' <<<"${_x}" \
-            && continue || Fatal 'Unexpected Cluster-IP'
+        awk '$1=="Server:"&&$2=="'"${_cluster_ip}"'"{exit 0}$1=="Server:"&&$2!="'"${_cluster_ip}"'"{exit 1}{exit 2}' <<<"${_x}"
+        case $? in
+          0) continue ;;
+          1) Fatal 'Unexpected Cluster-IP' ;;
+          *) : ;; # Retry; seeing truncated or garbled output sometimes
+        esac
       fi
       sleep "${WAIT}"
       _count=$((_count + 1))
