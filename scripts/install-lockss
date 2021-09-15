@@ -856,7 +856,7 @@ Test_K3s()
       if [ $? = 0 ] ; then
         awk '$1=="Server:"&&$2=="'"${_cluster_ip}"'"{exit 0}$1=="Server:"&&$2!="'"${_cluster_ip}"'"{exit 1}{exit 2}' <<<"${_x}"
         case $? in
-          0) continue ;;
+          0) break ;;
           1) Fatal 'Unexpected Cluster-IP' ;;
           *) : ;; # Retry; seeing truncated or garbled output sometimes
         esac
