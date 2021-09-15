@@ -63,6 +63,9 @@ DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
 DEFAULT_K3S_VERSION='v1.21.4+k3s1'
 
+DEFAULT_RETRIES='5'
+DEFAULT_WAIT='5'
+
 __BOLD="\033[1m"
 #__RESET_BOLD="\033[21m"
 __UNDERLINE="\033[4m"
@@ -74,10 +77,10 @@ __RESET_FG="\033[39m"
 __RESET_ALL="\033[0m"
 
 #
-# Begin_Step
+# Begin_Phase
 # $1: message
 #
-Begin_Step()
+Begin_Phase()
 {
   if test -t 1 ; then
     Echo "${__UNDERLINE}${1}...${__RESET_UNDERLINE}"
@@ -156,7 +159,7 @@ Check_Command()
 Check_K3s_Config()
 {
   # Begin step
-  Begin_Step 'Checking the K3s configuration'
+  Begin_Phase 'Checking the K3s configuration'
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -184,7 +187,7 @@ Check_K3s_Config()
 Check_System_User()
 {
   # Begin step
-  Begin_Step 'Checking the system user and group'
+  Begin_Phase 'Checking the system user and group'
   
   # Skip if --skip-check-system-user
   if [ "${SKIP_CHECK_SYSTEM_USER}" = 'true' ] ; then
@@ -214,7 +217,7 @@ Check_System_User()
 Configure_Coredns()
 {
   # Begin step
-  Begin_Step 'Configuring CoreDNS for K3s'
+  Begin_Phase 'Configuring CoreDNS for K3s'
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -299,7 +302,7 @@ Configure_Coredns()
 Configure_Firewalld()
 {
   # Begin step
-  Begin_Step "Configuring firewalld for K3s"
+  Begin_Phase "Configuring firewalld for K3s"
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -367,7 +370,7 @@ Configure_Firewalld()
 Configure_Ufw()
 {
   # Begin step
-  Begin_Step 'Configuring ufw for K3s'
+  Begin_Phase 'Configuring ufw for K3s'
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -448,7 +451,7 @@ Download_Url()
 Install_K3s()
 {
   # Begin step
-  Begin_Step 'Installing K3s'
+  Begin_Phase 'Installing K3s'
 
   # Skip if --skip-install-k3s
   if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
@@ -565,10 +568,13 @@ Parse_Command_Line()
       --install-k3s|-install-k3s|-K) SINGLE_STEP='Install_K3s' ; shift ;;
 
       --k3s-data-dir=*) K3S_DATA_DIR="${1#*=}" ; shift ;;
-      -k3s-data-dir) K3S_DATA_DIR="${2}" ; shift ; shift ;;
+      -k3s-data-dir) K3S_DATA_DIR="${2}" ; shift 2 ;;
 
       --k3s-version=*) K3S_VERSION="${1#*=}" ; shift ;;
-      -k3s-version) K3S_VERSION="${2}" ; shift ; shift ;;
+      -k3s-version) K3S_VERSION="${2}" ; shift 2 ;;
+
+      --retries=*) RETRIES="${1#*=}" ; shift ;;
+      -retries) RETRIES="${2}" ; shift 2 ;;
 
       --skip-check-k3s-config|-skip-check-k3s-config) SKIP_CHECK_K3S_CONFIG='true' ; shift ;;
 
@@ -582,7 +588,14 @@ Parse_Command_Line()
 
       --skip-install-k3s|-skip-install-k3s) SKIP_INSTALL_K3S='true' ; shift ;;
 
+      --skip-test-k3s|-skip-test-k3s) SKIP_TEST_K3S='true' ; shift ;;
+
+      --test-k3s|-test-k3s|-T) SINGLE_STEP='Test_K3s' ; shift ;;
+
       --version|-version|-V) echo "${VERSION}" ; exit 0 ;;
+
+      --wait=*) WAIT="${1#*=}" ; shift ;;
+      -wait) WAIT="${2}" ; shift 2 ;;
 
       -*) Fatal "Unknown option: ${1}" ;;
 
@@ -604,11 +617,12 @@ Usage:
 
   ${_0} [--skip-check-k3s-config|--skip-check-system-user|
       --skip-configure-coredns|--skip-configure-firewalld|--skip-configure-ufw|
-      --skip-install-k3s] [--assume-yes] [--force-dns-prompt]
-      [--k3s-data-dir=DIR|--k3s-version=VER]
+      --skip-install-k3s|--skip-test-k3s] [--assume-yes] [--force-dns-prompt]
+      [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
   ${_0} {--check-k3s-config|--configure-coredns|--configure-firewalld|
-      --configure-ufw|--install-k3s} [--assume-yes] [--force-dns-prompt]
-      [--k3s-data-dir=DIR|--k3s-data-dir=VER]
+      --configure-ufw|--install-k3s|--test-k3s} [--assume-yes]
+      [--force-dns-prompt] [--k3s-data-dir=DIR|--k3s-data-dir=VER] [--retries=N|
+      --wait=S]
   ${_0} {--help|--version}
 
 Options:
@@ -646,6 +660,9 @@ Options:
   --k3s-version=VER, -k3s-version VER
     Install version VER of K3s (default: ${DEFAULT_K3S_VERSION})
 
+  --retries=N, -retries N
+    Attempt retriable actions N times when testing the K3s node (default: ${DEFAULT_RETRIES}) 
+
   --skip-check-k3s-config, -skip-check-k3s-config
     Skip checking the K3s configuration.
 
@@ -664,10 +681,20 @@ Options:
   --skip-install-k3s, -skip-install-k3s
     Skip installing K3s. Implies --skip-check-k3s-config,
       --skip-configure-coredns, --skip-configure-firewalld,
-      --skip-configure-ufw.
+      --skip-configure-ufw, --skip-test-k3s.
+
+  --skip-test-k3s, -skip-test-k3s
+    Skip testing the K3s node
+
+  --test-k3s, -test-k3s, -T
+    Only test the K3s node and exit
 
   --version, -version, -V
     Display this script's version number and exit
+
+  --wait=S, -wait S
+    Wait S seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT}) 
+
 MyEOF
 }
 
@@ -700,15 +727,156 @@ Set_Sudo()
 }
 
 #
+# Test_K3s
+#
+Test_K3s()
+{
+  # Begin step
+  Begin_Phase 'Testing the K3s node'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-test-k3s
+  if [ "${SKIP_TEST_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-test-k3s)'
+    return
+  fi
+
+  local _k8s_file="${CONFIG_DIR}/k8s.cfg"
+
+  # Check k8s.cfg is present
+  Echo 'Checking that k8s.cfg is present...'
+  [ -f "${_k8s_file}" ] || Fatal "${_k8s_file} not found"
+
+  # Check K8S_FLAVOR is k3s
+  Echo 'Checking that K8S_FLAVOR is k3s...'
+  local _k8s_flavor=''
+  _k8s_flavor="$(. "${_k8s_file}" && echo "${K8S_FLAVOR}")" || Fatal 'Error reading K8S_FLAVOR'
+  [ -n "${_k8s_flavor}" ] || Fatal 'K8S_FLAVOR is not set'
+  [ "${_k8s_flavor}" = 'k3s' ] || Fatal 'K8S_FLAVOR is not k3s'
+
+  # Check KUBECTL_CMD is set
+  Echo 'Checking that KUBECTL_CMD is set...'
+  local _kubectl_cmd=''
+  _kubectl_cmd="$(. "${_k8s_file}" && echo "${KUBECTL_CMD}")" || Fatal 'Error reading KUBECTL_CMD'
+  [ -n "${_kubectl_cmd}" ] || Fatal "KUBECTL_CMD is not set"
+
+  # Check k3s command in KUBECTL_CMD is on PATH
+  Echo 'Checking that the k3s command of KUBECTL_CMD is on the PATH...'
+  local _k3s_cmd=''
+  for _w in $_kubectl_cmd ; do
+    _k3s_cmd="${_w}"
+    break
+  done
+  command -v "${_k3s_cmd}" &> /dev/null || Fatal 'k3s command of KUBECTL_CMD is not on the PATH'
+
+  # Check server is running
+  Echo "Checking that the K3s server is running..."
+  $_kubectl_cmd version || Fatal 'Command failed (kubectl version)'
+
+  Pass()
+  {
+    printf '%s\n' "${1}"
+    return 0 # Protect against https://www.shellcheck.net/wiki/SC2015
+  }
+
+  Fail()
+  {
+    printf '%s\n' "${1}"
+    return 1
+  }
+
+  local _count=''
+  local _x=''
+
+  # Check node is ready
+  Echo 'Checking that the K3s node is ready...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the K3s node to be ready'
+    _x="$($_kubectl_cmd get node --output=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? = 0 ] || Fatal 'Command failed (kubectl get node)'
+    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of K3s nodes'
+    [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$2=="True"{exit 0}{exit 1}' <<<"${_x}" && break
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+
+  # Check CoreDNS pod is running and ready
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-dns-pods-are-running
+  Echo 'Checking that the CoreDNS pod is running and ready...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the CoreDNS pod to be running and ready'
+    _x="$($_kubectl_cmd --namespace=kube-system get pod --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? -eq 0 ] || Fatal 'Command failed (kubectl get pod)'
+    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of CoreDNS pods'
+    [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$3=="Running"{exit 0}{exit 1}' <<<"${_x}" && break
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+
+  local _cluster_ip=''
+
+  # Check DNS service is present
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-the-dns-service-is-present-with-the-correct-cluster-ip
+  Echo 'Checking that the DNS service is present...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the DNS service to be present'
+    _x="$($_kubectl_cmd --namespace=kube-system get service --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.spec.type}{"\t"}{.spec.clusterIP}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? -eq 0 ] || Fatal 'Command failed (kubectl get service)'
+    [ "$(wc -l <<<"${_x}")" -gt 1 ] || Fatal 'Unexpected number of kube-dns services'
+    if [ "$(wc -l <<<"${_x}")" -eq 1 ] ; then
+      awk -F"\t" '$3=="ClusterIP"{exit 0}{exit 1}' <<<"${_x}" || Fatal 'Unexpected kube-dns service type'
+      _cluster_ip="$(awk -F"\t" '{print $4}' <<<"${_x}")"
+      break
+    fi
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+  
+  # Check kubernetes.default and props.lockss.org resolve
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-domain-names-are-resolving
+  # and https://stackoverflow.com/questions/69172935/why-does-the-rancher-dns-troubleshooting-tips-for-k3s-only-seem-to-work-with-bus
+  for _host in kubernetes.default props.lockss.org ; do
+    Echo "Checking DNS resolution (${_host})..."
+    _count=0
+    while true ; do
+      [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for DNS resolution'
+      _x="$($_kubectl_cmd run --tty --stdin --rm --restart=Never "busybox-${RANDOM}" --image=busybox:1.28 -- nslookup "${_host}" 2>&1)" \
+          && Pass "${_x}" || Fail "${_x}"
+      if [ $? = 0 ] ; then
+        awk '$1=="Server:"&&$2=="'"${_cluster_ip}"'"{exit 0}{exit 1}' <<<"${_x}" \
+            && continue || Fatal 'Unexpected Cluster-IP'
+      fi
+      sleep "${WAIT}"
+      _count=$((_count + 1))
+    done
+  done
+
+  # Success
+  Success 'Tested the K3s node'
+}
+
+#
 # Main
 #
 
 ASSUME_YES=''
-CURRENT_STEP='0'
+CURRENT_STEP=0
 DOWNLOADER=''
 FORCE_DNS_PROMPT=''
 K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
 K3S_VERSION="${DEFAULT_K3S_VERSION}"
+RETRIES="${DEFAULT_RETRIES}"
 SINGLE_STEP=''
 SKIP_CHECK_K3S_CONFIG=''
 SKIP_CHECK_SYSTEM_USER=''
@@ -716,7 +884,9 @@ SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
 SKIP_CONFIGURE_UFW=''
 SKIP_INSTALL_K3S=''
+SKIP_TEST_K3S=''
 SUDO=''
+WAIT="${DEFAULT_WAIT}"
 
 for _f in "${_MO}" "${_UTIL}" ; do
   . "${_f}" || Fatal "A dependent script is not available: ${_f}"
@@ -741,10 +911,11 @@ while true ; do
     3) Configure_Coredns ;;
     4) Install_K3s ;;
     5) Check_K3s_Config ;;
-    6) break ;;
+    6) Test_K3s ;;
+    7) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
-  CURRENT_STEP=$(($CURRENT_STEP + 1))
+  CURRENT_STEP=$((CURRENT_STEP + 1))
 done
 
 Success 'Exiting'
