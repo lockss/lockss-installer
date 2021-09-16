@@ -323,7 +323,7 @@ check_stack_solr() {
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
 
     # Copy Solr home and configuration
-    cp -r "${CONFIG_DIR}/solr/*" "${SOLR_HOME_PATH}" > /dev/null ||
+    cp -r "${CONFIG_DIR}"/solr/* "${SOLR_HOME_PATH}" > /dev/null ||
       error_exit "Unable to install LOCKSS Solr files, exiting..."
 
   elif compare_versions ${OLD_SOLR_HOME_VERSION} ${NEW_SOLR_HOME_VERSION}; then
@@ -339,7 +339,7 @@ check_stack_solr() {
       error_exit "Unable to write to ${SOLR_HOME_PATH}"
 
     # Copy Solr home and configuration
-    cp -r "${CONFIG_DIR}/solr/*" "${SOLR_HOME_PATH}" > /dev/null ||
+    cp -r "${CONFIG_DIR}"/solr/* "${SOLR_HOME_PATH}" > /dev/null ||
       error_exit "Unable to install LOCKSS Solr files, exiting..."
 
     # Signal to repository service that a reindex is needed
