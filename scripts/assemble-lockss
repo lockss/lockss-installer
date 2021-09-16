@@ -292,7 +292,7 @@ check_stack_solr() {
 
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${stack}-solr-data"
 
-  local CORE_PATH="${SOLR_HOME_PATH}/mycores"
+  local CORE_PATH="${SOLR_HOME_PATH}/data"
   local SOLR_FILE="${SOLR_HOME_PATH}/solr.xml"
   local OLD_REPO="${SOLR_HOME_PATH}/${SOLR_CORE_REPO}"
 #  local SOLR_CONFIG_PATH="${SOLR_HOME_PATH}/configsets/lockss"
