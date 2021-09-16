@@ -422,9 +422,9 @@ add_additional_stack_volumes() {
   start=1
   logger_debug "Creating additional data volumes for $stack-repository-service..."
   for ((cnt = $start; cnt < $len; cnt++)); do
-    mtpoint=${datadirs[$cnt]}/$stack-repo-data
+    mtpoint=${datadirs[$cnt]}/$stack-repo-content
     mkdir -p ${mtpoint} || error_exit "Unable to create data dir: ${mtpoint}"
-    mtname=$stack-repo-data${cnt}
+    mtname=$stack-repo-content${cnt}
   done
 }
 
