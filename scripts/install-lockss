@@ -463,11 +463,11 @@ Install_K3s()
   set_k3s_bin_dir
 
   # Check if K3s already present
-  if command -v "${K3S_CONFIG_DIR}/k3s" &> /dev/null ; then
+  if command -v "${K3S_BIN_DIR}/k3s" &> /dev/null ; then
     # K3s already present
     local _kver=''
     Check_Command 'awk'
-    _kver="$(k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" || \
+    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" || \
         Fatal "Error parsing K3s version"
     if [ "${_kver}" != "${K3S_VERSION}" ] ; then
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
