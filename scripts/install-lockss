@@ -760,14 +760,14 @@ Test_K3s()
   # Check K8S_FLAVOR is k3s
   Echo 'Checking that K8S_FLAVOR is k3s...'
   local _k8s_flavor=''
-  _k8s_flavor="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"${K8S_FLAVOR}\"")" || Fatal 'Error reading K8S_FLAVOR'
+  _k8s_flavor="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${K8S_FLAVOR}\"")" || Fatal 'Error reading K8S_FLAVOR'
   [ -n "${_k8s_flavor}" ] || Fatal 'K8S_FLAVOR is not set'
   [ "${_k8s_flavor}" = 'k3s' ] || Fatal 'K8S_FLAVOR is not k3s'
 
   # Check KUBECTL_CMD is set
   Echo 'Checking that KUBECTL_CMD is set...'
   local _kubectl_cmd=''
-  _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"${KUBECTL_CMD}\"")" || Fatal 'Error reading KUBECTL_CMD'
+  _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${KUBECTL_CMD}\"")" || Fatal 'Error reading KUBECTL_CMD'
   [ -n "${_kubectl_cmd}" ] || Fatal "KUBECTL_CMD is not set"
 
   # Check k3s command in KUBECTL_CMD is on PATH
