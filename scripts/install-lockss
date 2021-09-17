@@ -283,14 +283,11 @@ Configure_Coredns()
     done
   fi
 
-  $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || \
-      Fatal "Could not create ${LOCKSS_ETC_DIR}"
+  $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || Fatal "Could not create ${LOCKSS_ETC_DIR}"
   local _src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
   local _dst="${CONFIG_DIR}/resolv.conf"
-  mo "${_src}" > "${_dst}" || \
-      Fatal "Error rendering ${_src} to ${_dst}"
-  $SUDO cp "${_dst}" "${LOCKSS_RESOLV_CONF}" || \
-      Fatal "Could not copy ${_dst} to ${LOCKSS_RESOLV_CONF}"
+  mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
+  $SUDO cp "${_dst}" "${LOCKSS_RESOLV_CONF}" || Fatal "Could not copy ${_dst} to ${LOCKSS_RESOLV_CONF}"
 
   # Success
   Success 'Configured CoreDNS for K3s'
@@ -353,12 +350,11 @@ Configure_Firewalld()
   # Perform change. Verified that doing it twice doesn't hurt (succeeds with
   # "Warning: ALREADY_ENABLED: 10.42.0.0/16" or similar).
   echo "Adding 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone..."  
-  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 || \
-      Fatal "Could not add 10.42.0.0/16 to firewalld's trusted zone"
-  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 || \
-      Fatal "Could not add 10.43.0.0/16 to firewalld's trusted zone"
-  $SUDO firewall-cmd --reload || 
-      Fatal 'Could not reload firewalld'
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 \
+      || Fatal "Could not add 10.42.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 \
+      || Fatal "Could not add 10.43.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --reload || Fatal 'Could not reload firewalld'
 
   # Success
   Success 'Configured firewalld for K3s'
@@ -421,12 +417,11 @@ Configure_Ufw()
   # Perform change. Verified that adding the same rule twice doesn't hurt
   # (succeeds with "Skipping adding existing rule").
   echo 'Allowing traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw...'
-  $SUDO ufw allow from 10.42.0.0/16 to any || \
-      Fatal 'Could not allow traffic from 10.42.0.0/16 via ufw'
-  $SUDO ufw allow from 10.43.0.0/16 to any || \
-      Fatal 'Could not allow traffic from 10.43.0.0/16 via ufw'
-  $SUDO ufw reload || \
-      Fatal 'Could not reload ufw'
+  $SUDO ufw allow from 10.42.0.0/16 to any \
+      || Fatal 'Could not allow traffic from 10.42.0.0/16 via ufw'
+  $SUDO ufw allow from 10.43.0.0/16 to any \
+      || Fatal 'Could not allow traffic from 10.43.0.0/16 via ufw'
+  $SUDO ufw reload || Fatal 'Could not reload ufw'
 
   # Success
   Success 'Configured ufw for K3s'
@@ -467,8 +462,8 @@ Install_K3s()
     # K3s already present
     local _kver=''
     Check_Command 'awk'
-    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" || \
-        Fatal "Error parsing K3s version"
+    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" \
+        || Fatal "Error parsing K3s version"
     if [ "${_kver}" != "${K3S_VERSION}" ] ; then
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
     fi
@@ -512,8 +507,8 @@ Install_K3s()
   # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
-  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2;exit 0}{print;exit 1}')" || \
-      Fatal "Could not infer the Kubernetes version"
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+      || Fatal "Could not infer the Kubernetes version"
   cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
 K8S_VERSION="${_k8sver}"
