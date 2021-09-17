@@ -459,8 +459,11 @@ Install_K3s()
     return
   fi
 
+  # From _util
+  set_k3s_bin_dir
+
   # Check if K3s already present
-  if command -v k3s &> /dev/null ; then
+  if command -v "${K3S_CONFIG_DIR}/k3s" &> /dev/null ; then
     # K3s already present
     local _kver=''
     Check_Command 'awk'
@@ -507,7 +510,6 @@ Install_K3s()
     fi
 
   # Store k8s.cfg
-  set_k3s_bin_dir # from _util
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
   _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2;exit 0}{print;exit 1}')" || \
@@ -758,14 +760,14 @@ Test_K3s()
   # Check K8S_FLAVOR is k3s
   Echo 'Checking that K8S_FLAVOR is k3s...'
   local _k8s_flavor=''
-  _k8s_flavor="$(. "${_k8s_file}" && echo "${K8S_FLAVOR}")" || Fatal 'Error reading K8S_FLAVOR'
+  _k8s_flavor="$($SUDO_LOCKSS /bin/sh -c '. "${_k8s_file}" && echo "${K8S_FLAVOR}"')" || Fatal 'Error reading K8S_FLAVOR'
   [ -n "${_k8s_flavor}" ] || Fatal 'K8S_FLAVOR is not set'
   [ "${_k8s_flavor}" = 'k3s' ] || Fatal 'K8S_FLAVOR is not k3s'
 
   # Check KUBECTL_CMD is set
   Echo 'Checking that KUBECTL_CMD is set...'
   local _kubectl_cmd=''
-  _kubectl_cmd="$(. "${_k8s_file}" && echo "${KUBECTL_CMD}")" || Fatal 'Error reading KUBECTL_CMD'
+  _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c '. "${_k8s_file}" && echo "${KUBECTL_CMD}"')" || Fatal 'Error reading KUBECTL_CMD'
   [ -n "${_kubectl_cmd}" ] || Fatal "KUBECTL_CMD is not set"
 
   # Check k3s command in KUBECTL_CMD is on PATH
