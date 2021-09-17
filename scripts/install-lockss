@@ -512,18 +512,16 @@ Install_K3s()
   local _k8sver=''
   _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2;exit 0}{print;exit 1}')" || \
       Fatal "Could not infer the Kubernetes version"
-  cat >"${_f}" <<MyEOF || Fatal "Could not write to ${_f}"
+  cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
 K8S_VERSION="${_k8sver}"
 K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
 MyEOF
   if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
-    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" >>"${_f}" || \
-        Fatal "Could not append to ${_f}"
+    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \
+        || Fatal 'Could not append to k8s.cfg'
   fi
-  $SUDO chown "${LOCKSS_USER}:${LOCKSS_GROUP}" "${_f}" ||
-      Fatal "${_f} is not owned by ${LOCKSS_USER}:${LOCKSS_GROUP}"
       
   # Success
   Success 'Installed K3s'
@@ -720,10 +718,15 @@ Set_Downloader()
 Set_Sudo()
 {
   Check_Command 'id'
-  case "$(id --user)" in
-    0) SUDO='' ;;
-    *) Check_Command 'sudo' ; SUDO='sudo' ;;
-  esac
+  if [ "$(id --user)" = '0' ] ; then
+    Check_Command 'runuser'
+    SUDO=''
+    SUDO_LOCKSS="runuser --user=${LOCKSS_USER} --"
+  else
+    Check_Command 'sudo'
+    SUDO='sudo'
+    SUDO_LOCKSS="sudo --user=${LOCKSS_USER}"
+  fi
 }
 
 #
@@ -890,6 +893,7 @@ SKIP_CONFIGURE_UFW=''
 SKIP_INSTALL_K3S=''
 SKIP_TEST_K3S=''
 SUDO=''
+SUDO_LOCKSS=''
 WAIT="${DEFAULT_WAIT}"
 
 for _f in "${_MO}" "${_UTIL}" ; do
