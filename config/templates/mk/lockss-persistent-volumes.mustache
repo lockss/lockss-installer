@@ -605,7 +605,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: $REPO_DATA_MAP_{{.}}/{{STACK}}-repo-content
+    path: $REPO_CONTENT_MAP_{{.}}/{{STACK}}-repo-content
   nodeAffinity:
     required:
       nodeSelectorTerms:
