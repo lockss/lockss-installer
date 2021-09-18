@@ -490,8 +490,7 @@ generate_lockss() {
     for ((count = 0; count < $len; count++)); do
       REPO_NUMS[${count}]="$count"
       declare REPO_CONTENT_MAP_${count}=${datadirs[$count]}
-      varname=REPO_CONTENT_MAP_${count}
-      export varname
+      export REPO_CONTENT_MAP_${count}
     done
     export REPO_NUMS
 
