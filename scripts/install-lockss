@@ -175,7 +175,7 @@ Check_K3s_Config()
   
   # Run k3s check-config
   set_k3s_bin_dir # from _util
-  $SUDO "${K3S_BIN_DIR}/k3s" check-config || Fatal "k3s check-config failed"
+  $SUDO "${K3S_BIN_DIR}/k3s" check-config || Fatal 'k3s check-config failed'
   
   # Success
   Success 'Checked the K3s configuration'
@@ -208,7 +208,7 @@ Check_System_User()
   fi
   
   # Success
-  Success 'User and group present'
+  Success 'System user and group present'
 }
 
 #
@@ -923,4 +923,4 @@ while true ; do
   CURRENT_STEP=$((CURRENT_STEP + 1))
 done
 
-Success 'Exiting'
+Success 'Successful completion of the LOCKSS installation process'
