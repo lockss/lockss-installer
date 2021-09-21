@@ -641,7 +641,7 @@ MyEOF
 Is_Ufw_Active()
 {
   Check_Command 'grep'
-  if [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] ; then
+  if command -v ufw > /dev/null && [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] ; then
     return 0
   else
     return 1
