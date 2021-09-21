@@ -361,6 +361,117 @@ Configure_Firewalld()
 }
 
 #
+# Configure_Iptables
+#
+Configure_Iptables()
+{
+  # Begin step
+  Begin_Phase 'Configuring iptables for K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-iptables
+  if [ "${SKIP_CONFIGURE_IPTABLES}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-iptables)'
+    return
+  fi
+
+  # Skip if not on PATH nor via Alternatives
+  local _iptables_cmd="$(command -v iptables)"
+  # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
+  if [ -n "${_iptables_cmd}" ] ; then
+    _iptables_cmd='/etc/alternatives/iptables'
+    if [ ! -x "${_iptables_cmd}" ] ; then
+      Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
+      return
+    fi
+  fi
+
+  # Get the iptables version
+  # Examples of iptables --version:
+  #   iptables v1.8.7 (legacy)
+  #   iptables v1.8.7 (nf_tables)
+  #   iptables v1.4.21
+  local _line="$("${_iptables_cmd}" --version)"
+  local _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
+  
+  # Skip if not 1.8.0 or later
+  if echo "${_ver}" | awk -F. '(int($1)<1)||(int($2)<8){exit 0}{exit 1}' ; then
+    Success 'Skipping (iptables is not version 1.8.0 or later)'
+    return
+  fi
+
+  # Skip if not nf_tables mode
+  if [ "$(echo "${_line}" | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
+    Success 'Skipping (iptables is not in nf_tables mode)'
+    return
+  fi
+
+  # Skip if not via Alternatives
+  if [ "${_iptables_cmd}" != '/etc/alternatives/iptables' ] ; then
+    Success 'Skipping (iptables is not running via Alternatives)'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running iptables version 1.8.0 or later, in nf_tables'
+  echo 'mode, via Alternatives. For K3s to work properly, it is necessary to'
+  echo 'switch iptables to legacy mode via Alternatives. This script can do it'
+  echo 'for you. If you opt out, the script will continue but K3s is likely to'
+  echo 'malfunction without external intervention; see the manual for details.'
+  echo
+
+  local _q='Switch iptables to legacy mode via Alternatives?'
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving iptables unchanged; see manual for details'
+    return
+  fi
+
+  # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
+  # Verified that doing it twice doesn't hurt (succeeds with no output).
+  echo "Switching iptables to legacy mode via Alternatives..."
+  # Changing iptables can deactivate ufw
+  local _ufw_was_active='false'
+  if Is_Ufw_Active ; then
+    echo "Temporarily deactivating ufw..."
+    _ufw_was_active='true'
+    $SUDO ufw disable || Fatal 'Error deactivating ufw'
+  fi
+  # iptables-legacy and ip6tables-legacy are mandatory
+  $SUDO update-alternatives --set iptables /usr/sbin/iptables-legacy \
+      || Fatal 'Error applying update-alternatives to iptables'
+  $SUDO update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy \
+      || Fatal 'Error applying update-alternatives to ip6tables'
+  # arptables-legacy and ebtables-legacy are optional, only warn if it fails
+  $SUDO update-alternatives --set arptables /usr/sbin/arptables-legacy \
+      || Warning 'Error applying update-alternatives to arptables'
+  $SUDO update-alternatives --set ebtables /usr/sbin/ebtables-legacy \
+      || Warning 'Error applying update-alternatives to ebtables'
+  # Reload iptables
+  $SUDO iptables --flush || Fatal 'Error flushing iptables'
+  if [ "${_ufw_was_active}" = 'true' ] ; then
+    echo "Reactivating ufw..."
+    $SUDO ufw --force enable || Fatal 'Error reactivating ufw'
+  fi
+
+  # Success
+  Success 'Configured iptables for K3s'
+}
+
+#
 # Configure_Ufw
 #
 Configure_Ufw()
@@ -462,7 +573,7 @@ Install_K3s()
     # K3s already present
     local _kver=''
     Check_Command 'awk'
-    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
+    _kver="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
         || Fatal "Error parsing K3s version"
     if [ "${_kver}" != "${K3S_VERSION}" ] ; then
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
@@ -554,6 +665,8 @@ Parse_Command_Line()
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
 
+      --configure-iptables|-configure-iptables|-I) SINGLE_STEP='Configure_Iptables' ; shift ;;
+
       --configure-ufw|-configure-ufw|-U) SINGLE_STEP='Configure_Ufw' ; shift ;;
 
       --force-dns-prompt|-force-dns-prompt) FORCE_DNS_PROMPT='true' ; shift ;;
@@ -578,6 +691,8 @@ Parse_Command_Line()
       --skip-configure-coredns|-skip-configure-coredns) SKIP_CONFIGURE_COREDNS='true' ; shift ;;
 
       --skip-configure-firewalld|-skip-configure-firewalld) SKIP_CONFIGURE_FIREWALLD='true' ; shift ;;
+
+      --skip-configure-iptables|-skip-configure-iptables) SKIP_CONFIGURE_IPTABLES='true' ; shift ;;
 
       --skip-configure-ufw|-skip-configure-ufw) SKIP_CONFIGURE_UFW='true' ; shift ;;
 
@@ -611,13 +726,14 @@ ${_0} version ${VERSION}
 Usage:
 
   ${_0} [--skip-check-k3s-config|--skip-check-system-user|
-      --skip-configure-coredns|--skip-configure-firewalld|--skip-configure-ufw|
-      --skip-install-k3s|--skip-test-k3s] [--assume-yes] [--force-dns-prompt]
-      [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
+      --skip-configure-coredns|--skip-configure-firewalld|
+      --skip-configure-iptables|--skip-configure-ufw|--skip-install-k3s|
+      --skip-test-k3s] [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+      --k3s-version=VER] [--retries=N|--wait=S]
   ${_0} {--check-k3s-config|--configure-coredns|--configure-firewalld|
-      --configure-ufw|--install-k3s|--test-k3s} [--assume-yes]
-      [--force-dns-prompt] [--k3s-data-dir=DIR|--k3s-data-dir=VER] [--retries=N|
-      --wait=S]
+      --configure-iptables|--configure-ufw|--install-k3s|--test-k3s}
+      [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+      --k3s-data-dir=VER] [--retries=N|--wait=S]
   ${_0} {--help|--version}
 
 Options:
@@ -669,6 +785,9 @@ Options:
 
   --skip-configure-firewalld, -skip-configure-firewalld
     Skip configuring firewalld for K3s
+
+  --skip-configure-iptables, -skip-configure-iptables
+    Skip configuring iptables for K3s
 
   --skip-configure-ufw, -skip-configure-ufw
     Skip configuring ufw for K3s
@@ -886,6 +1005,7 @@ SKIP_CHECK_K3S_CONFIG=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
+SKIP_CONFIGURE_IPTABLES=''
 SKIP_CONFIGURE_UFW=''
 SKIP_INSTALL_K3S=''
 SKIP_TEST_K3S=''
@@ -911,13 +1031,14 @@ while true ; do
   case "${CURRENT_STEP}" in
     '') Fatal "Empty step number" ;;
     0) Check_System_User ;;
-    1) Configure_Firewalld ;;
-    2) Configure_Ufw ;;
-    3) Configure_Coredns ;;
-    4) Install_K3s ;;
-    5) Check_K3s_Config ;;
-    6) Test_K3s ;;
-    7) break ;;
+    1) Configure_Iptables ;;
+    2) Configure_Firewalld ;;
+    3) Configure_Ufw ;;
+    4) Configure_Coredns ;;
+    5) Install_K3s ;;
+    6) Check_K3s_Config ;;
+    7) Test_K3s ;;
+    8) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$((CURRENT_STEP + 1))
