@@ -381,7 +381,8 @@ Configure_Iptables()
   fi
 
   # Skip if not on PATH nor via Alternatives
-  local _iptables_cmd="$(command -v iptables)"
+  local _iptables_cmd=''
+  _iptables_cmd="$(command -v iptables)"
   # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
   if [ -n "${_iptables_cmd}" ] ; then
     _iptables_cmd='/etc/alternatives/iptables'
@@ -396,33 +397,42 @@ Configure_Iptables()
   #   iptables v1.8.7 (legacy)
   #   iptables v1.8.7 (nf_tables)
   #   iptables v1.4.21
-  local _line="$("${_iptables_cmd}" --version)"
-  local _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
+  local _line=''
+  _line="$("${_iptables_cmd}" --version)"
+  local _ver=''
+  _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
   
-  # Skip if not 1.8.0 or later
-  if echo "${_ver}" | awk -F. '(int($1)<1)||(int($2)<8){exit 0}{exit 1}' ; then
-    Success 'Skipping (iptables is not version 1.8.0 or later)'
+  # Skip if older than 1.8.0
+  if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8)){exit 0}{exit 1}' ; then
+    Success 'Skipping (iptables version is older than 1.8.0)'
     return
   fi
 
-  # Skip if not nf_tables mode
-  if [ "$(echo "${_line}" | awk '{print $3;exit 0}' | tr -d '()')" != 'nf_tables' ] ; then
-    Success 'Skipping (iptables is not in nf_tables mode)'
+  # Skip if newer than 1.8.3
+  if echo "${_ver}" | awk -F. '(int($1)>1)||((int($1)==1)&&(int($2)>8))||((int($1)==1)&&(int($2)==8)&&(int($3)>3)){exit 0}{exit 1}' ; then
+    Success 'Skipping (iptables version is newer than 1.8.3)'
+    return
+  fi
+
+  # Skip if in legacy mode
+  if [ "$(echo "${_line}" | awk '{print $3;exit 0}' | tr -d '()')" = 'legacy' ] ; then
+    Success 'Skipping (iptables is in legacy mode)'
     return
   fi
 
   # Skip if not via Alternatives
   if [ "${_iptables_cmd}" != '/etc/alternatives/iptables' ] ; then
-    Success 'Skipping (iptables is not running via Alternatives)'
+    Success 'Skipping (iptables is not run via Alternatives)'
     return
   fi
 
   # Ask for permission
-  echo 'Your system is running iptables version 1.8.0 or later, in nf_tables'
-  echo 'mode, via Alternatives. For K3s to work properly, it is necessary to'
-  echo 'switch iptables to legacy mode via Alternatives. This script can do it'
-  echo 'for you. If you opt out, the script will continue but K3s is likely to'
-  echo 'malfunction without external intervention; see the manual for details.'
+  echo 'Your system is running iptables version 1.8.0-1.8.3, not in legacy'
+  echo 'mode, and via Alternatives. For K3s to work properly, it is necessary'
+  echo 'to switch iptables to legacy mode via Alternatives. This script can do'
+  echo 'it for you. If you opt out, the script will continue but K3s is likely'
+  echo 'to malfunction without external intervention; see the manual for'
+  echo 'details.'
   echo
 
   local _q='Switch iptables to legacy mode via Alternatives?'
