@@ -61,10 +61,10 @@ K3S_URL='https://get.k3s.io'
 
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.21.4+k3s1'
+DEFAULT_K3S_VERSION='v1.21.5+k3s1'
 
 DEFAULT_RETRIES='5'
-DEFAULT_WAIT='5'
+DEFAULT_WAIT='10'
 
 __BOLD="\033[1m"
 #__RESET_BOLD="\033[21m"
@@ -462,7 +462,7 @@ Install_K3s()
     # K3s already present
     local _kver=''
     Check_Command 'awk'
-    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([[:xdigit:]]+\)$/{print $3;exit 0}{print;exit 1}')" \
+    _kver="$(${K3S_BIN_DIR}/k3s --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
         || Fatal "Error parsing K3s version"
     if [ "${_kver}" != "${K3S_VERSION}" ] ; then
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
@@ -507,7 +507,7 @@ Install_K3s()
   # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
-  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
       || Fatal "Could not infer the Kubernetes version"
   cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
