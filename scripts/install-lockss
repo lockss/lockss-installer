@@ -154,48 +154,6 @@ Check_Command()
 }
 
 #
-# Check_K3s_Config
-#
-Check_K3s_Config()
-{
-  # Begin step
-  Begin_Phase 'Checking the K3s configuration'
-
-  # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
-    Success 'Skipping (--skip-install-k3s)'
-    return
-  fi
-  
-  # Skip if --skip-check-k3s-config
-  if [ "${SKIP_CHECK_K3S_CONFIG}" = 'true' ] ; then
-    Success 'Skipping (--skip-check-k3s-config)'
-    return
-  fi
-  
-  # Run k3s check-config
-  set_k3s_bin_dir # from _util
-  if ! $SUDO "${K3S_BIN_DIR}/k3s" check-config ; then
-    # Good support for cgroup2 is too recent to be in 1.21.5 https://github.com/k3s-io/k3s/issues/3897
-    # Recent Fedora also causes: links: aux/ip6tables should link to iptables-detect.sh (fail)
-    if [ "$(. /etc/os-release && echo "${ID}")" = 'debian' -a "$(. /etc/os-release && echo "${VERSION_ID}")" -ge 11 ] \
-       || [ "$(. /etc/os-release && echo "${ID}")" = 'fedora' -a "$(. /etc/os-release && echo "${VERSION_ID}")" -ge 31 ] ; then
-      if [ "$(mount | grep cgroup2 | wc -l)" = '1' ] ; then
-        Warning 'Insufficient cgroup2 support in k3s check-config'
-        Warning 'Allowing k3s check-config to fail on Debian 11 and Fedora 31-34'
-      else
-        Fatal 'k3s check-config failed'
-      fi
-    else
-      Fatal 'k3s check-config failed'
-    fi
-  fi
-  
-  # Success
-  Success 'Checked the K3s configuration'
-}  
-
-#
 # Check_System_User
 #
 Check_System_User()
@@ -686,9 +644,7 @@ Parse_Command_Line()
 
       --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
 
-      --check-k3s-config|-check-k3s-config|-C) SINGLE_STEP='Check_K3s_Config' ; shift ;;
-
-      --configure-coredns|-configure-coredns|-D) SINGLE_STEP='Configure_Coredns' ; shift ;;
+      --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
 
@@ -710,8 +666,6 @@ Parse_Command_Line()
 
       --retries=*) RETRIES="${1#*=}" ; shift ;;
       -retries) RETRIES="${2}" ; shift 2 ;;
-
-      --skip-check-k3s-config|-skip-check-k3s-config) SKIP_CHECK_K3S_CONFIG='true' ; shift ;;
 
       --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
 
@@ -752,15 +706,14 @@ ${_0} version ${VERSION}
 
 Usage:
 
-  ${_0} [--skip-check-k3s-config|--skip-check-system-user|
-      --skip-configure-coredns|--skip-configure-firewalld|
-      --skip-configure-iptables|--skip-configure-ufw|--skip-install-k3s|
-      --skip-test-k3s] [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
-      --k3s-version=VER] [--retries=N|--wait=S]
-  ${_0} {--check-k3s-config|--configure-coredns|--configure-firewalld|
-      --configure-iptables|--configure-ufw|--install-k3s|--test-k3s}
-      [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
-      --k3s-data-dir=VER] [--retries=N|--wait=S]
+  ${_0} [--skip-check-system-user|--skip-configure-coredns|
+      --skip-configure-firewalld|--skip-configure-iptables|--skip-configure-ufw|
+      --skip-install-k3s|--skip-test-k3s] [--assume-yes] [--force-dns-prompt]
+      [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
+  ${_0} {--configure-coredns|--configure-firewalld|--configure-iptables|
+      --configure-ufw|--install-k3s|--test-k3s} [--assume-yes]
+      [--force-dns-prompt] [--k3s-data-dir=DIR|--k3s-data-dir=VER]
+      [--retries=N|--wait=S]
   ${_0} {--help|--version}
 
 Options:
@@ -769,10 +722,7 @@ Options:
     Assume that the answer to interactive yes/no questions is Y for "yes", and
     that the answer to other interactive questions is the proposed value
 
-  --check-k3s-config, -check-k3s-config, -C
-    Only check the K3s configuration and exit
-
-  --configure-coredns, -configure-coredns, -D
+  --configure-coredns, -configure-coredns, -C
     Only configure CoreDNS for K3s and exit
 
   --configure-firewalld, -configure-firewalld, -F
@@ -800,9 +750,6 @@ Options:
 
   --retries=N, -retries N
     Attempt retriable actions N times when testing the K3s node (default: ${DEFAULT_RETRIES}) 
-
-  --skip-check-k3s-config, -skip-check-k3s-config
-    Skip checking the K3s configuration.
 
   --skip-check-system-user, -skip-check-system-user
     Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
@@ -1028,7 +975,6 @@ K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
 K3S_VERSION="${DEFAULT_K3S_VERSION}"
 RETRIES="${DEFAULT_RETRIES}"
 SINGLE_STEP=''
-SKIP_CHECK_K3S_CONFIG=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
@@ -1063,9 +1009,8 @@ while true ; do
     3) Configure_Ufw ;;
     4) Configure_Coredns ;;
     5) Install_K3s ;;
-    6) Check_K3s_Config ;;
-    7) Test_K3s ;;
-    8) break ;;
+    6) Test_K3s ;;
+    7) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$((CURRENT_STEP + 1))
