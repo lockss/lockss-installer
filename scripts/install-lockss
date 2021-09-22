@@ -596,10 +596,10 @@ Install_K3s()
     echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
-      echo "{_q}?"
+      echo "${_q}?"
       echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
     elif [ "${ASSUME_YES}" = 'true' ] ; then
-      echo "{_q}?"
+      echo "${_q}?"
       echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
     else
       ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
