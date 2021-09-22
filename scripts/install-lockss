@@ -175,7 +175,21 @@ Check_K3s_Config()
   
   # Run k3s check-config
   set_k3s_bin_dir # from _util
-  $SUDO "${K3S_BIN_DIR}/k3s" check-config || Fatal 'k3s check-config failed'
+  if ! $SUDO "${K3S_BIN_DIR}/k3s" check-config ; then
+    # Good support for cgroups2 is too recent to be in 1.21.5
+    # Fedora 34 also causes: links: aux/ip6tables should link to iptables-detect.sh (fail)
+    if [ "$(. /etc/os-release && echo "${ID}")" = 'debian' -a "$(awk -F. '{print $1}' /etc/debian_version)" = '11' ] \
+       || [ "$(. /etc/os-release && echo "${ID}")" = 'fedora' -a "$(. /etc/os-release && echo "${VERSION_ID}")" = '34' ] ; then
+      if [ "$(mount | grep cgroups2 | wc -l)" = '1' ] ; then
+        Warning 'Insufficient cgroups2 support in k3s check-config'
+        Warning 'Allowing k3s check-config to fail on Debian 11 and Fedora 34'
+      else
+        Fatal 'k3s check-config failed'
+      fi
+    else
+      Fatal 'k3s check-config failed'
+    fi
+  fi
   
   # Success
   Success 'Checked the K3s configuration'
