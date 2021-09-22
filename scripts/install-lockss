@@ -579,7 +579,7 @@ Install_K3s()
   set_k3s_bin_dir
 
   # Check if K3s already present
-  if command -v "${K3S_BIN_DIR}/k3s" &> /dev/null ; then
+  if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
     # K3s already present
     local _kver=''
     Check_Command 'awk'
@@ -591,12 +591,15 @@ Install_K3s()
     Warning 'K3s is already installed; skipping the K3s Installer'
   else
     # Install K3s
+    local _q='K3s state data directory'
     echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
     echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
+      echo "{_q}?"
       echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
     elif [ "${ASSUME_YES}" = 'true' ] ; then
+      echo "{_q}?"
       echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
     else
       ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
