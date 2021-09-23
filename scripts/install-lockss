@@ -815,7 +815,14 @@ Set_Sudo()
   else
     Check_Command 'sudo'
     SUDO='sudo'
-    SUDO_LOCKSS="sudo --user=${LOCKSS_USER}"
+    
+    # Long options introduced only in sudo 1.8.8 (https://www.sudo.ws/legacy.html#1.8.8)
+    # sudo -V returns e.g. Sudo version 1.8.23
+    if "${SUDO}" -V | grep '^Sudo version' | awk '{print $3}' | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
+      SUDO_LOCKSS="sudo -u ${LOCKSS_USER}"
+    else
+      SUDO_LOCKSS="sudo --user=${LOCKSS_USER}"
+    fi
   fi
 }
 
