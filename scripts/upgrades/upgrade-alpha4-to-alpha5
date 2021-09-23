@@ -1,0 +1,196 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# upgrade-alpha4-to-alpha5 -
+#
+# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage: upgrade-alpha4-to-alpha5 [-h|--help]
+#
+# Revision history:
+# 2021-09-22 version 1
+# ---------------------------------------------------------------------------
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+##
+## Relative paths
+##
+
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/../_util"
+
+COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+LIB_DIR="${SCRIPTS_DIR}/lib"
+UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
+
+##
+## Definitions
+##
+declare -a arr svcs
+declare -a arr lockss_owned
+STACK_PREFIX="lockss-stack"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
+
+clean_up() { # Perform pre-exit housekeeping
+	return
+}
+
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
+}
+
+graceful_exit() {
+	clean_up
+	exit
+}
+
+signal_exit() { # Handle trapped signals
+	case $1 in
+		INT)
+			error_exit "Program interrupted by user" ;;
+		TERM)
+			echo -e "\n$PROGNAME: Program terminated" >&2
+			graceful_exit ;;
+		*)
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+	esac
+}
+
+usage() {
+	echo -e "Usage: $PROGNAME [-h|--help]"
+}
+
+help_message() {
+  cat <<- _EOF_
+  $PROGNAME ver. $VERSION
+  Update an alpha4 version to an alpha5 version.
+
+  $(usage)
+
+  Options:
+  -h, --help  Display this help message and exit.
+
+_EOF_
+  return
+}
+
+rename_dirs() {
+  logger_info "Looking for repository service content directories..."
+
+  # Parse host directories from system.cfg into array
+  IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
+
+  signal_reindex=0
+
+  for dir in "${datadirs[@]}"; do
+    new_dir="${dir}/${STACK_PREFIX}-repo-content"
+    if [ ! -d "${new_dir}" ]; then
+      # Rename old data directory to content directory
+      mv "$dir/${STACK_PREFIX}-repo-data" "${new_dir}"
+
+      # Make a new data directory
+      mkdir -p $dir/${STACK_PREFIX}-repo-data
+
+      # Signal to the repository service that a reindex is needed
+      signal_reindex=1
+    fi
+  done
+
+  if [ $signal_reindex -eq 1 ]; then
+    logger_info "Creating signal to reindex artifacts"
+
+    # Empty create reindex state file to signal a reindex is needed
+    REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
+    mkdir -p ${REPO_INDEX_STATE_DIR}
+    touch ${REPO_INDEX_STATE_DIR}/reindex
+  fi
+}
+
+###
+## MAIN
+###
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+# Source system config file
+
+if [ ! -r "$SYSTEM_CONF_FILE" ]; then
+  err "$_0: The system configuration file does not exist.  This script requires the ./config/system.cfg file."
+  err_exit "$_0: Run scripts/configure-lockss first."
+fi
+
+# Parse command-line
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; graceful_exit ;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+# Sanity checks
+Check_Runnable
+Check_Configured
+
+logger_init
+
+logger_info "Loading LOCKSS system configuration..."
+read_config ${SYSTEM_CONF_FILE}
+
+logger_info "Ensuring LOCKSS services are stopped..."
+"${SCRIPTS_DIR}/stop-lockss" && sleep 10 && logger_info "Successfully shutdown LOCKSS"
+
+logger_info "Renaming repository service's content directories..."
+rename_dirs
+
+logger_info "Update complete"
+graceful_exit
