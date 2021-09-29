@@ -127,13 +127,16 @@ rename_dirs() {
   signal_reindex=0
 
   for dir in "${datadirs[@]}"; do
+    old_dir="${dir}/${STACK_PREFIX}-repo-data"
     new_dir="${dir}/${STACK_PREFIX}-repo-content"
     if [ ! -d "${new_dir}" ]; then
+      logger_debug "Moving $old_dir to $new_dir"
+
       # Rename old data directory to content directory
-      mv "$dir/${STACK_PREFIX}-repo-data" "${new_dir}"
+      mv "${old_dir}" "${new_dir}"
 
       # Make a new data directory
-      mkdir -p $dir/${STACK_PREFIX}-repo-data
+      mkdir -p "${old_dir}"
 
       # Signal to the repository service that a reindex is needed
       signal_reindex=1
@@ -141,12 +144,12 @@ rename_dirs() {
   done
 
   if [ $signal_reindex -eq 1 ]; then
-    logger_info "Creating signal to reindex artifacts"
+    logger_debug "Creating signal to reindex artifacts"
 
     # Empty create reindex state file to signal a reindex is needed
     REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
-    mkdir -p ${REPO_INDEX_STATE_DIR}
-    touch ${REPO_INDEX_STATE_DIR}/reindex
+    mkdir -p "${REPO_INDEX_STATE_DIR}"
+    touch "${REPO_INDEX_STATE_DIR}"/reindex
   fi
 }
 
