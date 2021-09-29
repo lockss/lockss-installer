@@ -330,7 +330,7 @@ check_stack_solr() {
     # Signal to the repository that a reindex is needed
     #touch ${REPO_DATA_PATH}/state/index/reindex
 
-  elif compare_versions ${OLD_SOLR_HOME_VERSION} ${NEW_SOLR_HOME_VERSION}; then
+  elif compare_versions_lt "${OLD_SOLR_HOME_VERSION}" "${NEW_SOLR_HOME_VERSION}"; then
     # Solr home exists from previous installation but needs an upgrade
     logger_info "Upgrading Solr home '${SOLR_HOME_PATH}'..."
 

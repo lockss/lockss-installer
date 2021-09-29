@@ -861,24 +861,12 @@ extract_non_loopback_resolvers() {
 #
 # Usage: compare_versions VERSION_A VERSION_B
 #
-# Where VERSION is major, minor, and revision delimited by a dot.
-# E.g., 7.2.1. The return is true (0) if VERSION_A is less than
-# VERSION_B.
+# Where VERSION is major, minor, and revision delimited by a dot. E.g., 7.2.1
 #
-compare_versions() {
-  # Convert versions to arrays
-  local A=($(echo $1 | cut -d. -f1,2,3 --output-delimiter=" "))
-  local B=($(echo $2 | cut -d. -f1,2,3 --output-delimiter=" "))
+compare_versions_lte() {
+  printf '%s\n%s' "$1" "$2" | sort -C -V
+}
 
-  # Compare in order the major, minor, and revision
-  for i in {0..2}; do
-    if [ ${A[$i]} -lt ${B[$i]} ]; then
-      return 0
-    elif [ ${A[$i]} -gt ${B[$i]} ]; then
-      return 1
-    fi
-  done
-
-  # Version A is equal to version B
-  return 1
+compare_versions_lt() {
+  ! compare_versions_lte "$2" "$1"
 }
