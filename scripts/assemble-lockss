@@ -292,6 +292,7 @@ check_stack_solr() {
 
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${stack}-solr-data"
   local REPO_DATA_PATH="${LOCKSS_DATA_DIR}/${stack}-repo-data"
+  local INDEX_STATE_DIR="${REPO_DATA_PATH}/state/index"
 
   local CORE_PATH="${SOLR_HOME_PATH}/data"
   local SOLR_FILE="${SOLR_HOME_PATH}/solr.xml"
@@ -327,15 +328,19 @@ check_stack_solr() {
     cp -r "${CONFIG_DIR}"/solr/* "${SOLR_HOME_PATH}" > /dev/null ||
       error_exit "Unable to install LOCKSS Solr files, exiting..."
 
-    # Signal to the repository that a reindex is needed
-    #touch ${REPO_DATA_PATH}/state/index/reindex
-
+    # Create Solr artifact index state directory
+    mkdir -p ${INDEX_STATE_DIR}/solr
   elif compare_versions_lt "${OLD_SOLR_HOME_VERSION}" "${NEW_SOLR_HOME_VERSION}"; then
     # Solr home exists from previous installation but needs an upgrade
     logger_info "Upgrading Solr home '${SOLR_HOME_PATH}'..."
 
     # Move existing Solr index out of the way
     mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
+
+    # Move existing artifact index state out of the way if it exists
+    if [ -d ${INDEX_STATE_DIR} ]; then
+      mv ${INDEX_STATE_DIR} ${INDEX_STATE_DIR}."`date +%Y%m%d`"
+    fi
 
     # Create new Solr home directory and ensure it is writable
     mkdir ${SOLR_HOME_PATH}
@@ -346,9 +351,11 @@ check_stack_solr() {
     cp -r "${CONFIG_DIR}"/solr/* "${SOLR_HOME_PATH}" > /dev/null ||
       error_exit "Unable to install LOCKSS Solr files, exiting..."
 
+    # Create Solr artifact index state directory
+    mkdir -p ${INDEX_STATE_DIR}/solr
+
     # Signal to the repository that a reindex is needed
-    mkdir -p ${REPO_DATA_PATH}/state/index
-    touch ${REPO_DATA_PATH}/state/index/reindex
+    touch ${INDEX_STATE_DIR}/reindex
   fi
 
   src_plugin_file="${STACK_CONFIG_DIR}/${SOLR_SECURITY_PLUGIN}"
