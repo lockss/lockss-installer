@@ -315,7 +315,7 @@ check_stack_solr() {
     OLD_SOLR_HOME_VERSION="`cat ${CONFIG_DIR}/solr/solr-release`"
   fi
 
-  if [ ! -e "${SOLR_FILE}" -o ! -e "${CORE_PATH}" ]; then
+  if [ ! -e "${SOLR_FILE}" ]; then
     # Prepare Solr home directory for the first time
     logger_info "Preparing Solr home '${SOLR_HOME_PATH}' for new install..."
 
