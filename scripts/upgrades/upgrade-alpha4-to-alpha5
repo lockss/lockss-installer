@@ -119,12 +119,8 @@ _EOF_
 }
 
 rename_dirs() {
-  logger_info "Looking for repository service content directories..."
-
   # Parse host directories from system.cfg into array
   IFS=';' read -r -a datadirs <<<"${LOCKSS_REPO_HOST_DIRS}"
-
-  signal_reindex=0
 
   for dir in "${datadirs[@]}"; do
     old_dir="${dir}/${STACK_PREFIX}-repo-data"
@@ -139,18 +135,25 @@ rename_dirs() {
       mkdir -p "${old_dir}"
 
       # Signal to the repository service that a reindex is needed
-      signal_reindex=1
+      signal_reindex
     fi
   done
+}
 
-  if [ $signal_reindex -eq 1 ]; then
-    logger_debug "Creating signal to reindex artifacts"
+retire_solr_index() {
+  # Add date suffix to existing Solr home directory
+  local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
+  mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
 
-    # Empty create reindex state file to signal a reindex is needed
-    REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
-    mkdir -p "${REPO_INDEX_STATE_DIR}"
-    touch "${REPO_INDEX_STATE_DIR}"/reindex
-  fi
+  # Signal to the repository service that a reindex is needed
+  signal_reindex
+}
+
+signal_reindex() {
+  # Create "reindex artifacts" signal for LOCKSS repository
+  REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
+  mkdir -p "${REPO_INDEX_STATE_DIR}"
+  touch "${REPO_INDEX_STATE_DIR}"/reindex
 }
 
 ###
@@ -194,6 +197,9 @@ logger_info "Ensuring LOCKSS services are stopped..."
 
 logger_info "Renaming repository service's content directories..."
 rename_dirs
+
+logger_info "Retiring existing Solr home directory..."
+retire_solr_index
 
 logger_info "Update complete"
 graceful_exit
