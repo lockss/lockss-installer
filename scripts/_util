@@ -141,6 +141,15 @@ Check_Configured() {
 #TODO: Add container subnet change check
 }
 
+Check_Upgraded() {
+  local OLD_VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
+  local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
+
+  if ! cmp -s ${OLD_VERSION_FILE} ${NEW_VERSION_FILE}; then
+    err_exit "Please perform the upgrade first"
+  fi
+}
+
 Check_K8s_Command() {
     if [ "X${KUBECTL_CMD}" = X ]; then
     if kubepath=$(command -v k3s); then

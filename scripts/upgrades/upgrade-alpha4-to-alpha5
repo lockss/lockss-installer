@@ -149,6 +149,10 @@ retire_solr_index() {
   signal_reindex
 }
 
+copy_lockss_version() {
+  cp ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
+}
+
 signal_reindex() {
   # Create "reindex artifacts" signal for LOCKSS repository
   REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
@@ -189,17 +193,17 @@ Check_Configured
 
 logger_init
 
-logger_info "Loading LOCKSS system configuration..."
 read_config ${SYSTEM_CONF_FILE}
+logger_debug "Loaded LOCKSS system configuration"
 
-logger_info "Ensuring LOCKSS services are stopped..."
-"${SCRIPTS_DIR}/stop-lockss" && sleep 10 && logger_info "Successfully shutdown LOCKSS"
-
-logger_info "Renaming repository service's content directories..."
 rename_dirs
+logger_info "Renamed Repository content directories"
 
-logger_info "Retiring existing Solr home directory..."
 retire_solr_index
+logger_info "Decommissioned existing Solr home directory"
 
-logger_info "Update complete"
+copy_lockss_version
+logger_info "Installed LOCKSS version file"
+
+logger_info "Update completed"
 graceful_exit
