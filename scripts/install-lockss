@@ -551,17 +551,32 @@ Install_K3s()
   set_k3s_bin_dir
 
   # Check if K3s already present
+  local kverok=''
   if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
     # K3s already present
     local _kver=''
     Check_Command 'awk'
     _kver="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
         || Fatal "Error parsing K3s version"
-    if [ "${_kver}" != "${K3S_VERSION}" ] ; then
+    if [ "${_kver}" = "${K3S_VERSION}" ] ; then
+      kverok=1
+      Echo 'K3s is already installed; skipping the K3s Installer'
+    else
+      local _q='Keep current K3s version?'
       Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
+      if [ "${ASSUME_YES}" = 'true' ] ; then
+        echo "${_q}"
+        ANS=Y
+        echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+      else
+        ask_for_input "${_q}" Y
+      fi
+      if is_yes "${ANS}"; then
+        kverok=1
+      fi
     fi
-    Warning 'K3s is already installed; skipping the K3s Installer'
-  else
+  fi
+  if [ -z "${kverok}" ]; then
     # Install K3s
     local _q='K3s state data directory'
     echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
