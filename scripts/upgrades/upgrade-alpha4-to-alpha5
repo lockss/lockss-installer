@@ -135,7 +135,7 @@ rename_dirs() {
       mkdir -p "${old_dir}"
 
       # Signal to the repository service that a reindex is needed
-      signal_reindex
+      signal_reindex ${STACK_PREFIX}
     fi
   done
 }
@@ -145,19 +145,12 @@ retire_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
   mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
 
-  # Signal to the repository service that a reindex is needed
-  signal_reindex
+    # Signal to the repository service that a reindex is needed
+  signal_reindex ${STACK_PREFIX}
 }
 
 copy_lockss_version() {
   cp ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
-}
-
-signal_reindex() {
-  # Create "reindex artifacts" signal for LOCKSS repository
-  REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK_PREFIX}-repo-data/state/index
-  mkdir -p "${REPO_INDEX_STATE_DIR}"
-  touch "${REPO_INDEX_STATE_DIR}"/reindex
 }
 
 ###

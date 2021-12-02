@@ -598,6 +598,14 @@ init_one_dir() {
   fi
 }
 
+# Creates "reindex artifacts" signal for LOCKSS repository
+signal_reindex() {
+  local STACK=$1
+  local REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK}-repo-data/state/index
+  mkdir -p "${REPO_INDEX_STATE_DIR}"
+  touch "${REPO_INDEX_STATE_DIR}"/reindex
+}
+
 # check_writable (dir, user)
 check_writable() {
   local DIR="$1"
