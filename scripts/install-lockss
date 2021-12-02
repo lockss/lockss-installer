@@ -560,27 +560,35 @@ Install_K3s()
         || Fatal "Error parsing K3s version"
     if [ "${_kver}" = "${K3S_VERSION}" ] ; then
       kverok=1
-      Echo 'K3s is already installed; skipping the K3s Installer'
+      Echo 'K3s version ${_kver} is already installed; skipping'
     else
-      local _q='Keep current K3s version?'
-      Warning "K3s version mismatch: ${K3S_VERSION} requested, ${_kver} present"
-      if [ "${ASSUME_YES}" = 'true' ] ; then
-        echo "${_q}"
-        ANS=Y
-        echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
-      else
-        ask_for_input "${_q}" Y
-      fi
-      if is_yes "${ANS}"; then
+      if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
+        Warning "Detected K3s version ${_kver} is older than expected version ${K3S_VERSION}"
+        local _q='Upgrade K3s?'
+        if [ "${ASSUME_YES}" = 'true' ] ; then
+          echo "${_q}"
+          ANS=Y
+          echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+        else
+          ask_for_input "${_q}" Y
+        fi
+        if ! is_yes "${ANS}"; then
+          kverok=1
+        fi
+      elif compare_versions_lt "${K3S_VERSION}" "${_kver}" ; then
+        Echo "Detected K3s version ${_kver} is more recent than expected version ${K3S_VERSION}, skipping"
         kverok=1
+      else
+        Warning "Detected K3s version ${_kver}, expected version ${K3S_VERSION}, comparison vailure, skipping"
+
       fi
     fi
   fi
   if [ -z "${kverok}" ]; then
     # Install K3s
     local _q='K3s state data directory'
-    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but if"
-    echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but"
+    echo "if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"

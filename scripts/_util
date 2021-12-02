@@ -896,3 +896,11 @@ compare_versions_lte() {
 compare_versions_lt() {
   ! compare_versions_lte "$2" "$1"
 }
+
+#
+# Extract_K3s_Version
+# Returns a structured version string that can be compared by sort -V
+#
+Extract_K3s_Version() {
+  echo "${1}" | sed -e 's/\+k3s/./'
+}
