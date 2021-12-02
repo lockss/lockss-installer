@@ -33,4 +33,4 @@ _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
 ROOT_DIR="$(cd "${_D0}/.." >/dev/null 2>&1 && pwd)"
-echo "$(cat "${ROOT_DIR}/VERSION")"
+echo "LOCKSS Installer version $(cat "${ROOT_DIR}/VERSION")"
