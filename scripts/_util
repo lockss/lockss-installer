@@ -75,15 +75,18 @@ logger_init() {
   fi
 }
 
+# Used by scripts that do not have a logger available
 err() {
   echo "$*" >&2
 }
 
+# Used by scripts that do not have a logger available
 err_exit() {
   echo "$*" >&2
   exit 1
 }
 
+# Used by scripts that do not have a logger available
 msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
