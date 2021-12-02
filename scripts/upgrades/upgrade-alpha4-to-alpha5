@@ -125,6 +125,7 @@ rename_dirs() {
   for dir in "${datadirs[@]}"; do
     old_dir="${dir}/${STACK_PREFIX}-repo-data"
     new_dir="${dir}/${STACK_PREFIX}-repo-content"
+
     if [ ! -d "${new_dir}" ]; then
       logger_debug "Moving $old_dir to $new_dir"
 
@@ -136,21 +137,26 @@ rename_dirs() {
 
       # Signal to the repository service that a reindex is needed
       signal_reindex ${STACK_PREFIX}
+    else
+      logger_debug "$new_dir already exists"
     fi
   done
 }
 
 retire_solr_index() {
-  # Add date suffix to existing Solr home directory
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
-  mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
+
+  if [ -d "${SOLR_HOME_PATH}" ]; then
+    # Add date suffix to existing Solr home directory
+    mv --backup=numbered ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
 
     # Signal to the repository service that a reindex is needed
-  signal_reindex ${STACK_PREFIX}
+    signal_reindex ${STACK_PREFIX}
+  fi
 }
 
 copy_lockss_version() {
-  cp ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
+  cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
 }
 
 ###
