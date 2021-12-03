@@ -146,7 +146,7 @@ rename_dirs() {
 retire_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
 
-  if [ -d "${SOLR_HOME_PATH}" ]; then
+  if [ -d "${SOLR_HOME_PATH}" ] && [ ! -e "${SOLR_HOME_PATH}/solr-release" ]; then
     # Add date suffix to existing Solr home directory
     mv -T --backup=numbered ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
 
