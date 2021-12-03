@@ -148,7 +148,7 @@ retire_solr_index() {
 
   if [ -d "${SOLR_HOME_PATH}" ]; then
     # Add date suffix to existing Solr home directory
-    mv --backup=numbered ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
+    mv -T --backup=numbered ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
 
     # Signal to the repository service that a reindex is needed
     signal_reindex ${STACK_PREFIX}
