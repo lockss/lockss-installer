@@ -146,9 +146,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Main logic
-Check_Runnable | logger_debug
-Check_Configured | logger_debug
-Check_Upgraded | logger_debug
+Check_Runnable
+Check_Configured
+Check_Upgraded
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
