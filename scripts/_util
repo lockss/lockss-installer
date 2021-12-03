@@ -149,11 +149,11 @@ Check_Upgraded() {
   local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
 
   if ! cmp -s "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}"; then
-    local OLD_VERSION="$(cat "${OLD_VERSION_FILE}")"
-    local NEW_VERSION="$(cat "${NEW_VERSION_FILE}")"
+    [ -f "${OLD_VERSION_FILE}" ] && local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
+    [ -f "${NEW_VERSION_FILE}" ] && local NEW_VERSION="$(<"${NEW_VERSION_FILE}")"
 
     printf -v err_msg "Please perform an upgrade first (current version: %s, expected version: %s)" \
-        "${OLD_VERSION}" "${NEW_VERSION}"
+        "${OLD_VERSION:-unknown}" "${NEW_VERSION:-unknown}"
 
     err_exit "${err_msg}"
   fi
