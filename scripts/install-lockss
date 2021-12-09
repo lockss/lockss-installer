@@ -579,8 +579,7 @@ Install_K3s()
         Echo "Detected K3s version ${_kver} is more recent than expected version ${K3S_VERSION}, skipping"
         kverok=1
       else
-        Warning "Detected K3s version ${_kver}, expected version ${K3S_VERSION}, comparison vailure, skipping"
-
+        Warning "Detected K3s version ${_kver}, expected version ${K3S_VERSION}, comparison failure, skipping"
       fi
     fi
   fi
