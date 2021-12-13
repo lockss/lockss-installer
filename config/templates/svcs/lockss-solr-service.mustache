@@ -115,6 +115,8 @@ spec:
           value: {{LOCKSS_USER}}
         - name: SOLR_GID
           value: '{{LOCKSS_GID}}'
+        - name: SOLR_OPTS
+          value: '-Dlog4j2.formatMsgNoLookups=true'
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-solr-service
