@@ -135,6 +135,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: JVM_OPTS_ADDITIONAL
+          value: '-Dlog4j2.formatMsgNoLookups=true'
         image: {{REPO_IMG}}:{{REPO_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-repository-service

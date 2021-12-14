@@ -117,6 +117,8 @@ spec:
           value: http://{{LOCKSS_HOSTNAME}}:{{OPENWB_PORT}}
         - name: WAYBACK_BASEDIR
           value: /data
+        - name: CATALINA_OPTS
+          value: '-Dlog4j2.formatMsgNoLookups=true'
         image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-openwayback-service
