@@ -101,6 +101,8 @@ spec:
       containers:
       - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
         env:
+        - name: SOLR_HOME
+          value: /var/solr
         - name: LOG4J_PROPS
           value: /opt/solr/server/resources/lockss-log4j.properties
         - name: SOLR_TIMEZONE
