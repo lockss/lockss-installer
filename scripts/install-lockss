@@ -1,0 +1,1054 @@
+#!/bin/bash
+
+# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Version
+#
+
+VERSION='2.0-alpha5'
+
+#
+# Program name
+#
+
+_0="$(basename "${0}")"
+_D0="$(cd "$(dirname "${0}")" && pwd)"
+
+#
+# Constants
+#
+
+_MO="${_D0}/lib/mo"
+_UTIL="${_D0}/_util"
+
+LOCKSS_GROUP='lockss'
+LOCKSS_USER='lockss'
+
+LOCKSS_ETC_DIR='/etc/lockss'
+LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
+SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
+ETC_RESOLV_CONF='/etc/resolv.conf'
+
+K3S_URL='https://get.k3s.io'
+
+DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
+DEFAULT_K3S_DATA_DIR_ROOT='/var'
+DEFAULT_K3S_VERSION='v1.21.5+k3s1'
+
+DEFAULT_RETRIES='5'
+DEFAULT_WAIT='10'
+
+__BOLD="\033[1m"
+#__RESET_BOLD="\033[21m"
+__UNDERLINE="\033[4m"
+__RESET_UNDERLINE="\033[24m"
+__FG_RED="\033[31m"
+__FG_GREEN="\033[32m"
+__FG_YELLOW="\033[33m"
+__RESET_FG="\033[39m"
+__RESET_ALL="\033[0m"
+
+#
+# Begin_Phase
+# $1: message
+#
+Begin_Phase()
+{
+  if test -t 1 ; then
+    Echo "${__UNDERLINE}${1}...${__RESET_UNDERLINE}"
+  else
+    Echo "${1}..."
+  fi
+}
+
+#
+# Echo
+# $1: optional message
+#
+Echo()
+{
+  if test -t 1 ; then
+    echo -e "${__BOLD}[$_0] ${1}${__RESET_ALL}"
+  else
+    echo "[$_0] ${1}"
+  fi
+}
+
+#
+# Fatal
+# $1: error message
+#
+Fatal()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_RED}ERROR${__RESET_FG}] ${1}"
+  else
+    Echo "[ERROR] ${1}"
+  fi
+  exit 1
+}
+
+#
+# Success
+# $1: optional message
+#
+Success()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_GREEN}success${__RESET_FG}] ${1}"
+  else
+    Echo "[success] ${1}"
+  fi
+}
+
+#
+# Warning
+# $1: warning message
+#
+Warning()
+{
+  if test -t 1 ; then
+    Echo "[${__FG_YELLOW}Warning${__RESET_FG}] ${1}"
+  else
+    Echo "[Warning] ${1}"
+  fi
+}
+
+#
+# Check_Command
+# $1: command
+#
+Check_Command()
+{
+  if ! command -v "${1}" > /dev/null ; then
+    Fatal "A dependent utility is not available: ${1}"
+  fi
+}
+
+#
+# Check_System_User
+#
+Check_System_User()
+{
+  # Begin step
+  Begin_Phase 'Checking the system user and group'
+  
+  # Skip if --skip-check-system-user
+  if [ "${SKIP_CHECK_SYSTEM_USER}" = 'true' ] ; then
+    Success 'Skipping (--skip-check-system-user)'
+    return
+  fi
+  
+  # Fail if $LOCKSS_USER does not exist
+  Check_Command 'id'
+  if ! id "${LOCKSS_USER}" &> /dev/null ; then
+    Fatal "The ${LOCKSS_USER} user does not exist"
+  fi
+
+  # Fail if $LOCKSS_GROUP does not exist
+  Check_Command 'getent'
+  if ! getent group "${LOCKSS_GROUP}" &> /dev/null ; then
+    Fatal "The ${LOCKSS_GROUP} group does not exist"
+  fi
+  
+  # Success
+  Success 'System user and group present'
+}
+
+#
+# Configure_Coredns
+#
+Configure_Coredns()
+{
+  # Begin step
+  Begin_Phase 'Configuring CoreDNS for K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-coredns
+  if [ "${SKIP_CONFIGURE_COREDNS}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-coredns)'
+    return
+  fi
+  
+  # Examine local resolv.conf for loopback address
+  local _use_resolv_conf='Y'
+  if has_loopback_resolver "${ETC_RESOLV_CONF}" ; then
+    if [ -f "${SYSTEMD_RESOLV_CONF}" ] ; then
+      if has_loopback_resolver "${SYSTEMD_RESOLV_CONF}" ; then
+        _use_resolv_conf='N'
+      fi
+    else
+      _use_resolv_conf='N'
+    fi
+  fi
+  
+  declare -a nameservers
+  if [ "${FORCE_DNS_PROMPT}" != 'true' ] && is_yes "${_use_resolv_conf}" ; then
+    Success 'Using system resolv.conf files'
+    return
+  fi
+
+  if [ "${FORCE_DNS_PROMPT}" = 'true' ] ; then
+    echo "In forced DNS prompt mode (--force-dns-prompt); prompting for DNS servers"
+    echo
+  else
+    echo "Both ${ETC_RESOLV_CONF} and ${SYSTEMD_RESOLV_CONF}"
+    echo 'in your system contain a loopback address. CoreDNS does not allow a'
+    echo 'loopback address to be given to Kubernetes pods as an upstream DNS'
+    echo 'server. Please enter a list of IP addresses of upstream DNS resolvers.'
+    echo
+  fi
+
+  local _ip_ok='N'
+  local _default_ip_list=''
+  if [ -r "${SYSTEMD_RESOLV_CONF}" ] ; then
+    _default_ip_list="$(extract_non_loopback_resolvers "${SYSTEMD_RESOLV_CONF}")"
+  fi
+  if [ -z "${_default_ip_list}" ] && [ -r "${ETC_RESOLV_CONF}" ] ; then
+    _default_ip_list="$(extract_non_loopback_resolvers "${ETC_RESOLV_CONF}")"
+  fi
+
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    nameservers=("${_default_ip_list[@]}")
+    echo "In automatic 'yes' mode (--assume-yes): $(IFS=';' ; echo "${nameservers[*]}")"
+  else
+    until is_yes "${_ip_ok}" ; do
+      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${_default_ip_list}"
+      if valid_ip_address_list "${ANS}" ; then
+        _ip_ok='Y'
+        # set IP addr array used in resolv.conf.mustache
+        nameservers=("${VALIDATED_LIST[@]}")
+      fi
+    done
+  fi
+
+  $SUDO mkdir -p "${LOCKSS_ETC_DIR}" || Fatal "Could not create ${LOCKSS_ETC_DIR}"
+  local _src="${CONFIG_DIR}/templates/k3s/resolv.conf.mustache"
+  local _dst="${CONFIG_DIR}/resolv.conf"
+  mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
+  $SUDO cp "${_dst}" "${LOCKSS_RESOLV_CONF}" || Fatal "Could not copy ${_dst} to ${LOCKSS_RESOLV_CONF}"
+
+  # Success
+  Success 'Configured CoreDNS for K3s'
+}
+
+#
+# Configure_Firewalld
+#
+Configure_Firewalld()
+{
+  # Begin step
+  Begin_Phase "Configuring firewalld for K3s"
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-firewalld
+  if [ "${SKIP_CONFIGURE_FIREWALLD}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-firewalld)'
+    return
+  fi
+  
+  # Skip if firewall-cmd not on PATH
+  if ! command -v firewall-cmd > /dev/null ; then
+    Success 'Skipping (firewall-cmd is not on the PATH)'
+    return
+  fi
+  
+  # Skip if firewalld not running
+  if [ "$($SUDO firewall-cmd --state 2>&1)" != 'running' ] ; then
+    Success 'Skipping (firewalld is not running)'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running firewalld. For K3s to work properly, it is'
+  echo "necessary to add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted"
+  echo 'zone. This script can do it for you. If you opt out, the script will'
+  echo 'continue but K3s is likely to malfunction without external intervention;'
+  echo 'see the manual for details.'
+  echo
+  local _q="Add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone?"
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving firewalld unchanged; see manual for details'
+    return
+  fi
+  
+  # Perform change. Verified that doing it twice doesn't hurt (succeeds with
+  # "Warning: ALREADY_ENABLED: 10.42.0.0/16" or similar).
+  echo "Adding 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone..."  
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 \
+      || Fatal "Could not add 10.42.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 \
+      || Fatal "Could not add 10.43.0.0/16 to firewalld's trusted zone"
+  $SUDO firewall-cmd --reload || Fatal 'Could not reload firewalld'
+
+  # Success
+  Success 'Configured firewalld for K3s'
+}
+
+#
+# Configure_Iptables
+#
+Configure_Iptables()
+{
+  # Begin step
+  Begin_Phase 'Configuring iptables for K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-iptables
+  if [ "${SKIP_CONFIGURE_IPTABLES}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-iptables)'
+    return
+  fi
+
+  # Skip if not on PATH nor via Alternatives
+  local _iptables_cmd=''
+  _iptables_cmd="$(command -v iptables)"
+  # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
+  if [ -n "${_iptables_cmd}" ] ; then
+    _iptables_cmd='/etc/alternatives/iptables'
+    if [ ! -x "${_iptables_cmd}" ] ; then
+      Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
+      return
+    fi
+  fi
+
+  # Get the iptables version
+  # Examples of iptables --version:
+  #   iptables v1.8.7 (legacy)
+  #   iptables v1.8.7 (nf_tables)
+  #   iptables v1.4.21
+  local _line=''
+  _line="$("${_iptables_cmd}" --version)"
+  local _ver=''
+  _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
+  
+  # Skip if older than 1.8.0
+  if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8)){exit 0}{exit 1}' ; then
+    Success 'Skipping (iptables version is older than 1.8.0)'
+    return
+  fi
+
+  # Skip if newer than 1.8.3
+  if echo "${_ver}" | awk -F. '(int($1)>1)||((int($1)==1)&&(int($2)>8))||((int($1)==1)&&(int($2)==8)&&(int($3)>3)){exit 0}{exit 1}' ; then
+    Success 'Skipping (iptables version is newer than 1.8.3)'
+    return
+  fi
+
+  # Skip if in legacy mode
+  if [ "$(echo "${_line}" | awk '{print $3;exit 0}' | tr -d '()')" = 'legacy' ] ; then
+    Success 'Skipping (iptables is in legacy mode)'
+    return
+  fi
+
+  # Skip if not via Alternatives
+  if [ "${_iptables_cmd}" != '/etc/alternatives/iptables' ] ; then
+    Success 'Skipping (iptables is not run via Alternatives)'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running iptables version 1.8.0-1.8.3, not in legacy'
+  echo 'mode, and via Alternatives. For K3s to work properly, it is necessary'
+  echo 'to switch iptables to legacy mode via Alternatives. This script can do'
+  echo 'it for you. If you opt out, the script will continue but K3s is likely'
+  echo 'to malfunction without external intervention; see the manual for'
+  echo 'details.'
+  echo
+
+  local _q='Switch iptables to legacy mode via Alternatives?'
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving iptables unchanged; see manual for details'
+    return
+  fi
+
+  # Perform change; see https://github.com/k3s-io/k3s/issues/116#issuecomment-624770403
+  # Verified that doing it twice doesn't hurt (succeeds with no output).
+  echo "Switching iptables to legacy mode via Alternatives..."
+  # Changing iptables can deactivate ufw
+  local _ufw_was_active='false'
+  if Is_Ufw_Active ; then
+    echo "Temporarily deactivating ufw..."
+    _ufw_was_active='true'
+    $SUDO ufw disable || Fatal 'Error deactivating ufw'
+  fi
+  # iptables-legacy and ip6tables-legacy are mandatory
+  $SUDO update-alternatives --set iptables /usr/sbin/iptables-legacy \
+      || Fatal 'Error applying update-alternatives to iptables'
+  $SUDO update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy \
+      || Fatal 'Error applying update-alternatives to ip6tables'
+  # arptables-legacy and ebtables-legacy are optional, only warn if it fails
+  $SUDO update-alternatives --set arptables /usr/sbin/arptables-legacy \
+      || Warning 'Error applying update-alternatives to arptables'
+  $SUDO update-alternatives --set ebtables /usr/sbin/ebtables-legacy \
+      || Warning 'Error applying update-alternatives to ebtables'
+  # Reload iptables
+  $SUDO iptables --flush || Fatal 'Error flushing iptables'
+  if [ "${_ufw_was_active}" = 'true' ] ; then
+    echo "Reactivating ufw..."
+    $SUDO ufw --force enable || Fatal 'Error reactivating ufw'
+  fi
+
+  # Success
+  Success 'Configured iptables for K3s'
+}
+
+#
+# Configure_Ufw
+#
+Configure_Ufw()
+{
+  # Begin step
+  Begin_Phase 'Configuring ufw for K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-configure-ufw
+  if [ "${SKIP_CONFIGURE_UFW}" = 'true' ] ; then
+    Success 'Skipping (--skip-configure-ufw)'
+    return
+  fi
+
+  # Skip if ufw not on PATH
+  if ! command -v ufw > /dev/null ; then
+    Success 'Skipping (ufw is not on the PATH)'
+    return
+  fi
+
+  # Skip if ufw not active
+  if ! Is_Ufw_Active ; then
+    Success 'Skipping (ufw is not active)'
+    return
+  fi
+
+  # Ask for permission
+  echo 'Your system is running ufw. For K3s to work properly, it is necessary to'
+  echo 'allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw. This script'
+  echo 'can do it for you. If you opt out, the script will continue but K3s is'
+  echo 'likely to malfunction without external intervention; see the manual for'
+  echo 'details.'
+  echo
+  local _q='Allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw?'
+  if [ "${ASSUME_YES}" = 'true' ] ; then
+    echo "${_q}"
+    ANS=Y
+    echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+  else
+    ask_for_input "${_q}" Y
+  fi
+
+  # Warn and return if user opts out
+  if ! is_yes "${ANS}" ; then
+    Warning 'Leaving ufw unchanged; see manual for details'
+    return
+  fi
+  
+  # Perform change. Verified that adding the same rule twice doesn't hurt
+  # (succeeds with "Skipping adding existing rule").
+  echo 'Allowing traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw...'
+  $SUDO ufw allow from 10.42.0.0/16 to any \
+      || Fatal 'Could not allow traffic from 10.42.0.0/16 via ufw'
+  $SUDO ufw allow from 10.43.0.0/16 to any \
+      || Fatal 'Could not allow traffic from 10.43.0.0/16 via ufw'
+  $SUDO ufw reload || Fatal 'Could not reload ufw'
+
+  # Success
+  Success 'Configured ufw for K3s'
+}
+
+#
+# Download_Url
+# $1: URL
+#
+Download_Url()
+{
+  case "${DOWNLOADER}" in
+    curl) curl -sSfL "${1}" || Fatal "curl failed to fetch ${1}" ;;
+    wget) wget -qO- "${1}" || Fatal "wget failed to fetch ${1}" ;;
+    *) Fatal "Unknown downloader: ${DOWNLOADER}" ;; # shouldn't happen
+  esac
+}
+
+#
+# Install_K3s
+#
+Install_K3s()
+{
+  # Begin step
+  Begin_Phase 'Installing K3s'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+
+  # From _util
+  set_k3s_bin_dir
+
+  # Check if K3s already present
+  local kverok=''
+  if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
+    # K3s already present
+    local _kver=''
+    Check_Command 'awk'
+    _kver="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
+        || Fatal "Error parsing K3s version"
+    if [ "${_kver}" = "${K3S_VERSION}" ] ; then
+      kverok=1
+      Echo 'K3s version ${_kver} is already installed; skipping'
+    else
+      if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
+        Warning "Detected K3s version ${_kver} is older than expected version ${K3S_VERSION}"
+        local _q="Upgrade K3s from ${_kver} to ${K3S_VERSION}?"
+        if [ "${ASSUME_YES}" = 'true' ] ; then
+          echo "${_q}"
+          ANS=Y
+          echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
+        else
+          ask_for_input "${_q}" Y
+        fi
+        if ! is_yes "${ANS}"; then
+          kverok=1
+        fi
+      elif compare_versions_lt "${K3S_VERSION}" "${_kver}" ; then
+        Echo "Detected K3s version ${_kver} is more recent than expected version ${K3S_VERSION}, skipping"
+        kverok=1
+      else
+        Warning "Detected K3s version ${_kver}, expected version ${K3S_VERSION}, comparison failure, skipping"
+      fi
+    fi
+  else
+    Echo 'K3s is not present'
+  fi
+  if [ -n "${kverok}" ]; then
+    # Not installing K3s
+    Echo 'Not installing K3s'
+  else
+    # Install K3s
+    Echo "Installing K3s version ${K3S_VERSION}"
+    local _q='K3s state data directory'
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but"
+    echo "if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo
+    if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
+      echo "${_q}?"
+      echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
+    elif [ "${ASSUME_YES}" = 'true' ] ; then
+      echo "${_q}?"
+      echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
+    else
+      ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+      K3S_DATA_DIR="${ANS}"
+    fi
+    local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
+  
+    local _resolv_conf_args='' 
+    if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
+      _resolv_conf_args="--resolv-conf ${LOCKSS_RESOLV_CONF}"
+    fi
+  
+    if [ "${K3S_VERSION}" != "${DEFAULT_K3S_VERSION}" ] ; then
+      Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
+    fi 
+  
+    # Invoke Rancher's installer
+    Download_Url "${K3S_URL}" | \
+        INSTALL_K3S_VERSION="${K3S_VERSION}" \
+        sh -s - \
+        --write-kubeconfig-mode 644 \
+        --disable-cloud-controller \
+        --disable traefik \
+        ${_resolv_conf_args} \
+        ${_data_dir_args} \
+            || Fatal 'The K3s Installer failed'
+  fi
+
+  # Store k8s.cfg
+  local _f="${CONFIG_DIR}/k8s.cfg"
+  local _k8sver=''
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+      || Fatal "Could not infer the Kubernetes version"
+  cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
+K8S_FLAVOR="k3s"
+K8S_VERSION="${_k8sver}"
+K3S_VERSION="${K3S_VERSION}"
+KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
+MyEOF
+  if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
+    echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \
+        || Fatal 'Could not append to k8s.cfg'
+  fi
+      
+  # Success
+  Success 'Installed K3s'
+}
+
+#
+# Is_Ufw_Active
+#
+Is_Ufw_Active()
+{
+  Check_Command 'grep'
+  if command -v ufw > /dev/null && [ "$($SUDO ufw status | grep -m 1 '^Status:')" = 'Status: active' ] ; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+#
+# Parse_Command_Line
+# Must be called with "$@"
+#
+Parse_Command_Line()
+{
+  while [ $# -gt 0 ] ; do
+    case "${1}" in
+
+      --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
+
+      --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
+
+      --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
+
+      --configure-iptables|-configure-iptables|-I) SINGLE_STEP='Configure_Iptables' ; shift ;;
+
+      --configure-ufw|-configure-ufw|-U) SINGLE_STEP='Configure_Ufw' ; shift ;;
+
+      --force-dns-prompt|-force-dns-prompt) FORCE_DNS_PROMPT='true' ; shift ;;
+
+      --help|-help|-h) Print_Help ; exit 0 ;;
+        
+      --install-k3s|-install-k3s|-K) SINGLE_STEP='Install_K3s' ; shift ;;
+
+      --k3s-data-dir=*) K3S_DATA_DIR="${1#*=}" ; shift ;;
+      -k3s-data-dir) K3S_DATA_DIR="${2}" ; shift 2 ;;
+
+      --k3s-version=*) K3S_VERSION="${1#*=}" ; shift ;;
+      -k3s-version) K3S_VERSION="${2}" ; shift 2 ;;
+
+      --retries=*) RETRIES="${1#*=}" ; shift ;;
+      -retries) RETRIES="${2}" ; shift 2 ;;
+
+      --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
+
+      --skip-configure-coredns|-skip-configure-coredns) SKIP_CONFIGURE_COREDNS='true' ; shift ;;
+
+      --skip-configure-firewalld|-skip-configure-firewalld) SKIP_CONFIGURE_FIREWALLD='true' ; shift ;;
+
+      --skip-configure-iptables|-skip-configure-iptables) SKIP_CONFIGURE_IPTABLES='true' ; shift ;;
+
+      --skip-configure-ufw|-skip-configure-ufw) SKIP_CONFIGURE_UFW='true' ; shift ;;
+
+      --skip-install-k3s|-skip-install-k3s) SKIP_INSTALL_K3S='true' ; shift ;;
+
+      --skip-test-k3s|-skip-test-k3s) SKIP_TEST_K3S='true' ; shift ;;
+
+      --test-k3s|-test-k3s|-T) SINGLE_STEP='Test_K3s' ; shift ;;
+
+      --version|-version|-V) echo "${VERSION}" ; exit 0 ;;
+
+      --wait=*) WAIT="${1#*=}" ; shift ;;
+      -wait) WAIT="${2}" ; shift 2 ;;
+
+      -*) Fatal "Unknown option: ${1}" ;;
+
+      *) Fatal "Unexpected argument: ${1:-empty string}" ;;
+
+    esac
+  done
+}
+
+#
+# Print_Help
+#
+Print_Help()
+{
+  cat <<MyEOF
+${_0} version ${VERSION}
+
+Usage:
+
+  ${_0} [--skip-check-system-user|--skip-configure-coredns|
+      --skip-configure-firewalld|--skip-configure-iptables|--skip-configure-ufw|
+      --skip-install-k3s|--skip-test-k3s] [--assume-yes] [--force-dns-prompt]
+      [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
+  ${_0} {--configure-coredns|--configure-firewalld|--configure-iptables|
+      --configure-ufw|--install-k3s|--test-k3s} [--assume-yes]
+      [--force-dns-prompt] [--k3s-data-dir=DIR|--k3s-data-dir=VER]
+      [--retries=N|--wait=S]
+  ${_0} {--help|--version}
+
+Options:
+
+  --assume-yes, -assume-yes, -y
+    Assume that the answer to interactive yes/no questions is Y for "yes", and
+    that the answer to other interactive questions is the proposed value
+
+  --configure-coredns, -configure-coredns, -C
+    Only configure CoreDNS for K3s and exit
+
+  --configure-firewalld, -configure-firewalld, -F
+    Only configure firewalld for K3s and exit
+
+  --configure-ufw, -configure-ufw, -U
+    Only configure ufw for K3s and exit
+
+  --force-dns-prompt, -force-dns-prompt
+    Force prompting for IP addresses of DNS servers while configuring CoreDNS
+    for K3s
+
+  --help, -help, -h
+    Display this message and exit
+
+  --install-k3s, -install-k3s, -K
+    Only install K3s and exit
+
+  --k3s-data-dir=DIR, -k3s-data-dir DIR
+    Directory to hold K3s state data (default: ${DEFAULT_K3S_DATA_DIR}).
+    Should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited.
+
+  --k3s-version=VER, -k3s-version VER
+    Install version VER of K3s (default: ${DEFAULT_K3S_VERSION})
+
+  --retries=N, -retries N
+    Attempt retriable actions N times when testing the K3s node (default: ${DEFAULT_RETRIES}) 
+
+  --skip-check-system-user, -skip-check-system-user
+    Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
+
+  --skip-configure-coredns, -skip-configure-coredns
+    Skip configuring CoreDNS for K3s
+
+  --skip-configure-firewalld, -skip-configure-firewalld
+    Skip configuring firewalld for K3s
+
+  --skip-configure-iptables, -skip-configure-iptables
+    Skip configuring iptables for K3s
+
+  --skip-configure-ufw, -skip-configure-ufw
+    Skip configuring ufw for K3s
+
+  --skip-install-k3s, -skip-install-k3s
+    Skip installing K3s. Implies --skip-check-k3s-config,
+      --skip-configure-coredns, --skip-configure-firewalld,
+      --skip-configure-ufw, --skip-test-k3s.
+
+  --skip-test-k3s, -skip-test-k3s
+    Skip testing the K3s node
+
+  --test-k3s, -test-k3s, -T
+    Only test the K3s node and exit
+
+  --version, -version, -V
+    Display this script's version number and exit
+
+  --wait=S, -wait S
+    Wait S seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT}) 
+
+MyEOF
+}
+
+#
+# Set_Downloader
+#
+Set_Downloader()
+{
+  for _d in curl wget ; do
+    if command -v "${_d}" > /dev/null ; then
+      DOWNLOADER="${_d}"
+      break
+    fi
+  done
+  if [ -z "${DOWNLOADER}" ] ; then
+    Fatal 'curl or wget must be on the PATH'
+  fi
+}
+
+#
+# Set_Sudo
+#
+Set_Sudo()
+{
+  Check_Command 'id'
+  if [ "$(id --user)" = '0' ] ; then
+    Check_Command 'runuser'
+    SUDO=''
+    SUDO_LOCKSS="runuser --user=${LOCKSS_USER} --"
+  else
+    Check_Command 'sudo'
+    SUDO='sudo'
+    
+    # Long options introduced only in sudo 1.8.8 (https://www.sudo.ws/legacy.html#1.8.8)
+    # sudo -V returns e.g. Sudo version 1.8.23
+    if "${SUDO}" -V | grep '^Sudo version' | awk '{print $3}' | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
+      SUDO_LOCKSS="sudo -u ${LOCKSS_USER}"
+    else
+      SUDO_LOCKSS="sudo --user=${LOCKSS_USER}"
+    fi
+  fi
+}
+
+#
+# Test_K3s
+#
+Test_K3s()
+{
+  # Begin step
+  Begin_Phase 'Testing the K3s node'
+
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-test-k3s
+  if [ "${SKIP_TEST_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-test-k3s)'
+    return
+  fi
+
+  local _k8s_file="${CONFIG_DIR}/k8s.cfg"
+
+  # Check k8s.cfg is present
+  Echo 'Checking that k8s.cfg is present...'
+  [ -f "${_k8s_file}" ] || Fatal "${_k8s_file} not found"
+
+  # Check K8S_FLAVOR is k3s
+  Echo 'Checking that K8S_FLAVOR is k3s...'
+  local _k8s_flavor=''
+  _k8s_flavor="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${K8S_FLAVOR}\"")" || Fatal 'Error reading K8S_FLAVOR'
+  [ -n "${_k8s_flavor}" ] || Fatal 'K8S_FLAVOR is not set'
+  [ "${_k8s_flavor}" = 'k3s' ] || Fatal 'K8S_FLAVOR is not k3s'
+
+  # Check KUBECTL_CMD is set
+  Echo 'Checking that KUBECTL_CMD is set...'
+  local _kubectl_cmd=''
+  _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${KUBECTL_CMD}\"")" || Fatal 'Error reading KUBECTL_CMD'
+  [ -n "${_kubectl_cmd}" ] || Fatal "KUBECTL_CMD is not set"
+
+  # Check k3s command in KUBECTL_CMD is on PATH
+  Echo 'Checking that the k3s command of KUBECTL_CMD is on the PATH...'
+  local _k3s_cmd=''
+  for _w in $_kubectl_cmd ; do
+    _k3s_cmd="${_w}"
+    break
+  done
+  command -v "${_k3s_cmd}" &> /dev/null || Fatal 'k3s command of KUBECTL_CMD is not on the PATH'
+
+  # Check server is running
+  Echo "Checking that the K3s server is running..."
+  $_kubectl_cmd version || Fatal 'Command failed (kubectl version)'
+
+  Pass()
+  {
+    printf '%s\n' "${1}"
+    return 0 # Protect against https://www.shellcheck.net/wiki/SC2015
+  }
+
+  Fail()
+  {
+    printf '%s\n' "${1}"
+    return 1
+  }
+
+  local _count=''
+  local _x=''
+
+  # Check node is ready
+  Echo 'Checking that the K3s node is ready...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the K3s node to be ready'
+    _x="$($_kubectl_cmd get node --output=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? = 0 ] || Fatal 'Command failed (kubectl get node)'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of K3s nodes'
+    [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$2=="True"{exit 0}{exit 1}' <<<"${_x}" && break
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+
+  # Check CoreDNS pod is running and ready
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-dns-pods-are-running
+  Echo 'Checking that the CoreDNS pod is running and ready...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the CoreDNS pod to be running and ready'
+    _x="$($_kubectl_cmd --namespace=kube-system get pod --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? -eq 0 ] || Fatal 'Command failed (kubectl get pod)'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of CoreDNS pods'
+    [ "$(wc -l <<<"${_x}")" -eq 1 ] && awk -F"\t" '$3=="Running"{exit 0}{exit 1}' <<<"${_x}" && break
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+
+  local _cluster_ip=''
+
+  # Check DNS service is present
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-the-dns-service-is-present-with-the-correct-cluster-ip
+  Echo 'Checking that the DNS service is present...'
+  _count=0
+  while true ; do
+    [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for the DNS service to be present'
+    _x="$($_kubectl_cmd --namespace=kube-system get service --selector=k8s-app=kube-dns --output=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.spec.type}{"\t"}{.spec.clusterIP}{"\n"}{end}' 2>&1)" \
+        && Pass "${_x}" || Fail "${_x}"
+    [ $? -eq 0 ] || Fatal 'Command failed (kubectl get service)'
+    [ "$(wc -l <<<"${_x}")" -le 1 ] || Fatal 'Unexpected number of kube-dns services'
+    if [ "$(wc -l <<<"${_x}")" -eq 1 ] ; then
+      awk -F"\t" '$3=="ClusterIP"{exit 0}{exit 1}' <<<"${_x}" || Fatal 'Unexpected kube-dns service type'
+      _cluster_ip="$(awk -F"\t" '{print $4}' <<<"${_x}")"
+      break
+    fi
+    sleep "${WAIT}"
+    _count=$((_count + 1))
+  done
+  
+  # Check kubernetes.default and props.lockss.org resolve
+  # See https://rancher.com/docs/rancher/v2.x/en/troubleshooting/dns/#check-if-domain-names-are-resolving
+  # and https://stackoverflow.com/questions/69172935/why-does-the-rancher-dns-troubleshooting-tips-for-k3s-only-seem-to-work-with-bus
+  for _host in kubernetes.default props.lockss.org ; do
+    Echo "Checking DNS resolution (${_host})..."
+    _count=0
+    while true ; do
+      [ "${_count}" -lt "${RETRIES}" ] || Fatal 'Timeout waiting for DNS resolution'
+      _x="$($_kubectl_cmd run --quiet --tty --stdin --rm --restart=Never "busybox-${RANDOM}" --image=busybox:1.28 -- nslookup "${_host}" 2>&1)" \
+          && Pass "${_x}" || Fail "${_x}"
+      if [ $? = 0 ] ; then
+        awk '$1=="Server:"&&$2=="'"${_cluster_ip}"'"{exit 0}$1=="Server:"&&$2!="'"${_cluster_ip}"'"{exit 1}{exit 2}' <<<"${_x}"
+        case $? in
+          0) break ;;
+          1) Fatal 'Unexpected Cluster-IP' ;;
+          *) : ;; # Retry; seeing truncated or garbled output sometimes
+        esac
+      fi
+      sleep "${WAIT}"
+      _count=$((_count + 1))
+    done
+  done
+
+  # Success
+  Success 'Tested the K3s node'
+}
+
+#
+# Main
+#
+
+ASSUME_YES=''
+CURRENT_STEP=0
+DOWNLOADER=''
+FORCE_DNS_PROMPT=''
+K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
+K3S_VERSION="${DEFAULT_K3S_VERSION}"
+RETRIES="${DEFAULT_RETRIES}"
+SINGLE_STEP=''
+SKIP_CHECK_SYSTEM_USER=''
+SKIP_CONFIGURE_COREDNS=''
+SKIP_CONFIGURE_FIREWALLD=''
+SKIP_CONFIGURE_IPTABLES=''
+SKIP_CONFIGURE_UFW=''
+SKIP_INSTALL_K3S=''
+SKIP_TEST_K3S=''
+SUDO=''
+SUDO_LOCKSS=''
+WAIT="${DEFAULT_WAIT}"
+
+for _f in "${_MO}" "${_UTIL}" ; do
+  . "${_f}" || Fatal "A dependent script is not available: ${_f}"
+done
+
+Parse_Command_Line "$@"
+
+Set_Sudo
+Set_Downloader
+
+if [ -n "${SINGLE_STEP}" ] ; then
+  $SINGLE_STEP || Fatal "Unknown single step: ${SINGLE_STEP}"
+  exit 0
+fi
+
+while true ; do
+  case "${CURRENT_STEP}" in
+    '') Fatal "Empty step number" ;;
+    0) Check_System_User ;;
+    1) Configure_Iptables ;;
+    2) Configure_Firewalld ;;
+    3) Configure_Ufw ;;
+    4) Configure_Coredns ;;
+    5) Install_K3s ;;
+    6) Test_K3s ;;
+    7) break ;;
+    *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
+  esac
+  CURRENT_STEP=$((CURRENT_STEP + 1))
+done
+
+Success 'Successful completion of the LOCKSS installation process'

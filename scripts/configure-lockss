@@ -64,6 +64,23 @@ _D0=$(dirname "${0}")
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
 
+# $1=log filename
+# tee stdout/err to log file
+Log_Std() {
+  local file="$1"
+  # Create named pipe, delete on exit
+  local npipe=/tmp/$$.ptmp1
+  trap "rm -f $npipe" EXIT
+  # This script always runs as process 1, don't rely on unique name
+  rm -f $npipe
+  mknod $npipe p
+  tee -a "${file}" <$npipe &
+  # Redirect FD 1&2 to pipe
+  exec 1>$npipe
+  exec 2>&1
+}
+
+
 configure_databases() {
   echo ""
   echo "Configuring database services..."
@@ -330,7 +347,7 @@ EOF
 
 # build_config_file file user
 build_config_file() {
-  echo "Building config file info ${1} for user ${2}..."
+  echo "Building config file ${1} for user ${2}..."
   Clear_Secrets
   CONFIG_OK=N
   until is_yes ${CONFIG_OK}; do
@@ -506,7 +523,7 @@ build_config_file() {
     fi
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
-    repoDirs[0]="/data"
+    repoDirs[0]="/content0"
     ask_for_input "Use additional directories for content data storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
     if is_yes "${ANS}"; then
       count=1
@@ -516,7 +533,7 @@ build_config_file() {
           done=Y
         elif [ -n "${ANS}" ]; then
           curPaths[count]="$(normalize_path ${ANS})"
-          repoDirs[count]="/data$count"
+          repoDirs[count]="/content$count"
           count=$((count+1))
         fi
       done
@@ -528,7 +545,7 @@ build_config_file() {
       if test ${#prevPaths[*]} -gt 1; then
         echo "Run repo cache updater."
       fi
-      LOCKSS_REPO_CONTAINER_DIRS="/data"
+      LOCKSS_REPO_CONTAINER_DIRS="/content0"
       LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
@@ -643,6 +660,12 @@ setup_k8s_cmd() {
   write_k8s_cfg ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
 }
 
+CONFIG_LOGFILE="./lockss-configure.log"
+
+# Redirect stdout and stderr to file
+
+Log_Std "${CONFIG_LOGFILE}"
+
 ###
 # Start
 ###
@@ -680,7 +703,10 @@ Darwin)
   exit 1
   ;;
 esac
+
 LOCKSS_TIMEZONE=$(Get_Timezone)
+
+[ -z "${LOCKSS_TIMEZONE}" ] && echo "Warning, timezone not set"
 LOCAL_IPADDR=$(guess_ip_address)
 
 declare -i CONFIG_COUNT
@@ -689,15 +715,15 @@ echo "LOCKSS host configuration for ${OS_TYPE}."
 echo "For more information see README"
 
 if [ -r "${SYSTEM_CONF_FILE}" ]; then
-  msg "${_DO} Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
+  echo "Setting defaults from existing config: ${SYSTEM_CONF_FILE}"
   read_config ${SYSTEM_CONF_FILE}
 fi
 # support for alternate kubectl command
 if [ -r "${K8S_CONF_FILE}" ]; then
-  msg "${_DO} Setting defaults from existing config: ${K8S_CONF_FILE}"
+  echo "Reading Kubernetes config: ${K8S_CONF_FILE}"
   read_config ${K8S_CONF_FILE}
 fi
-echo "$(date) Checking system state..."
+echo "Checking system state..."
 
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
@@ -716,13 +742,13 @@ fi
 case "${1}" in
 '') CONFIG_COUNT=1 ;;
 [1-9]) CONFIG_COUNT="${1}" ;;
-  *) echo "$(date) Invalid number of parallel stacks: ${1}" ; exit 1 ;;
+  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
 #build config file
-echo "building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
+echo "Building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 if build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT} ; then
-    echo "$(date) Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
+    echo "Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
     exit 0
 else
   echo

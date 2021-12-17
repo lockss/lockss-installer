@@ -131,8 +131,6 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
-        - name: JVM_OPTS_ADDITIONAL
-          value: '-Dlog4j2.formatMsgNoLookups=true'
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap

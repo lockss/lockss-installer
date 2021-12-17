@@ -173,7 +173,7 @@ init_service_arrays() {
 
 # Check our secrets
 check_installed_secrets() {
-  logger_info "checking installed secrets..."
+  logger_debug "checking installed secrets..."
   Check_Secret 'lockss-postgres-pass'
   Check_Secret 'lockss-ui-pass'
   Check_Secret 'lockss-auth'
@@ -197,14 +197,16 @@ check_installed_volumes() {
 wait_for_ready() {
   local wait_for_file=$1
   logger_info "Waiting for pods to be marked 'Ready'..."
-  kubectl_lockss wait --for=condition=Ready --all pods --timeout=90s | logger_info
+  kubectl_lockss wait --for=condition=Ready --all pods --timeout=180s | logger_debug
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
-    logger_info "waiting for LOCKSS wait file..."
+    logger_info "Waiting for LOCKSS services to start..."
     while [ ! -f $wait_for_file ]
     do
       sleep 2
     done
     logger_info "LOCKSS services are now ready for use."
+  else
+    logger_info "Pods are ready, LOCKSS services are starting."
   fi
 }
 
@@ -217,7 +219,7 @@ deploy_stack() {
   set +a
   check_installed_volumes $stack
   pushd . &>/dev/null
-  logger_info "Deploying services and deployments for stack $stack"
+  logger_debug "Deploying services and deployments for stack $stack"
   for svc in "${deploy_service_names[@]}"; do
     logger_trace "Deploying service from ${svc}..."
     if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" >/dev/null ; then
@@ -279,7 +281,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Sanity checks
-logger_info "Checking system..."
+logger_debug "Checking system..."
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
@@ -293,7 +295,7 @@ if [ ${NUM_STACKS} -eq 0 ]; then
 elif [ ${NUM_STACKS} -eq 1 ]; then
   deploy_stack ""
 elif [ ${STACK_NUM} -eq 0 ]; then
-  logger_info "Deploying ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
+  logger_debug "Deploying ${NUM_STACKS} stacks found in ${DOCKER_CONFIGS_DIR}"
   deploy_stack ""
   for ((num = 1; num < $NUM_STACKS; num++)); do
     deploy_stack $num

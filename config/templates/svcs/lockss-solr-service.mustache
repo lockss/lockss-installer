@@ -101,6 +101,8 @@ spec:
       containers:
       - command: [{{SOLR_CMD}},{{SOLR_CORE_REPO}}, {{SOLR_CONFIGSET}}]
         env:
+        - name: SOLR_HOME
+          value: /var/solr
         - name: LOG4J_PROPS
           value: /opt/solr/server/resources/lockss-log4j.properties
         - name: SOLR_TIMEZONE
@@ -133,7 +135,7 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
-        - mountPath: /opt/solr/server/solr
+        - mountPath: /var/solr
           name: lockss-solr-data
         - mountPath: /opt/solr/server/logs
           name: lockss-solr-logs

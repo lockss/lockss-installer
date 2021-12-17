@@ -66,22 +66,27 @@ logger_init() {
       LOG4SH_CONFIGURATION="${SCRIPTS_DIR}/log4sh.properties"
     fi
     . ${LIB_DIR}/log4sh
-    logger_info "$(${SCRIPTS_DIR}/installer-version)"
-    echo "-------------------------------------------------------------"
+    if [ -z "${LOCKSS_LOGGER_INITED}" ]; then
+      logger_info "$(${SCRIPTS_DIR}/installer-version)"
+      export LOCKSS_LOGGER_INITED=1
+    fi
   else
     err_exit "logger_error: could not load ${LIB_DIR}/log4sh)" >&2
   fi
 }
 
+# Used by scripts that do not have a logger available
 err() {
   echo "$*" >&2
 }
 
+# Used by scripts that do not have a logger available
 err_exit() {
   echo "$*" >&2
   exit 1
 }
 
+# Used by scripts that do not have a logger available
 msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
@@ -137,6 +142,21 @@ Check_Configured() {
   Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
   Check_VarDef "KUBECTL_CMD"
 #TODO: Add container subnet change check
+}
+
+Check_Upgraded() {
+  local OLD_VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
+  local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
+
+  if ! cmp -s "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}"; then
+    [ -f "${OLD_VERSION_FILE}" ] && local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
+    [ -f "${NEW_VERSION_FILE}" ] && local NEW_VERSION="$(<"${NEW_VERSION_FILE}")"
+
+    printf -v err_msg "Please perform an upgrade first (current version: %s, required version: %s)" \
+        "${OLD_VERSION:-unknown}" "${NEW_VERSION:-unknown}"
+
+    err_exit "${err_msg}"
+  fi
 }
 
 Check_K8s_Command() {
@@ -317,8 +337,16 @@ Get_Timezone() {
 
   if [ -z "${timezone}" ]; then
     if command -v timedatectl &>/dev/null; then
-      timezone=$(timedatectl show --property=Timezone --value)
-    elif -r /etc/timezone; then
+      # Newer versions of timedatectl have 'show' command
+      timezone=$(timedatectl show --property=Timezone --value 2>/dev/null)
+      # else parse from full status output
+      if [ -z "${timezone}" ]; then
+        timezone=$(timedatectl | sed -n -r "s/.*Time zone: ([^ \t]+).*/\1/p")
+      fi
+    fi
+  fi
+  if [ -z "${timezone}" ]; then
+    if -r /etc/timezone; then
       timezone=$(cat /etc/timezone)
     elif -r /etc/localtime; then
       timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
@@ -389,7 +417,7 @@ read_config() {
 
 ask_for_input() {
   case "${1}" in
-    *\?) echo -n "${1} [${2}] "  ;;
+    *\?) echo -n "${1} [${2}] " ;;
     *)   echo -n "${1}: [${2}] " ;;
   esac
   read ANS
@@ -577,6 +605,14 @@ init_one_dir() {
     fi
     return 1
   fi
+}
+
+# Creates "reindex artifacts" signal for LOCKSS repository
+signal_reindex() {
+  local STACK=$1
+  local REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK}-repo-data/state/index
+  mkdir -p "${REPO_INDEX_STATE_DIR}"
+  touch "${REPO_INDEX_STATE_DIR}"/reindex
 }
 
 # check_writable (dir, user)
@@ -846,4 +882,25 @@ has_loopback_resolver() {
 extract_non_loopback_resolvers() {
   local file="$1"
   grep -E -i "$NAMESERVER_REGEX" "${file}" | grep -v -E -i "$LOOPBACK_REGEX" | awk '{print $2}' | xargs | tr ' ' ';'
+}
+
+#
+# Usage: compare_versions VERSION_A VERSION_B
+#
+# Where VERSION is major, minor, and revision delimited by a dot. E.g., 7.2.1
+#
+compare_versions_lte() {
+  printf '%s\n%s' "$1" "$2" | sort -C -V
+}
+
+compare_versions_lt() {
+  ! compare_versions_lte "$2" "$1"
+}
+
+#
+# Extract_K3s_Version
+# Returns a structured version string that can be compared by sort -V
+#
+Extract_K3s_Version() {
+  echo "${1}" | sed -e 's/\+k3s/./'
 }

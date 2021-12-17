@@ -231,3 +231,20 @@ EOF
   refute valid_hostname -no
   refute valid_hostname un_der
 }
+
+@test 'compare_versions_lt' {
+  refute compare_versions_lt 0.0.0 0.0.0
+  assert compare_versions_lt 0.0.0 1.1.1
+  refute compare_versions_lt 1.1.1 0.0.0
+  refute compare_versions_lt 1.1.1 1.1.1
+  assert compare_versions_lt 1.1.1 2.1.1
+  assert compare_versions_lt 1.1.1 1.2.1
+  assert compare_versions_lt 1.1.1 1.1.2
+  refute compare_versions_lt 2.1.1 1.1.1
+  refute compare_versions_lt 1.2.1 1.1.1
+  refute compare_versions_lt 1.1.2 1.1.1
+}
+
+@test 'Extract_K3s_Version' {
+  assert_equal $(Extract_K3s_Version 'v1.21.5+k3s1') v1.21.5.1
+}

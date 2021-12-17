@@ -145,8 +145,6 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
-        - name: JVM_OPTS_ADDITIONAL
-          value: '-Dlog4j2.formatMsgNoLookups=true'
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service

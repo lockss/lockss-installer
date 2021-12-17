@@ -590,12 +590,12 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: lockss-repo-data{{.}}-pv
+  name: lockss-repo-content{{.}}-pv
   labels:
     type: hostPath
     app: lockss
     lockss-stack-id: {{STACK}}
-    owner: lockss-repo-data{{.}}
+    owner: lockss-repo-content{{.}}
 spec:
   capacity:
     storage: 5Gi
@@ -605,7 +605,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: $REPO_DATA_MAP_{{.}}/{{STACK}}-repo-data
+    path: $REPO_CONTENT_MAP_{{.}}/{{STACK}}-repo-content
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -663,6 +663,34 @@ spec:
   storageClassName: local-storage
   local:
     path: {{MK_TMP_ROOT}}/{{STACK}}-repo-tmp
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-repo-data-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-repo-data
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_DATA_ROOT}}/{{STACK}}-repo-data
   nodeAffinity:
     required:
       nodeSelectorTerms:

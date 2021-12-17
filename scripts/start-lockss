@@ -122,12 +122,12 @@ while [[ $# -gt 0 ]]; do
       help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
-      logger_info "Forcing update of LOCKSS docker images"
+      logger_debug "Forcing update of LOCKSS docker images"
       shift
       ;;
     -w | --wait)
       WAIT_ARG="-w"
-      logger_info "Setting wait for file on deploy."
+      logger_debug "Setting wait for file on deploy."
       shift
       ;;
     -a | --args)
@@ -148,6 +148,7 @@ done
 # Main logic
 Check_Runnable
 Check_Configured
+Check_Upgraded
 
 if $(am_i_root); then
   error_exit "This script should not be run as root. Run as the lockss user."
