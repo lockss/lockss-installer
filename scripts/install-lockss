@@ -564,7 +564,7 @@ Install_K3s()
     else
       if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
         Warning "Detected K3s version ${_kver} is older than expected version ${K3S_VERSION}"
-        local _q='Upgrade K3s?'
+        local _q="Upgrade K3s from ${_kver} to ${K3S_VERSION}?"
         if [ "${ASSUME_YES}" = 'true' ] ; then
           echo "${_q}"
           ANS=Y
@@ -582,9 +582,15 @@ Install_K3s()
         Warning "Detected K3s version ${_kver}, expected version ${K3S_VERSION}, comparison failure, skipping"
       fi
     fi
+  else
+    Echo 'K3s is not present'
   fi
-  if [ -z "${kverok}" ]; then
+  if [ -n "${kverok}" ]; then
+    # Not installing K3s
+    Echo 'Not installing K3s'
+  else
     # Install K3s
+    Echo "Installing K3s version ${K3S_VERSION}"
     local _q='K3s state data directory'
     echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but"
     echo "if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
@@ -620,7 +626,7 @@ Install_K3s()
         ${_resolv_conf_args} \
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
-    fi
+  fi
 
   # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
