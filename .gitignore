@@ -19,3 +19,4 @@
 /scripts/script_tester.sh
 /config/*.bak
 config/keys
+lockss-configure.log

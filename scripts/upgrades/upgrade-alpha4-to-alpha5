@@ -155,10 +155,6 @@ retire_solr_index() {
   fi
 }
 
-copy_lockss_version() {
-  cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
-}
-
 ###
 ## MAIN
 ###
@@ -201,7 +197,7 @@ logger_info "Renamed Repository content directories"
 retire_solr_index
 logger_info "Decommissioned existing Solr home directory"
 
-copy_lockss_version
+Copy_Lockss_Version
 logger_info "Installed LOCKSS version file"
 
 logger_info "Update completed"
