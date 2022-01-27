@@ -561,6 +561,7 @@ assemble_lockss() {
 	else
 		error_exit "Unable to find generated stack ${STACK_NUM}"
 	fi
+        Copy_Lockss_Version
 	logger_debug "Successfully installed components."
 
 }

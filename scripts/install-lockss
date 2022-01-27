@@ -592,8 +592,9 @@ Install_K3s()
     # Install K3s
     Echo "Installing K3s version ${K3S_VERSION}"
     local _q='K3s state data directory'
-    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default, but"
-    echo "if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default.  If"
+    echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory,"
+    echo "but it must not be on an NFS-mounted filesystem."
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"
