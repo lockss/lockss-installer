@@ -649,6 +649,79 @@ MyEOF
 }
 
 #
+# Harden_K3s
+#
+Harden_K3s()
+{
+  # Begin step
+  Begin_Phase 'Hardening K3s'
+
+  # Read KUBECTL_CMD from k8s.cfg
+  local _k8s_file="${CONFIG_DIR}/k8s.cfg"
+  local _kubectl_cmd=''
+  _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${KUBECTL_CMD}\"")" || Fatal 'Error reading KUBECTL_CMD'
+
+  # Generate new client certificate and key for LOCKSS
+  Check_Command 'openssl'
+
+  local NAMESPACE="lockss"
+  local APISERVER_USER="lockss"
+
+  openssl genrsa -out ${APISERVER_USER}.key 4096 || Fatal 'Command failed (openssl genrsa)'
+  openssl req -new -key ${APISERVER_USER}.key -out ${APISERVER_USER}.csr || Fatal 'Command failed (openssl req)'
+
+  local CSR_DATA="`base64 -w0 ${APISERVER_USER}.csr`"
+
+  local _src="${CONFIG_DIR}/templates/k3s/authenticated-user-csr.mustache"
+  local _dst="${CONFIG_DIR}/${APISERVER_USER}.kubecsr"
+  mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
+
+  $_kubectl_cmd apply -f "${_dst}" || Fatal 'Command failed (kubectl apply)'
+  $_kubectl_cmd certificate approve ${APISERVER_USER}-csr || Fatal 'Command failed (kubectl certificate approve)'
+
+  # Generate and install kubeconfig
+  local CLIENT_CERT_DATA="`$_kubectl_cmd get csr ${APISERVER_USER}-csr -o jsonpath='{.status.certificate}'`"
+  local CLIENT_KEY_DATA="`base64 -w0 ${APISERVER_USER}.key`"
+  local APISERVER_URL="`$_kubectl_cmd config view --raw -o jsonpath='{.clusters[0].cluster.server}'`"
+  local APISERVER_CA_DATA="`$_kubectl_cmd config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}'`"
+
+  local _src="${CONFIG_DIR}/templates/k3s/kubeconfig.mustache"
+  local _dst="/home/${LOCKSS_USER}/.kube/config"
+  mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
+
+  # Install Roles and ClusterRoles
+  $_kubectl_cmd apply -f "${CONFIG_DIR}/templates/k3s/node-view-clusterrole.yaml"
+  $_kubectl_cmd apply -f "${CONFIG_DIR}/templates/k3s/pv-admin-clusterrole.yaml"
+
+  # Install RoleBindings and ClusterRoleBindings
+  local _src="${CONFIG_DIR}/templates/k3s/node-view-binding.mustache"
+  mo "${_src}" | $_kubectl_cmd apply -f - || Fatal "Command failed (kubectl apply)"
+
+  local _src="${CONFIG_DIR}/templates/k3s/pv-admin-binding.mustache"
+  mo "${_src}" | $_kubectl_cmd apply -f - || Fatal "Command failed (kubectl apply)"
+
+  local _src="${CONFIG_DIR}/templates/k3s/lockss-edit-binding.mustache"
+  mo "${_src}" | $_kubectl_cmd apply -f - || Fatal "Command failed (kubectl apply)"
+
+  # Install PodSecurityPolicies (PSPs)
+  $_kubectl_cmd apply -f "${CONFIG_DIR}/templates/k3s/restricted-psp.yaml"
+  $_kubectl_cmd apply -f "${CONFIG_DIR}/templates/k3s/restricted-psp-clusterrole.yaml"
+  $_kubectl_cmd apply -f "${CONFIG_DIR}/templates/k3s/restricted-psp-binding.yaml"
+
+  # Disable default ServiceAccounts in LOCKSS namespace
+  $_kubectl_cmd patch serviceaccount default -n "${NAMESPACE}" -p "automountServiceAccountToken: false"
+
+  # Configure k3s server and agent startup arguments
+  cp "${CONFIG_DIR}/k3s/config.yaml" /etc/rancher/k3s/config.yaml
+
+  # Sandbox K3s systemd service unit
+  # TODO
+
+  # Success
+  Success 'Hardened K3s'
+}
+
+#
 # Is_Ufw_Active
 #
 Is_Ufw_Active()
@@ -1044,8 +1117,9 @@ while true ; do
     3) Configure_Ufw ;;
     4) Configure_Coredns ;;
     5) Install_K3s ;;
-    6) Test_K3s ;;
-    7) break ;;
+    6) Harden_K3s ;;
+    7) Test_K3s ;;
+    8) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$((CURRENT_STEP + 1))
