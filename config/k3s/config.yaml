@@ -1,0 +1,27 @@
+# K3s Server Configuration file
+# See https://rancher.com/docs/k3s/latest/en/installation/install-options/#configuration-file
+# and https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/
+
+kube-apiserver-arg:
+  - "encryption-provider-config=/etc/rancher/k3s/encryption.yaml"
+  - "tls-min-version=VersionTLS12"
+  - "tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384"
+  - "enable-admission-plugins=AlwaysPullImages,DefaultStorageClass,DefaultTolerationSeconds,LimitRanger,MutatingAdmissionWebhook,NamespaceLifecycle,NodeRestriction,PersistentVolumeClaimResize,PodSecurityPolicy,Priority,ResourceQuota,ServiceAccount,TaintNodesByCondition,ValidatingAdmissionWebhook"
+  - "audit-log-maxage=30"
+  - "audit-log-maxbackup=30"
+  - "audit-log-maxsize=30"
+  - "audit-log-path=/var/lib/rancher/audit/audit.log"
+  - "service-account-lookup=true"
+  - "anonymous-auth=false"
+  - "request-timeout=300s"
+
+node-taint: "CriticalAddonsOnly=true:NoExecute"
+
+kubelet-arg:
+  - "tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384"
+  - "anonymous-auth=false"
+  - "streaming-connection-idle-timeout=5m"
+
+kube-controller-manager-arg:
+  - "use-service-account-credentials=true"
+  - "terminated-pod-gc-threshold=10"
