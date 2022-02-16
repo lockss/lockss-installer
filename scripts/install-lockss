@@ -661,9 +661,6 @@ Harden_K3s()
   local _kubectl_cmd=''
   _kubectl_cmd="$($SUDO_LOCKSS /bin/sh -c ". \"${_k8s_file}\" && echo \"\${KUBECTL_CMD}\"")" || Fatal 'Error reading KUBECTL_CMD'
 
-  # Generate new client certificate and key for LOCKSS
-  Check_Command 'openssl'
-
   local NAMESPACE="lockss"
   local APISERVER_USER="lockss"
   local APISERVER_GROUP="lockss"
@@ -671,6 +668,8 @@ Harden_K3s()
   # Create LOCKSS namespace
   $_kubectl_cmd create namespace lockss || Fatal 'Could not create "lockss" namespace'
 
+  # Generate new client certificate and key for LOCKSS
+  Check_Command 'openssl'
   openssl genrsa -out ${APISERVER_USER}.key 4096 || Fatal 'Command failed (openssl genrsa)'
   openssl req -new -key ${APISERVER_USER}.key -out ${APISERVER_USER}.csr -subj "/CN=${APISERVER_USER}/O=${APISERVER_GROUP}" \
     || Fatal 'Command failed (openssl req)'
