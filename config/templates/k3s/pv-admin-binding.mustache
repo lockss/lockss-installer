@@ -32,7 +32,7 @@ kind: ClusterRoleBinding
 metadata:
   name: pv-admin-binding
 subjects:
-  - kind: User
+- kind: User
   name: {{APISERVER_USER}}
   apiGroup: rbac.authorization.k8s.io
 roleRef:
