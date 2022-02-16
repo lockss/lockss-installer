@@ -2,8 +2,9 @@
 # See https://rancher.com/docs/k3s/latest/en/installation/install-options/#configuration-file
 # and https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/
 
+secrets-encryption: true
 kube-apiserver-arg:
-  - "encryption-provider-config=/etc/rancher/k3s/encryption.yaml"
+#  - "encryption-provider-config=/etc/rancher/k3s/encryption.yaml"
   - "tls-min-version=VersionTLS12"
   - "tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384"
   - "enable-admission-plugins=AlwaysPullImages,DefaultStorageClass,DefaultTolerationSeconds,LimitRanger,MutatingAdmissionWebhook,NamespaceLifecycle,NodeRestriction,PersistentVolumeClaimResize,PodSecurityPolicy,Priority,ResourceQuota,ServiceAccount,TaintNodesByCondition,ValidatingAdmissionWebhook"
