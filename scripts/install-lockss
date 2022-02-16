@@ -719,7 +719,22 @@ Harden_K3s()
   cp "${CONFIG_DIR}/k3s/config.yaml" /etc/rancher/k3s/config.yaml
 
   # Sandbox K3s systemd service unit
-  # TODO
+  cat <<MyEOF2 | $SUDO tee -a /etc/systemd/system/k3s.service
+AssertSecurity=selinux
+ConditionSecurity=selinux
+LockPersonality=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+#ProtectKernelTunables=yes
+ProtectSystem=full
+ReadWriteDirectories=/var/lib/ /var/run /run /var/log/ /lib/modules /etc/rancher/
+MyEOF2
+
+  # Restart K3s server and agent
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl restart k3s
 
   # Success
   Success 'Hardened K3s'
