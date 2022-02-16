@@ -666,9 +666,14 @@ Harden_K3s()
 
   local NAMESPACE="lockss"
   local APISERVER_USER="lockss"
+  local APISERVER_GROUP="lockss"
+
+  # Create LOCKSS namespace
+  $_kubectl_cmd create namespace lockss || Fatal 'Could not create "lockss" namespace'
 
   openssl genrsa -out ${APISERVER_USER}.key 4096 || Fatal 'Command failed (openssl genrsa)'
-  openssl req -new -key ${APISERVER_USER}.key -out ${APISERVER_USER}.csr || Fatal 'Command failed (openssl req)'
+  openssl req -new -key ${APISERVER_USER}.key -out ${APISERVER_USER}.csr -subj "/CN=${APISERVER_USER}/O=${APISERVER_GROUP}" \
+    || Fatal 'Command failed (openssl req)'
 
   local CSR_DATA="`base64 -w0 ${APISERVER_USER}.csr`"
 
