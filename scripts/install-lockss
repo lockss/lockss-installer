@@ -716,7 +716,7 @@ Harden_K3s()
   $_kubectl_cmd patch serviceaccount default -n "${NAMESPACE}" -p "automountServiceAccountToken: false"
 
   # Configure k3s server and agent startup arguments
-  cp "${CONFIG_DIR}/k3s/config.yaml" /etc/rancher/k3s/config.yaml
+  $SUDO cp "${CONFIG_DIR}/k3s/config.yaml" /etc/rancher/k3s/config.yaml
 
   # Sandbox K3s systemd service unit
   cat <<MyEOF2 | $SUDO tee -a /etc/systemd/system/k3s.service
