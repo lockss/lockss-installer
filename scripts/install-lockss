@@ -643,7 +643,7 @@ MyEOF
     echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \
         || Fatal 'Could not append to k8s.cfg'
   fi
-      
+
   # Success
   Success 'Installed K3s'
 }
@@ -1136,8 +1136,8 @@ while true ; do
     3) Configure_Ufw ;;
     4) Configure_Coredns ;;
     5) Install_K3s ;;
-    6) Harden_K3s ;;
-    7) Test_K3s ;;
+    6) Test_K3s ;;
+    7) Harden_K3s ;;
     8) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
