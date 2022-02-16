@@ -715,6 +715,10 @@ Harden_K3s()
   # Disable default ServiceAccounts in LOCKSS namespace
   $_kubectl_cmd patch serviceaccount default -n "${NAMESPACE}" -p "automountServiceAccountToken: false"
 
+  # Move system-wide kubeconfig for use by root only
+  $SUDO mkdir -p /root/.kube
+  $SUDO mv /etc/rancher/k3s/k3s.yaml /root/.kube/config
+
   # Configure k3s server and agent startup arguments
   $SUDO cp "${CONFIG_DIR}/k3s/config.yaml" /etc/rancher/k3s/config.yaml
 
