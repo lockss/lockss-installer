@@ -25,8 +25,9 @@ spec:
   hostPorts:
     - min: 1
       max: 65535
-  runAsUser:
-    rule: 'MustRunAsNonRoot'       # CIS - 5.2.6
+# TODO: Doesn't work with official PostgreSQL container image - disabled for now
+#  runAsUser:
+#    rule: 'MustRunAsNonRoot'       # CIS - 5.2.6
   seLinux:
     rule: 'RunAsAny'
   supplementalGroups:
