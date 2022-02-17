@@ -681,7 +681,7 @@ Harden_K3s()
   Check_Command 'base64'
   local CSR_DATA="`base64 -w0 ${TMPDIR}/${APISERVER_USER}.csr`"
 
-  local _src="${TMPDIR}/templates/k3s/authenticated-user-csr.mustache"
+  local _src="${CONFIG_DIR}/templates/k3s/authenticated-user-csr.mustache"
   local _dst="${TMPDIR}/${APISERVER_USER}.kubecsr"
   mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
 
