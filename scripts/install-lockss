@@ -736,14 +736,15 @@ Harden_K3s()
 
   # Sandbox K3s systemd service unit
   cat <<MyEOF2 | $SUDO tee -a /etc/systemd/system/k3s.service
-# TODO: Only enable SELinux support if SELinux is available
+# TODO: Only enable SELinux support if SELinux is available:
 #AssertSecurity=selinux
 #ConditionSecurity=selinux
 LockPersonality=yes
 PrivateTmp=yes
 ProtectHome=yes
 ProtectHostname=yes
-ProtectKernelLogs=yes
+# TODO: Doesn't work with Ubuntu 20.04 LTS:
+#ProtectKernelLogs=yes
 #ProtectKernelTunables=yes
 ProtectSystem=full
 ReadWriteDirectories=/var/lib/ /var/run /run /var/log/ /lib/modules /etc/rancher/
