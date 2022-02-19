@@ -148,8 +148,9 @@ Check_Upgraded() {
   local OLD_VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
   local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
 
+  [ ! -f "${OLD_VERSION_FILE}" ] && return 0
   if ! cmp -s "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}"; then
-    [ -f "${OLD_VERSION_FILE}" ] && local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
+    local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
     [ -f "${NEW_VERSION_FILE}" ] && local NEW_VERSION="$(<"${NEW_VERSION_FILE}")"
 
     printf -v err_msg "Please perform an upgrade first (current version: %s, required version: %s)" \
@@ -157,6 +158,10 @@ Check_Upgraded() {
 
     err_exit "${err_msg}"
   fi
+}
+
+Copy_Lockss_Version() {
+  cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
 }
 
 Check_K8s_Command() {
