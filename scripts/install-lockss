@@ -736,8 +736,9 @@ Harden_K3s()
 
   # Sandbox K3s systemd service unit
   cat <<MyEOF2 | $SUDO tee -a /etc/systemd/system/k3s.service
-AssertSecurity=selinux
-ConditionSecurity=selinux
+# TODO: Only enable SELinux support if SELinux is available
+#AssertSecurity=selinux
+#ConditionSecurity=selinux
 LockPersonality=yes
 PrivateTmp=yes
 ProtectHome=yes
