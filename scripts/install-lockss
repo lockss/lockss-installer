@@ -743,8 +743,8 @@ Harden_K3s()
 LockPersonality=yes
 PrivateTmp=yes
 ProtectHome=yes
-ProtectHostname=yes
 # TODO: Doesn't work with Ubuntu 20.04 LTS:
+#ProtectHostname=yes
 #ProtectKernelLogs=yes
 #ProtectKernelTunables=yes
 ProtectSystem=full
