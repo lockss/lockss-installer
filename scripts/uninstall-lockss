@@ -60,7 +60,7 @@ clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
 
-error_exit() {
+logger_error_exit() {
   logger_error "${1:-"Unknown Error"}"
   clean_up
   exit 1
@@ -74,14 +74,14 @@ graceful_exit() {
 signal_exit() { # Handle trapped signals
   case $1 in
   INT)
-    error_exit "Program interrupted by user"
+    logger_error_exit "Program interrupted by user"
     ;;
   TERM)
     logger_error "Program terminated"
     graceful_exit
     ;;
   *)
-    error_exit "Terminating on unknown signal"
+    logger_error_exit "Terminating on unknown signal"
     ;;
   esac
 }
@@ -122,7 +122,7 @@ while [[ -n $1 ]]; do
       help_message; graceful_exit ;;
     -* | --*)
       usage
-      error_exit "Unknown option $1" ;;
+      logger_error_exit "Unknown option $1" ;;
     *)
       logger_debug "Argument $1 to process..." ;;
   esac
