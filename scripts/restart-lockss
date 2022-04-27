@@ -59,7 +59,7 @@ clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
 
-error_exit() {
+logger_error_exit() {
   logger_fatal "${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
@@ -73,12 +73,12 @@ graceful_exit() {
 signal_exit() { # Handle trapped signals
 	case $1 in
 		INT)
-			error_exit "Program interrupted by user" ;;
+			logger_error_exit "Program interrupted by user" ;;
 		TERM)
 			echo -e "\n$PROGNAME: Program terminated" >&2
 			graceful_exit ;;
 		*)
-			error_exit "$PROGNAME: Terminating on unknown signal" ;;
+			logger_error_exit "$PROGNAME: Terminating on unknown signal" ;;
 	esac
 }
 
@@ -136,7 +136,7 @@ while [[ $# -gt 0 ]]; do
     ;;
     -*)
       usage
-      error_exit "Unknown option $1" ;;
+      logger_error_exit "Unknown option $1" ;;
     *)
       logger_debug "Argument $1 to process..."
       shift
@@ -150,12 +150,12 @@ Check_Configured
 Check_Upgraded
 
 if $(am_i_root); then
-  error_exit "This script should not be run as root. Run as the lockss user."
+  logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-"${SCRIPTS_DIR}"/stop-lockss || error_exit "An error occured while stopping running stack."
-"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || error_exit "Stack reassembly failed."
-"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || error_exit "Attempt to redeploy stack failed"
+"${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "An error occured while stopping running stack."
+"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || logger_error_exit "Stack reassembly failed."
+"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || logger_error_exit "Attempt to redeploy stack failed"
 
 graceful_exit
 
