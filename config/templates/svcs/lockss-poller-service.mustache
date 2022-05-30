@@ -29,6 +29,12 @@ spec:
   - name: "icp-port"
     port: {{LOCKSS_ICP_PORT}}
     targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
+{{#additional_ports POL}}
+  - name: "__PORT_NAME__"
+    port: __CONTAINER_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
   selector:
     io.kompose.service: lockss-poller-service
   type: ClusterIP
@@ -123,6 +129,8 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{POL_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_IS_POLLER
           value: "true"
         - name: LOCKSS_ADMIN_USER
@@ -177,6 +185,13 @@ spec:
           containerPort: {{LOCKSS_DEFAULT_ICP_PORT}}
           hostPort: {{LOCKSS_ICP_PORT}}
           protocol: UDP
+{{#additional_ports POL}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
         resources: {}
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap

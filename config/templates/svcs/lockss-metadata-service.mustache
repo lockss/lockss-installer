@@ -14,6 +14,12 @@ spec:
   - name: "mdq-service-ui-port"
     port: {{MDQ_UI_PORT}}
     targetPort: {{MDQ_DEFAULT_UI_PORT}}
+{{#additional_ports MDQ}}
+  - name: "__PORT_NAME__"
+    port: __CONTAINER_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
   selector:
     io.kompose.service: lockss-metadata-service
   type: ClusterIP
@@ -105,6 +111,8 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{MDQ_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
@@ -162,6 +170,13 @@ spec:
           containerPort: {{MDQ_DEFAULT_UI_PORT}}
           hostPort: {{MDQ_UI_PORT}}
           protocol: TCP
+{{#additional_ports MDQ}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
