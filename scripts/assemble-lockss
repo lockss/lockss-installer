@@ -212,6 +212,22 @@ init_service_arrays() {
   fi
 }
 
+# Expand {{#additional_ports svc}} ... {{/additional_ports}} sections.
+# For each service in svcs, if the variable SVC_PORTS_ADDITIONAL is a
+# semicolon-separated list of strings of the form
+# port-mapping-name:container-port:host-port , the contants of the
+# {{#additional_ports xxx}} section will be expanded, with
+# __PORT_NAME__, __CONTAINER_PORT__, and __HOST_PORT__ replaced by
+# port-mapping-name, container-port, and host-port.
+additional_ports() {
+  portsvar="${1^^}_PORTS_ADDITIONAL"
+  IFS=';' read -r -a ports <<< "${!portsvar}"
+  local content=$(cat)
+  for port in "${ports[@]}"; do
+    IFS=':' read portname container_port host_port <<< "$port"
+    echo "$content" | sed "s/__PORT_NAME__/${portname}/; s/__CONTAINER_PORT__/${container_port}/; s/__HOST_PORT__/${host_port}/; "
+  done
+}
 
 ensure_writable_dir() {
   local DIR="$1"
@@ -510,7 +526,7 @@ generate_lockss() {
       src="${f}"
       dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
       logger_debug "Rendering ${src} to ${dst}..."
-      mo "${src}" >"${dst}"
+      mo --allow-function-arguments "${src}" >"${dst}"
     done
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"

@@ -14,6 +14,12 @@ spec:
   - name: "mdx-service-ui-port"
     port: {{MDX_UI_PORT}}
     targetPort: {{MDX_DEFAULT_UI_PORT}}
+{{#additional_ports MDX}}
+  - name: "__PORT_NAME__"
+    port: __CONTAINER_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
   selector:
     io.kompose.service: lockss-metadata-extraction-service
   type: ClusterIP
@@ -106,6 +112,8 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{MDX_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
@@ -138,6 +146,13 @@ spec:
           containerPort: {{MDX_DEFAULT_UI_PORT}}
           hostPort: {{MDX_UI_PORT}}
           protocol: TCP
+{{#additional_ports MDX}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
         resources: {}
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
