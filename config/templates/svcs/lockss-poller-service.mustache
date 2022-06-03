@@ -31,7 +31,7 @@ spec:
     targetPort: {{LOCKSS_DEFAULT_ICP_PORT}}
 {{#additional_ports POL}}
   - name: "__PORT_NAME__"
-    port: __CONTAINER_PORT__
+    port: __HOST_PORT__
     targetPort: __CONTAINER_PORT__
 {{/additional_ports}}
 
