@@ -16,7 +16,7 @@ spec:
     targetPort: {{MDQ_DEFAULT_UI_PORT}}
 {{#additional_ports MDQ}}
   - name: "__PORT_NAME__"
-    port: __CONTAINER_PORT__
+    port: __HOST_PORT__
     targetPort: __CONTAINER_PORT__
 {{/additional_ports}}
 
