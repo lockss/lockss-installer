@@ -189,15 +189,15 @@ Check_Prerequisites()
           if ! grep -q 'user_namespace.enable=1' /proc/cmdline ; then
             Fatal 'User namespaces must be enabled on the boot command line; see manual'
           fi
-          echo 'RHEL7-like with user namespaces enabled: OK'
+          echo 'OK: RHEL7-like with user namespaces enabled'
           ;;
         *)
-          echo 'RHEL-like but not RHEL7-like: OK'
+          echo 'OK: RHEL-like but not RHEL7-like'
           ;;
       esac
       ;;
     *)
-      echo 'Not RHEL-like: OK'
+      echo 'OK: not RHEL-like'
       ;;
   esac
 
@@ -205,11 +205,12 @@ Check_Prerequisites()
   # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L321-L336
   Echo 'Checking apparmor_parser...'
   if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = 'Y' ] ; then
-    if command -v apparmor_parser > /dev/null ; then
-      echo 'apparmor enabled and tools installed'
-    else
+    if ! command -v apparmor_parser > /dev/null ; then
       Fatal 'apparmor enabled but apparmor_parser missing; see manual'
     fi
+    echo 'OK: apparmor enabled and tools installed'
+  else
+    echo 'OK: apparmor not enabled'
   fi
   
   # Success
