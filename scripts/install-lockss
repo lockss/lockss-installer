@@ -181,7 +181,7 @@ Check_Prerequisites()
     '')
       Warning 'Could not infer ID from /etc/os-release'
       ;;
-    centos|rhel|ol)
+    centos|rhel)
       case "$(test -f /etc/os-release && source /etc/os-release && echo "${VERSION_ID}")" in
         '')
           Warning 'Could not infer VERSION_ID from /etc/os-release'
