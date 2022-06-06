@@ -200,6 +200,17 @@ Check_Prerequisites()
       echo 'Not RHEL-like: OK'
       ;;
   esac
+
+  # apparmor_parser
+  # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L321-L336
+  Echo 'Checking apparmor_parser...'
+  if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = 'Y' ] ; then
+    if command -v apparmor_parser > /dev/null ; then
+      echo 'apparmor enabled and tools installed'
+    else
+      Fatal 'apparmor enabled but apparmor_parser missing; see manual'
+    fi
+  fi
   
   # Success
   Success 'All K3s prerequisites checked'
