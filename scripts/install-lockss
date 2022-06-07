@@ -187,7 +187,7 @@ Check_Prerequisites()
           ;;
         7*)
           if ! grep -q 'user_namespace.enable=1' /proc/cmdline ; then
-            Fatal 'User namespaces must be enabled on the boot command line; see manual'
+            Fatal 'User namespaces must be enabled in RHEL/CentOS 7; see manual'
           fi
           echo 'OK: RHEL7-like with user namespaces enabled'
           ;;
@@ -214,7 +214,7 @@ Check_Prerequisites()
   fi
   
   # Success
-  Success 'All K3s prerequisites checked'
+  Success 'K3s prerequisites checked'
 }
 
 #
