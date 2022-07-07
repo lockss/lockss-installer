@@ -71,7 +71,7 @@ clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
 
-error_exit() {
+logger_error_exit() {
   logger_fatal "${1:-"Unknown Error"}" >&2
   clean_up
   exit 1
@@ -92,7 +92,7 @@ signal_exit() { # Handle trapped signals
     graceful_exit
     ;;
   *)
-    error_exit "Terminating on unknown signal"
+    logger_error_exit "Terminating on unknown signal"
     ;;
   esac
 }
@@ -225,7 +225,7 @@ deploy_stack() {
     if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" >/dev/null ; then
       popd &>/dev/null
       logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
-      error_exit "Fix the error then run scripts/restart-lockss."
+      logger_error_exit "Fix the error then run scripts/restart-lockss."
     fi
 #    kubectl_cmd expose deployment $svc
   done
@@ -271,7 +271,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -* | --*)
     usage
-    error_exit "Unknown option $1"
+    logger_error_exit "Unknown option $1"
     ;;
   *)
     logger_trace "Argument $1 to process..."
@@ -284,14 +284,14 @@ done
 logger_debug "Checking system..."
 
 if $(am_i_root); then
-  error_exit "This script should not be run as root. Run as the lockss user."
+  logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 Check_Runnable
 
 init_service_arrays
 
 if [ ${NUM_STACKS} -eq 0 ]; then
-  error_exit "Unable to find generated stack info, run configure, generate and install first."
+  logger_error_exit "Unable to find generated stack info, run configure, generate and install first."
 elif [ ${NUM_STACKS} -eq 1 ]; then
   deploy_stack ""
 elif [ ${STACK_NUM} -eq 0 ]; then
@@ -303,7 +303,7 @@ elif [ ${STACK_NUM} -eq 0 ]; then
 elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
   deploy_stack ${STACK_NUM}
 else
-  error_exit "Unable to find generated stack info for ${STACK_NUM}"
+  logger_error_exit "Unable to find generated stack info for ${STACK_NUM}"
 fi
 
 graceful_exit

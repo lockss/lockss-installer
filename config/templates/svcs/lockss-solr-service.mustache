@@ -104,7 +104,7 @@ spec:
         - name: SOLR_HOME
           value: /var/solr
         - name: LOG4J_PROPS
-          value: /opt/solr/server/resources/lockss-log4j.properties
+          value: /opt/solr/server/resources/lockss-solr-log4j2.xml
         - name: SOLR_TIMEZONE
           value: {{LOCKSS_TIMEZONE}}
         - name: SOLR_LOG_PRESTART_ROTATION
@@ -119,6 +119,8 @@ spec:
           value: '{{LOCKSS_GID}}'
         - name: SOLR_OPTS
           value: '-Dlog4j2.formatMsgNoLookups=true'
+        - name: SOLR_HEAP
+          value: '2g'
         image: {{SOLR_IMG}}:{{SOLR_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-solr-service
@@ -129,15 +131,15 @@ spec:
           protocol: TCP
         resources: {}
         volumeMounts:
-        - mountPath: /opt/solr/server/resources/lockss-log4j.properties
-          subPath: lockss-log4j.properties
-          name: lockss-solr-log4j-properties
+        - mountPath: /opt/solr/server/resources/lockss-solr-log4j2.xml
+          subPath: lockss-solr-log4j2.xml
+          name: lockss-solr-log4j2-xml
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
         - mountPath: /var/solr
           name: lockss-solr-data
-        - mountPath: /opt/solr/server/logs
+        - mountPath: /var/solr/logs
           name: lockss-solr-logs
         - mountPath: /tmp
           name: lockss-solr-tmp
@@ -149,10 +151,10 @@ spec:
       volumes:
       - configMap:
           items:
-          - key: lockss-solr-log4j-properties
-            path: lockss-log4j.properties
-          name: lockss-solr-log4j-properties
-        name: lockss-solr-log4j-properties
+          - key: lockss-solr-log4j2-xml
+            path: lockss-solr-log4j2.xml
+          name: lockss-solr-log4j2-xml
+        name: lockss-solr-log4j2-xml
       - name: lockss-auth
         secret:
           secretName: lockss-auth

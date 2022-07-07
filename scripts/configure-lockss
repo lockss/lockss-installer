@@ -657,7 +657,7 @@ setup_k8s_cmd() {
   echo "Kubectl command alias set to $KUBECTL_CMD"
   KUBECTL="${KUBECTL_CMD}"
   K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
-  write_k8s_cfg ${K8S_CONF_FILE}|| error_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  write_k8s_cfg ${K8S_CONF_FILE}|| err_exit "Attempt to write ${K8S_CONF_FILE} failed."
 }
 
 CONFIG_LOGFILE="./lockss-configure.log"
@@ -672,7 +672,7 @@ Log_Std "${CONFIG_LOGFILE}"
 CONFIG_USER=$(whoami)
 
 if $(am_i_root); then
-  error_exit "This script should not be run as root. Run as the lockss user."
+  err_exit "This script should not be run as root. Run as the lockss user."
 fi
 
 OS_TYPE=$(uname -s)
