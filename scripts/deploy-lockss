@@ -140,6 +140,11 @@ init_service_arrays() {
     deploy_service_names+=("lockss-poller-service")
     svc_port_map["lockss-poller-service"]="$POL_UI_PORT:$POL_DEFAULT_UI_PORT $POL_REST_PORT:$POL_DEFAULT_REST_PORT"
   fi
+  if ${USE_LOCKSS_SOAP}; then
+    svcs+=("soap")
+    deploy_service_names+=("lockss-soap-service")
+    svc_port_map["lockss-soap-service"]="$SOAP_WS_PORT:$SOAP_DEFAULT_WS_PORT"
+  fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     deploy_service_names+=("lockss-repository-service")

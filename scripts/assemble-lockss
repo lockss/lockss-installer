@@ -188,6 +188,12 @@ init_service_arrays() {
     lockss_owned+=("pol")
     export HAS_POL=${USE_LOCKSS_POL}
   fi
+  if ${USE_LOCKSS_SOAP}; then
+    svcs+=("soap")
+    svcs_confs+=("soap")
+    lockss_owned+=("soap")
+    export HAS_SOAP=${USE_LOCKSS_SOAP}
+  fi
   if ${USE_LOCKSS_REPO}; then
     svcs+=("repo")
     svcs_confs+=("repo")

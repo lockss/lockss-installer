@@ -217,6 +217,18 @@ configure_services() {
   else
     USE_LOCKSS_MDX=false
   fi
+
+  # Check SOAP service
+  if [ "X${USE_LOCKSS_SOAP}" = X ]; then
+    USE_LOCKSS_SOAP=false
+  fi
+  ask_for_input "Use LOCKSS SOAP Service?" $(to_yes_no ${USE_LOCKSS_SOAP})
+  if is_yes "${ANS}"; then
+    USE_LOCKSS_SOAP=true
+  else
+    USE_LOCKSS_SOAP=false
+  fi
+
   #check repository service
   USE_LOCKSS_REPO=true
 
@@ -318,6 +330,7 @@ USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
+USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP:-false}"
 USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
 USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
 USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
