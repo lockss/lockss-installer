@@ -337,6 +337,90 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
+  name: lockss-soap-data-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-soap-data
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_DATA_ROOT}}/{{STACK}}-soap-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-soap-logs-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-soap-logs
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-soap-logs
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-soap-tmp-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-soap-tmp
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_TMP_ROOT}}/{{STACK}}-soap-tmp
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
   name: lockss-postgres-data-pv
   labels:
     type: hostPath

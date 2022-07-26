@@ -1,0 +1,227 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-soap-service
+  name: lockss-soap-service
+spec:
+  ports:
+  - name: "soap-service-ws-port"
+    port: {{SOAP_WS_PORT}}
+    targetPort: {{SOAP_DEFAULT_WS_PORT}}
+{{#additional_ports SOAP}}
+  - name: "__PORT_NAME__"
+    port: __HOST_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
+  selector:
+    io.kompose.service: lockss-soap-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-soap-service
+  name: lockss-soap-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-soap-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-soap-service
+  name: lockss-soap-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-soap-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-soap-service
+  name: lockss-soap-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-soap-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-soap-service
+  name: lockss-soap-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-soap-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-soap-service
+    spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{SOAP_JVM_OPTS_ADDITIONAL}}"
+        - name: LOCKSS_IS_SOAP
+          value: "true"
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_WAIT_FOR_200
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}}"
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}}"
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
+        - name: LOCKSS_UID
+          value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
+        - name: LOCKSS_GID
+          value: '{{LOCKSS_GID}}'
+        image: {{SOAP_IMG}}:{{SOAP_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-soap-service
+        ports:
+        - name: "soap-ws-port"
+          containerPort: {{SOAP_DEFAULT_WS_PORT}}
+          hostPort: {{SOAP_WS_PORT}}
+          protocol: TCP
+{{#additional_ports SOAP}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/configs/lockss.properties
+          name: soap-properties
+          subPath: lockss.properties
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: soap-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: soap-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss_ui_pass
+          name: lockss-ui-pass
+          subPath: lockss_ui_pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /data
+          name: lockss-soap-data
+        - mountPath: /var/log/lockss
+          name: lockss-soap-logs
+        - mountPath: /tmp/lockss
+          name: lockss-soap-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
+      volumes:
+      - configMap:
+          items:
+          - key: soap-properties
+            path: lockss.properties
+          name: soap-properties
+        name: soap-properties
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: soap-service
+            path: lockss_service
+          name: soap-service
+        name: soap-service
+      - configMap:
+          items:
+          - key: soap-service-opt
+            path: lockss_service_opt
+          name: soap-service-opt
+        name: soap-service-opt
+      - name: lockss-ui-pass
+        secret:
+          secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+      - name: lockss-soap-data
+        persistentVolumeClaim:
+          claimName: lockss-soap-data-pvc
+      - name: lockss-soap-logs
+        persistentVolumeClaim:
+          claimName: lockss-soap-logs-pvc
+      - name: lockss-soap-tmp
+        persistentVolumeClaim:
+          claimName: lockss-soap-tmp-pvc
