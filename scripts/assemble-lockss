@@ -78,7 +78,7 @@ EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 # Variables
 declare -i STACK_COUNT=1
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
-declare -a global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties" "lockss-solr-log4j2-xml")
+declare -a global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties" "soap-properties" "lockss-solr-log4j2-xml")
 declare -a svcs
 declare -a svcs_confs
 declare -a lockss_owned
