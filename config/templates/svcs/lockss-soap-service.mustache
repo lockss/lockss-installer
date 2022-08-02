@@ -155,6 +155,9 @@ spec:
         - mountPath: /run/configs/lockss_service_opt
           name: soap-service-opt
           subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
         - mountPath: /data
           name: lockss-soap-data
         - mountPath: /var/log/lockss
@@ -185,6 +188,12 @@ spec:
             path: lockss_service_opt
           name: soap-service-opt
         name: soap-service-opt
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
       - name: lockss-soap-data
         persistentVolumeClaim:
           claimName: lockss-soap-data-pvc
