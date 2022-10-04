@@ -33,7 +33,7 @@
 # Usage: upgrade-to-alpha6 [-h|--help]
 #
 # Revision history:
-# 2021-09-22 version 1
+# 2022-09-22 version 1
 # ---------------------------------------------------------------------------
 
 PROGNAME=${0##*/}
