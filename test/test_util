@@ -248,3 +248,53 @@ EOF
 @test 'Extract_K3s_Version' {
   assert_equal $(Extract_K3s_Version 'v1.21.5+k3s1') v1.21.5.1
 }
+
+@test 'Check_Version_Match' {
+  assert Check_Version_Match '2.0.60-alpha6f' 2 0
+  assert_equal "$MATCH_BUILD_NUM" "60"
+  assert_equal "$MATCH_SUFFIX" "alpha6f"
+
+  assert Check_Version_Match '2.0.60' 2 0
+  assert_equal "$MATCH_BUILD_NUM" "60"
+  assert_equal "$MATCH_SUFFIX" ""
+
+  assert Check_Version_Match '2.0-alpha1' 2 0
+  assert_equal "$MATCH_BUILD_NUM" ""
+  assert_equal "$MATCH_SUFFIX" "alpha1"
+
+  assert Check_Version_Match '2.0' 2 0
+  assert_equal "$MATCH_BUILD_NUM" ""
+  assert_equal "$MATCH_SUFFIX" ""
+
+  assert Check_Version_Match '2.1|2' 2 1
+  assert_equal "$MATCH_BUILD_NUM" ""
+  assert_equal "$MATCH_SUFFIX" ""
+}
+
+@test 'Parse_Lockss_Version' {
+  refute Parse_Lockss_Version '2'
+
+  assert Parse_Lockss_Version '2.0'
+  assert_equal "$MATCH_MAJOR" "2"
+  assert_equal "$MATCH_MINOR" "0"
+  assert_equal "$MATCH_BUILD_NUM" ""
+  assert_equal "$MATCH_SUFFIX" ""
+
+  assert Parse_Lockss_Version '2.0.70'
+  assert_equal "$MATCH_MAJOR" "2"
+  assert_equal "$MATCH_MINOR" "0"
+  assert_equal "$MATCH_BUILD_NUM" "70"
+  assert_equal "$MATCH_SUFFIX" ""
+
+  assert Parse_Lockss_Version '2.0-alpha1'
+  assert_equal "$MATCH_MAJOR" "2"
+  assert_equal "$MATCH_MINOR" "0"
+  assert_equal "$MATCH_BUILD_NUM" ""
+  assert_equal "$MATCH_SUFFIX" "alpha1"
+
+  assert Parse_Lockss_Version '2.0.60-alpha6'
+  assert_equal "$MATCH_MAJOR" "2"
+  assert_equal "$MATCH_MINOR" "0"
+  assert_equal "$MATCH_BUILD_NUM" "60"
+  assert_equal "$MATCH_SUFFIX" "alpha6"
+}

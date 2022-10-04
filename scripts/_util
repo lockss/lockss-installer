@@ -164,6 +164,41 @@ Copy_Lockss_Version() {
   cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
 }
 
+Set_Lockss_Version() {
+  echo "$1" > "${LOCKSS_DATA_DIR}/VERSION"
+}
+
+Check_Version_Match() {
+  CUR_VERSION="$1"
+  MAJOR="$2"
+  MINOR="$3"
+
+  UPGRADE_FROM="${MAJOR}\.${MINOR}(\.([[:digit:]]+))?(-([[:alnum:]]+))?"
+
+  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+    MATCH_BUILD_NUM=${BASH_REMATCH[2]}
+    MATCH_SUFFIX=${BASH_REMATCH[4]}
+    return 0
+  fi
+
+  return 1
+}
+
+Parse_Lockss_Version() {
+  CUR_VERSION="$1"
+  UPGRADE_FROM="([[:digit:]]+)\.([[:digit:]]+)(\.([[:digit:]]+))?(-([[:alnum:]]+))?"
+
+  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+    MATCH_MAJOR=${BASH_REMATCH[1]}
+    MATCH_MINOR=${BASH_REMATCH[2]}
+    MATCH_BUILD_NUM=${BASH_REMATCH[4]}
+    MATCH_SUFFIX=${BASH_REMATCH[6]}
+    return 0
+  fi
+
+  return 1
+}
+
 Check_K8s_Command() {
     if [ "X${KUBECTL_CMD}" = X ]; then
     if kubepath=$(command -v k3s); then
