@@ -121,12 +121,46 @@ _EOF_
 
 nuke_journal_files() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-
   for dir in "${repoPaths[@]}"; do
     if [ ! -z "${dir}" ]; then
       find "${dir}/${STACK_PREFIX}-repo-content" -type f -name "lockss-repo.warc" -delete 2> /dev/null
     fi
   done
+}
+
+move_tmp_warcs() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    TEMPWARCS_DIR="${dir}/${STACK_PREFIX}-repo-content/tempwarcs"
+    TMP_DIR="${dir}/${STACK_PREFIX}-repo-content/tmp"
+    if [ -d "${TEMPWARCS_DIR}" ]; then
+      mkdir -p "${TMP_DIR}"
+      mv "${TEMPWARCS_DIR}" "${TMP_DIR}/warcs"
+    fi
+  done
+}
+
+rename_collections() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
+    NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
+    if [ -d "${COLLECTIONS_DIR}" ]; then
+      mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
+    fi
+  done
+}
+
+update_solr_index() {
+  local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
+
+  if [ -d "${SOLR_HOME_PATH}" ]; then
+    # Add date suffix to existing Solr home directory
+    mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
+
+    # Signal to the repository service that a reindex is needed
+    signal_reindex ${STACK_PREFIX}
+  fi
 }
 
 ###
@@ -177,7 +211,10 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
     2.0-alpha5)
       logger_info "Upgrade from alpha5"
+      rename_collections
+      move_tmp_warcs
       nuke_journal_files
+      update_solr_index
       ;;
     2.0-alpha6)
       logger_info "Upgrade already applied (alpha6)"
