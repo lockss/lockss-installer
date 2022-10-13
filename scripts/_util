@@ -149,7 +149,7 @@ Check_Upgraded() {
   local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
 
   [ ! -f "${OLD_VERSION_FILE}" ] && return 0
-  if ! cmp -s "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}"; then
+  if ! diff -iwB --new-file "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}" &> /dev/null; then
     local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
     [ -f "${NEW_VERSION_FILE}" ] && local NEW_VERSION="$(<"${NEW_VERSION_FILE}")"
 
