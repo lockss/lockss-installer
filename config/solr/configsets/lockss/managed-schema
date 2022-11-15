@@ -123,7 +123,7 @@
     <field name="_text_" type="text_general" indexed="true" stored="false" multiValued="true"/>
 
     <field name="auid" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
-    <field name="collection" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
+    <field name="namespace" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
     <field name="collectionDate" type="plong" multiValued="false" indexed="true" required="true" stored="true"/>
     <field name="committed" type="boolean" multiValued="false" indexed="true" required="true" stored="true"/>
     <field name="contentDigest" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
