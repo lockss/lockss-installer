@@ -151,6 +151,17 @@ rename_collections() {
   done
 }
 
+reset_repo_index_state() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
+    if [ -d "${INDEX_STATE_DIR}" ]; then
+      rm -f "${INDEX_STATE_DIR}/reindex*"
+      rm -f "${INDEX_STATE_DIR}/solr/*"
+    fi
+  done
+}
+
 update_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
 
@@ -214,6 +225,7 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
       rename_collections
       move_tmp_warcs
       nuke_journal_files
+      reset_repo_index_state
       update_solr_index
       ;;
     2.0-alpha6)
