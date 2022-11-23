@@ -167,7 +167,7 @@ update_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
 
   if [ -d "${SOLR_HOME_PATH}" ]; then
-    tar czvf ${SOLR_HOME_PATH}."`date +%Y%m%d%H%M`.tar.gz" "${SOLR_HOME_PATH}"
+    tar czf ${SOLR_HOME_PATH}."`date +%Y%m%d%H%M`.tar.gz" "${SOLR_HOME_PATH}"
     rm -rf "${SOLR_HOME_PATH}"
   fi
 
