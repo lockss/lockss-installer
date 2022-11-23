@@ -156,8 +156,9 @@ reset_repo_index_state() {
   for dir in "${repoPaths[@]}"; do
     INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
     if [ -d "${INDEX_STATE_DIR}" ]; then
-      rm -f "${INDEX_STATE_DIR}/reindex*"
-      rm -f "${INDEX_STATE_DIR}/solr/*"
+      logger_info "Removing files from ${INDEX_STATE_DIR}"
+      rm -f "${INDEX_STATE_DIR}"/reindex*
+      rm -f "${INDEX_STATE_DIR}"/solr/*
     fi
   done
 }
@@ -166,12 +167,14 @@ update_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
 
   if [ -d "${SOLR_HOME_PATH}" ]; then
-    # Add date suffix to existing Solr home directory
-    mv ${SOLR_HOME_PATH} ${SOLR_HOME_PATH}."`date +%Y%m%d`"
-
-    # Signal to the repository service that a reindex is needed
-    signal_reindex ${STACK_PREFIX}
+    tar czvf ${SOLR_HOME_PATH}."`date +%Y%m%d%H%M`.tar.gz" "${SOLR_HOME_PATH}"
+    rm -rf "${SOLR_HOME_PATH}"
   fi
+
+  reset_repo_index_state
+
+  # Signal to the repository service that a reindex is needed
+  signal_reindex ${STACK_PREFIX}
 }
 
 ###
@@ -225,7 +228,6 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
       rename_collections
       move_tmp_warcs
       nuke_journal_files
-      reset_repo_index_state
       update_solr_index
       ;;
     2.0-alpha6)
