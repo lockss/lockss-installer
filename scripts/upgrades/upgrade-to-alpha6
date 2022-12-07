@@ -206,6 +206,7 @@ done
 
 # Sanity checks
 Check_Runnable
+Check_Stopped
 Check_Configured
 
 logger_init
