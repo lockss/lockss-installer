@@ -138,7 +138,7 @@ Check_Runnable() {
 # Checks whether the "lockss" namespace contains any active deployments
 Check_Stopped() {
   if ! kubectl_cmd get deployments -n lockss 2>&1 | grep -q "No resources found" ; then
-    err_exit "LOCKSS components are still deployed under Kubernetes; exiting..."
+    err_exit "LOCKSS components are still deployed under Kubernetes; please stop LOCKSS and try again."
   fi
 }
 

@@ -108,7 +108,7 @@ usage() {
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Update alpha6 from a previous alpha release.
+  Updates content from a previous alpha release to alpha6.
 
   $(usage)
 
