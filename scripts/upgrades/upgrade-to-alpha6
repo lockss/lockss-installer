@@ -123,6 +123,7 @@ nuke_journal_files() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
   for dir in "${repoPaths[@]}"; do
     if [ ! -z "${dir}" ]; then
+      logger_debug "Removing journal files under ${dir}/${STACK_PREFIX}-repo-content"
       find "${dir}/${STACK_PREFIX}-repo-content" -type f -name "lockss-repo.warc" -delete 2> /dev/null
     fi
   done
@@ -133,6 +134,7 @@ move_tmp_warcs() {
   for dir in "${repoPaths[@]}"; do
     TEMPWARCS_DIR="${dir}/${STACK_PREFIX}-repo-content/tempwarcs"
     TMP_DIR="${dir}/${STACK_PREFIX}-repo-content/tmp"
+    logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
     if [ -d "${TEMPWARCS_DIR}" ]; then
       mkdir -p "${TMP_DIR}"
       mv "${TEMPWARCS_DIR}" "${TMP_DIR}/warcs"
@@ -145,6 +147,7 @@ rename_collections() {
   for dir in "${repoPaths[@]}"; do
     COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
     NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
+    logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
     if [ -d "${COLLECTIONS_DIR}" ]; then
       mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
     fi
@@ -156,7 +159,7 @@ reset_repo_index_state() {
   for dir in "${repoPaths[@]}"; do
     INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
     if [ -d "${INDEX_STATE_DIR}" ]; then
-      logger_debug "Removing files from ${INDEX_STATE_DIR}"
+      logger_debug "Removing index state from ${INDEX_STATE_DIR}"
       rm -f "${INDEX_STATE_DIR}"/reindex*
       rm -f "${INDEX_STATE_DIR}"/solr/*
     fi
@@ -169,17 +172,17 @@ update_solr_index() {
 
   if [ -d "${SOLR_HOME_PATH}" ]; then
     local SOLR_BACKUP_TGZ="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}.`date +%Y%m%d%H%M`.tar.gz"
-    logger_info "Backing up Solr home directory to ${SOLR_BACKUP_TGZ}. This may take several minutes."
+    logger_info "Backing up Solr home directory to ${SOLR_BACKUP_TGZ}; this may take several minutes..."
     tar -C "${LOCKSS_DATA_DIR}" -czf "${SOLR_BACKUP_TGZ}" "${STACK_SOLR_DATA}"
     if [ $? -eq 0 ]; then
-      logger_debug "Solr index backup successful; removing Solr home directory."
+      logger_debug "Removing Solr home directory ($SOLR_HOME_PATH})"
       rm -rf "${SOLR_HOME_PATH}"
     else
       err_exit "Failed to back Solr home directory; exiting."
     fi
   fi
 
-  logger_info "Resetting Repository's artifact index state"
+  logger_debug "Resetting Repository's artifact index state"
   reset_repo_index_state
 
   # Signal to the repository service that a reindex is needed
