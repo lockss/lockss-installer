@@ -156,7 +156,7 @@ reset_repo_index_state() {
   for dir in "${repoPaths[@]}"; do
     INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
     if [ -d "${INDEX_STATE_DIR}" ]; then
-      logger_info "Removing files from ${INDEX_STATE_DIR}"
+      logger_debug "Removing files from ${INDEX_STATE_DIR}"
       rm -f "${INDEX_STATE_DIR}"/reindex*
       rm -f "${INDEX_STATE_DIR}"/solr/*
     fi
@@ -176,6 +176,7 @@ update_solr_index() {
     fi
   fi
 
+  logger_info "Resetting Repository's artifact index state"
   reset_repo_index_state
 
   # Signal to the repository service that a reindex is needed
