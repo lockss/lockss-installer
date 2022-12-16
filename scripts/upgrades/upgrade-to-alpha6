@@ -147,7 +147,7 @@ rename_collections() {
   for dir in "${repoPaths[@]}"; do
     COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
     NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
-    logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
+    logger_debug "Renaming directory (src: ${COLLECTIONS_DIR}, dst: ${NAMESPACES_DIR})"
     if [ -d "${COLLECTIONS_DIR}" ]; then
       mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
     fi
