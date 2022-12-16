@@ -175,7 +175,7 @@ reset_solr_index() {
     logger_info "Backing up Solr home directory to ${SOLR_BACKUP_TGZ}; this may take several minutes..."
     tar -C "${LOCKSS_DATA_DIR}" -czf "${SOLR_BACKUP_TGZ}" "${STACK_SOLR_DATA}"
     if [ $? -eq 0 ]; then
-      logger_debug "Removing Solr home directory ($SOLR_HOME_PATH})"
+      logger_debug "Removing Solr home directory (${SOLR_HOME_PATH})"
       rm -rf "${SOLR_HOME_PATH}"
     else
       err_exit "Failed to backup Solr home directory; exiting."
