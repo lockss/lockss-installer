@@ -167,8 +167,13 @@ update_solr_index() {
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-solr-data"
 
   if [ -d "${SOLR_HOME_PATH}" ]; then
-    tar czf ${SOLR_HOME_PATH}."`date +%Y%m%d%H%M`.tar.gz" "${SOLR_HOME_PATH}"
-    rm -rf "${SOLR_HOME_PATH}"
+    local SOLR_BACKUP_TGZ="${SOLR_HOME_PATH}.`date +%Y%m%d%H%M`.tar.gz"
+    logger_info "Backing up Solr home directory to ${LOCKSS_DATA_DIR}/${SOLR_BACKUP_TGZ}. This may take several minutes."
+    tar -C "${LOCKSS_DATA_DIR}" czf "${SOLR_BACKUP_TGZ}" "${STACK_PREFIX-solr-data}"
+    if [ $? -eq 0 ]; then
+      logger_debug "Solr index backup successful; removing Solr home directory"
+      rm -rf "${SOLR_HOME_PATH}"
+    fi
   fi
 
   reset_repo_index_state
