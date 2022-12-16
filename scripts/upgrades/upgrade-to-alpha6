@@ -178,7 +178,7 @@ update_solr_index() {
       logger_debug "Removing Solr home directory ($SOLR_HOME_PATH})"
       rm -rf "${SOLR_HOME_PATH}"
     else
-      err_exit "Failed to back Solr home directory; exiting."
+      err_exit "Failed to backup Solr home directory; exiting."
     fi
   fi
 
