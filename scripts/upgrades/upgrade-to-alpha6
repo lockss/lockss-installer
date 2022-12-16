@@ -234,7 +234,7 @@ CUR_VERSION="`cat ${VERSION_FILE}`"
 if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
     2.0-alpha5)
-      logger_info "Upgrade from alpha5"
+      logger_info "Performing upgrade from alpha5"
       rename_collections
       move_tmp_warcs
       nuke_journal_files
@@ -251,8 +251,8 @@ else
   error_exit "Unexpected version: ${CUR_VERSION}"
 fi
 
+logger_debug "Updating LOCKSS version file"
 Set_Lockss_Version "${UPGRADE_TO}"
-logger_info "Updated LOCKSS version file"
 
 logger_info "Upgrade completed"
 graceful_exit
