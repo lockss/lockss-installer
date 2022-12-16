@@ -119,7 +119,7 @@ _EOF_
   return
 }
 
-nuke_journal_files() {
+remove_journal_files() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
   for dir in "${repoPaths[@]}"; do
     if [ ! -z "${dir}" ]; then
@@ -129,32 +129,32 @@ nuke_journal_files() {
   done
 }
 
-move_tmp_warcs() {
+rename_tempwarcs_dir() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
   for dir in "${repoPaths[@]}"; do
     TEMPWARCS_DIR="${dir}/${STACK_PREFIX}-repo-content/tempwarcs"
     TMP_DIR="${dir}/${STACK_PREFIX}-repo-content/tmp"
-    logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
     if [ -d "${TEMPWARCS_DIR}" ]; then
+      logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
       mkdir -p "${TMP_DIR}"
       mv "${TEMPWARCS_DIR}" "${TMP_DIR}/warcs"
     fi
   done
 }
 
-rename_collections() {
+rename_collections_dir() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
   for dir in "${repoPaths[@]}"; do
     COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
     NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
-    logger_debug "Renaming directory (src: ${COLLECTIONS_DIR}, dst: ${NAMESPACES_DIR})"
     if [ -d "${COLLECTIONS_DIR}" ]; then
+      logger_debug "Renaming directory (src: ${COLLECTIONS_DIR}, dst: ${NAMESPACES_DIR})"
       mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
     fi
   done
 }
 
-reset_repo_index_state() {
+reset_index_state() {
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
   for dir in "${repoPaths[@]}"; do
     INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
@@ -166,7 +166,7 @@ reset_repo_index_state() {
   done
 }
 
-update_solr_index() {
+reset_solr_index() {
   local STACK_SOLR_DATA="${STACK_PREFIX}-solr-data"
   local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}"
 
@@ -181,12 +181,6 @@ update_solr_index() {
       err_exit "Failed to backup Solr home directory; exiting."
     fi
   fi
-
-  logger_debug "Resetting Repository's artifact index state"
-  reset_repo_index_state
-
-  # Signal to the repository service that a reindex is needed
-  signal_reindex ${STACK_PREFIX}
 }
 
 ###
@@ -238,10 +232,17 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
     2.0-alpha5)
       logger_info "Performing upgrade from alpha5"
-      rename_collections
-      move_tmp_warcs
-      nuke_journal_files
-      update_solr_index
+
+      # Repository Service changes
+      rename_collections_dir
+      rename_tempwarcs_dir
+      remove_journal_files
+
+      # Reset Solr for reindex
+      reset_solr_index
+      reset_index_state
+      signal_reindex "${STACK_PREFIX}"
+
       ;;
     2.0-alpha6)
       logger_info "Upgrade already applied (alpha6)"
