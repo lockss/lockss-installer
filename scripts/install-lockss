@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,17 +29,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 #
-# Version
-#
-
-VERSION='2.0-alpha5-dev'
-
-#
 # Program name
 #
 
 _0="$(basename "${0}")"
 _D0="$(cd "$(dirname "${0}")" && pwd)"
+
+#
+# Version
+#
+
+VERSION="$(cat "${_D0}/../VERSION")"
+VERSION_STR="${_0} version ${VERSION}"
 
 #
 # Constants
@@ -731,7 +731,7 @@ Parse_Command_Line()
 Print_Help()
 {
   cat <<MyEOF
-${_0} version ${VERSION}
+${VERSION_STR}
 
 Usage:
 
