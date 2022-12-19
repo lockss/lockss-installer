@@ -2,9 +2,8 @@
 # ---------------------------------------------------------------------------
 # _utils_solr: utility functions to access the java SolrArtifactIndexAdmin tool.
 #  These routines should not be called while solr is running.
-#
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # deploy-lockss - Collect host system information needed to run a LOCKSS stack
-#
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
