@@ -222,7 +222,7 @@ configure_services() {
   if [ "X${USE_LOCKSS_SOAP}" = X ]; then
     USE_LOCKSS_SOAP=false
   fi
-  ask_for_input "Use LOCKSS SOAP Service?" $(to_yes_no ${USE_LOCKSS_SOAP})
+  ask_for_input "Use LOCKSS SOAP Compatibility Service?" $(to_yes_no ${USE_LOCKSS_SOAP})
   if is_yes "${ANS}"; then
     USE_LOCKSS_SOAP=true
   else
