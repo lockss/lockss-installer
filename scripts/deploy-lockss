@@ -201,7 +201,7 @@ check_installed_volumes() {
 wait_for_ready() {
   local wait_for_file=$1
   logger_info "Waiting for pods to be marked 'Ready'..."
-  kubectl_lockss wait --for=condition=Ready --all pods --timeout=180s | logger_debug
+  kubectl_lockss wait --for=condition=Ready --all pods --timeout=180s >/dev/null
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
     logger_info "Waiting for LOCKSS services to start..."
     while [ ! -f $wait_for_file ]
