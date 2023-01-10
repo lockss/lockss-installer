@@ -70,6 +70,7 @@ echo
 
 utilpath=$(abspath "${_D0}/../")
 echo ". \"${utilpath}/_util\" || exit 1"
+echo "Check_Stopped"
 echo "echo \"This will delete all preserved content in your LOCKSS system.\""
 echo "ask_for_input \"Do you want to proceed?\" N"
 echo "if ! is_yes \"\${ANS}\"; then"
