@@ -68,6 +68,15 @@ done
 echo "# and the artifact index and AU configurations stored below ${LOCKSS_DATA_DIR}"
 echo
 
+utilpath=$(abspath "${_D0}/../")
+echo ". \"${utilpath}/_util\" || exit 1"
+echo "echo \"This will delete all preserved content in your LOCKSS system.\""
+echo "ask_for_input \"Do you want to proceed?\" N"
+echo "if ! is_yes \"\${ANS}\"; then"
+echo "  echo \"Exiting\""
+echo "  exit 1"
+echo "fi"
+
 echo "sudo /usr/bin/rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-postgres-data\" && ("
 echo "rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-solr-data\""
 echo "rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-repo-data\""
