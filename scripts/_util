@@ -951,3 +951,9 @@ compare_versions_lt() {
 Extract_K3s_Version() {
   echo "${1}" | sed -e 's/\+k3s/./'
 }
+
+# return absolute path of $1
+abspath() {
+  ( cd "$(dirname "$1")"
+    printf "%s/%s\n" "$(pwd)" "$(basename "$1")" )
+}
