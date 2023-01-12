@@ -658,9 +658,10 @@ Install_K3s()
     Echo "Installing K3s version ${K3S_VERSION}"
     local _q='K3s state data directory'
     echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default."
-    echo "If ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory,"
-    echo 'but it must not be on a file system mounted with NFS,'
-    echo 'or a filesystem mounted with XFS with legacy ftype=0.'
+    echo "If ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo 'Note that some filesystem types backing this directory may not be'
+    echo 'suitable or may require special handling, for example NFS, or XFS'
+    echo 'with legacy ftype=0; see the manual for details.'
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"
@@ -674,8 +675,8 @@ Install_K3s()
     fi
     Echo "K3s state data directory: ${K3S_DATA_DIR}"
   
-    # Attempt to check filesystem type
-    Echo "Attempting to check K3s state data directory filesystem type"
+    # Determine filesystem type
+    Echo "Determining the K3s state data directory filesystem type"
     if command -v findmnt > /dev/null ; then
       local _d1="${K3S_DATA_DIR}"
       until [ -d "${_d1}" ] ; do
@@ -683,29 +684,29 @@ Install_K3s()
       done
       local _d1="$(findmnt --noheadings --first-only --output=target --target="${_d1}")"
       local _fstype="$(findmnt --noheadings --first-only --output=fstype --target="${_d1}")"
-      case "${_fstype}" ; do
+      case "${_fstype}" in
         nfs)
-          Fatal "Filesystem type of ${_d1} is NFS; see manual"
+          Fatal "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is NFS; see manual"
           ;;
         xfs)
           if command -v xfs_info > /dev/null ; then
             if xfs_info "${_d1}" | grep --quiet 'ftype=0' ; then
-              Fatal "Filesystem type of ${_d1} is XFS with legacy ftype=0; see manual"
+              Fatal "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS with legacy ftype=0; see manual for workaround"
             elif xfs_info "${_d1}" | grep --quiet 'ftype=1' ; then
-              Echo "Filesystem type of ${_d1} is XFS with ftype=1"
+              Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS with ftype=1; proceeding"
             else
-              Echo "Filesystem type of ${_d1} is XFS but not with legacy ftype=0"
+              Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS but not with legacy ftype=0; proceeding"
             fi
           else
-            Warning "Filesystem type of ${_d1} is XFS but ftype unknown (xfs_info not present)"
+            Warning "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS but ftype unknown (xfs_info not present); proceeding"
           fi
           ;;
         *)
-          Echo "Filesystem type of ${_d1} is ${_fstype}"
+          Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is ${_fstype}; proceeding"
           ;;
       esac
     else
-      Warning "Filesystem type of ${_d1} unknown (findmnt not present)"
+      Warning "Filesystem type of ${K3S_DATA_DIR} unknown (findmnt not present); proceeding"
     fi
     
     local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
@@ -777,6 +778,8 @@ Parse_Command_Line()
 
       --check-prerequisites|-check-prerequisites|-P) SINGLE_STEP='Check_Prerequisites' ; shift ;;
 
+      --check-system-user|-check-sustem-user) SINGLE_STEP='Check_System_User' ; shift ;;
+
       --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
@@ -846,9 +849,9 @@ Usage:
       --skip-configure-iptables|--skip-configure-ufw|--skip-install-k3s|
       --skip-test-k3s] [--assume-yes] [--force-dns-prompt]
       [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
-  ${_0} {--check-prerequisites|--configure-coredns|--configure-firewalld|
-      --configure-iptables|--configure-ufw|--install-k3s|--test-k3s}
-      [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+  ${_0} {--check-prerequisites|--configure-coredns|
+      --configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|
+      --test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
       --k3s-data-dir=VER] [--retries=N|--wait=S]
   ${_0} {--help|--version}
 
@@ -861,11 +864,18 @@ Options:
   --check-prerequisites, -check-prerequisites, -P
     Only check K3s prerequisites and exit
 
+  --check-system-user, -check-system-user
+    Only check that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP})
+    exist and exit
+
   --configure-coredns, -configure-coredns, -C
     Only configure CoreDNS for K3s and exit
 
   --configure-firewalld, -configure-firewalld, -F
     Only configure firewalld for K3s and exit
+
+  --configure-iptables, -configure-firewalld, -I
+    Only configure iptables for K3s and exit
 
   --configure-ufw, -configure-ufw, -U
     Only configure ufw for K3s and exit
@@ -909,15 +919,12 @@ Options:
     Skip configuring ufw for K3s
 
   --skip-install-k3s, -skip-install-k3s
-    Skip installing K3s. Implies --skip-check-k3s-config,
-      --skip-check-prerequisites, --skip-configure-coredns,
-      --skip-configure-firewalld, --skip-configure-ufw, --skip-test-k3s.
+    Skip installing K3s. Implies --skip-check-prerequisites,
+    --skip-configure-coredns, --skip-configure-firewalld,
+    --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s.
 
   --skip-test-k3s, -skip-test-k3s
     Skip testing the K3s node
-
-  --test-k3s, -test-k3s, -T
-    Only precheck the system before installing K3s the K3s node and exit
 
   --test-k3s, -test-k3s, -T
     Only test the K3s node and exit
