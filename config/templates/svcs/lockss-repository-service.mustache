@@ -11,6 +11,12 @@ spec:
   - name: "repo-rest-port"
     port: {{REPO_REST_PORT}}
     targetPort: {{REPO_DEFAULT_REST_PORT}}
+{{#additional_ports REPO}}
+  - name: "__PORT_NAME__"
+    port: __HOST_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
   selector:
     io.kompose.service: lockss-repository-service
   type: ClusterIP
@@ -127,10 +133,14 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{REPO_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
           value: {{CFG_URL}}
+        - name: LOCKSS_NEEDS_SECRETS
+          value: "true"
         - name: LOCKSS_IS_REPO
           value: "true"
         - name: LOCKSS_JMS_HOST
@@ -163,6 +173,13 @@ spec:
           containerPort: {{REPO_DEFAULT_REST_PORT}}
           hostPort: {{REPO_REST_PORT}}
           protocol: TCP
+{{#additional_ports REPO}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
         volumeMounts:
         - mountPath: /run/configs/lockss.properties
           name: repo-properties

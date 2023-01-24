@@ -20,6 +20,12 @@ spec:
   - name: "ui-port"
     port: {{LOCKSS_UI_PORT}}
     targetPort: {{CFG_DEFAULT_UI_PORT}}
+{{#additional_ports CFG}}
+  - name: "__PORT_NAME__"
+    port: __HOST_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
   selector:
     io.kompose.service: lockss-configuration-service
   type: ClusterIP
@@ -113,7 +119,13 @@ spec:
       - env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{CFG_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_IS_CONFIG
+          value: "true"
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_NEEDS_SECRETS
           value: "true"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
@@ -178,6 +190,13 @@ spec:
           containerPort: {{JMS_DEFAULT_PORT}}
           hostPort: {{JMS_PORT}}
           protocol: TCP
+{{#additional_ports CFG}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"

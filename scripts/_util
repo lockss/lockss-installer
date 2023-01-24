@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
 #
 # 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation and/or
-# other materials provided with the distribution.
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 ##
 ## Relative paths
@@ -135,6 +135,13 @@ Check_Runnable() {
   fi
 }
 
+# Checks whether the "lockss" namespace contains any active deployments
+Check_Stopped() {
+  if ! kubectl_cmd get deployments -n lockss 2>&1 | grep -q "No resources found" ; then
+    err_exit "LOCKSS components are still deployed under Kubernetes; exiting..."
+  fi
+}
+
 Check_Configured() {
   Check_VarDef "LOCKSS_SOLR_USER"
   Check_VarDef "LOCKSS_SOLR_PASSWD"
@@ -149,7 +156,7 @@ Check_Upgraded() {
   local NEW_VERSION_FILE="${COMPOSE_DIR}/VERSION"
 
   [ ! -f "${OLD_VERSION_FILE}" ] && return 0
-  if ! cmp -s "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}"; then
+  if ! diff -iwB --new-file "${OLD_VERSION_FILE}" "${NEW_VERSION_FILE}" &> /dev/null; then
     local OLD_VERSION="$(<"${OLD_VERSION_FILE}")"
     [ -f "${NEW_VERSION_FILE}" ] && local NEW_VERSION="$(<"${NEW_VERSION_FILE}")"
 
@@ -162,6 +169,41 @@ Check_Upgraded() {
 
 Copy_Lockss_Version() {
   cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
+}
+
+Set_Lockss_Version() {
+  echo "$1" > "${LOCKSS_DATA_DIR}/VERSION"
+}
+
+Check_Version_Match() {
+  CUR_VERSION="$1"
+  MAJOR="$2"
+  MINOR="$3"
+
+  UPGRADE_FROM="${MAJOR}\.${MINOR}(\.([[:digit:]]+))?(-([[:alnum:]]+))?"
+
+  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+    MATCH_BUILD_NUM=${BASH_REMATCH[2]}
+    MATCH_SUFFIX=${BASH_REMATCH[4]}
+    return 0
+  fi
+
+  return 1
+}
+
+Parse_Lockss_Version() {
+  CUR_VERSION="$1"
+  UPGRADE_FROM="([[:digit:]]+)\.([[:digit:]]+)(\.([[:digit:]]+))?(-([[:alnum:]]+))?"
+
+  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+    MATCH_MAJOR=${BASH_REMATCH[1]}
+    MATCH_MINOR=${BASH_REMATCH[2]}
+    MATCH_BUILD_NUM=${BASH_REMATCH[4]}
+    MATCH_SUFFIX=${BASH_REMATCH[6]}
+    return 0
+  fi
+
+  return 1
 }
 
 Check_K8s_Command() {
@@ -908,4 +950,10 @@ compare_versions_lt() {
 #
 Extract_K3s_Version() {
   echo "${1}" | sed -e 's/\+k3s/./'
+}
+
+# return absolute path of $1
+abspath() {
+  ( cd "$(dirname "$1")"
+    printf "%s/%s\n" "$(pwd)" "$(basename "$1")" )
 }

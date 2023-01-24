@@ -1,8 +1,7 @@
-#!/usr/bin/env bash
-#---------------------------------------------------------------------------
-# setup-storage - Initialize storage directories used by services
-
-# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
+#!/bin/bash
+# ---------------------------------------------------------------------------
+#
+# Copyright (c) 2000-2022, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,17 +28,17 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
-# Usage: setup-storage
-#  Reads config file to find storage paths
+#
+# Usage: generate-content-reset-script
 #
 # Revision history:
+# 2022-12-19 version 1
 # ---------------------------------------------------------------------------
 
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-##
+#
 ## Relative paths
 ##
 _0=$(basename "${0}")
@@ -48,17 +47,44 @@ _D0=$(dirname "${0}")
 ##
 ## Load _util
 ##
+. "${_D0}/../_util"
 
-. "${_D0}/_util"
+COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
+CONFIG_DIR="${COMPOSE_DIR}/config"
 
-# Files
+STACK_PREFIX="lockss-stack"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-CONFIG_USER=$(whoami)
+# Source system config file
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
-if ! setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} ; then
-    echo "Some directories could not be set up correctly.  Please either" >&2
-    echo " fix the ownership/permission problems then rerun scripts/setup-storage, or" >&2
-    echo " rerun scripts/configure-lockss and specify different directories." >&2
-    exit 1
-fi
-exit 0
+IFS=';' read -r -a contentDirs <<< "${LOCKSS_REPO_HOST_DIRS}"
+
+echo "# This script will delete the LOCKSS V2 content stored in:"
+for dir in "${contentDirs[@]}"; do
+  echo "#  ${dir}/lockss-stack-repo-content"
+done
+echo "# and the artifact index and AU configurations stored below ${LOCKSS_DATA_DIR}"
+echo
+
+utilpath=$(abspath "${_D0}/../")
+echo ". \"${utilpath}/_util\" || exit 1"
+echo "Check_Stopped"
+echo "echo \"This will delete all preserved content in your LOCKSS system.\""
+echo "ask_for_input \"Do you want to proceed?\" N"
+echo "if ! is_yes \"\${ANS}\"; then"
+echo "  echo \"Exiting\""
+echo "  exit 1"
+echo "fi"
+
+echo "sudo /usr/bin/rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-postgres-data\" && ("
+echo "rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-solr-data\""
+echo "rm -rf \"${LOCKSS_DATA_DIR}/lockss-stack-repo-data\""
+
+IFS=';' read -r -a contentDirs <<< "${LOCKSS_REPO_HOST_DIRS}"
+for dir in "${contentDirs[@]}"; do
+  echo "rm -rf \"${dir}/lockss-stack-repo-content\""
+done
+
+echo ")"

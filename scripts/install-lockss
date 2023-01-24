@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2000-2021, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,17 +29,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 #
-# Version
-#
-
-VERSION='2.0-alpha5'
-
-#
 # Program name
 #
 
 _0="$(basename "${0}")"
 _D0="$(cd "$(dirname "${0}")" && pwd)"
+
+#
+# Version
+#
+
+VERSION="$(cat "${_D0}/../VERSION")"
+VERSION_STR="${_0} version ${VERSION}"
 
 #
 # Constants
@@ -151,6 +151,71 @@ Check_Command()
   if ! command -v "${1}" > /dev/null ; then
     Fatal "A dependent utility is not available: ${1}"
   fi
+}
+
+#
+# Check_Prerequisites
+#
+Check_Prerequisites()
+{
+  # Begin step
+  Begin_Phase 'Checking K3s prerequisites'
+  
+  # Skip if --skip-install-k3s
+  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+    Success 'Skipping (--skip-install-k3s)'
+    return
+  fi
+  
+  # Skip if --skip-check-prerequisites
+  if [ "${SKIP_CHECK_PREREQUISITES}" = 'true' ] ; then
+    Success 'Skipping (--skip-check-check-prerequisites)'
+    return
+  fi
+  
+  # User namespaces
+  # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L142-L153
+  # See https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+  Echo 'Checking user namespaces...'
+  case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
+    '')
+      Warning 'Could not infer ID from /etc/os-release'
+      ;;
+    centos|rhel)
+      case "$(test -f /etc/os-release && source /etc/os-release && echo "${VERSION_ID}")" in
+        '')
+          Warning 'Could not infer VERSION_ID from /etc/os-release'
+          ;;
+        7*)
+          if ! grep -q 'user_namespace.enable=1' /proc/cmdline ; then
+            Fatal 'User namespaces must be enabled in RHEL/CentOS 7; see manual'
+          fi
+          echo 'OK: RHEL7-like with user namespaces enabled'
+          ;;
+        *)
+          echo 'OK: RHEL-like but not RHEL7-like'
+          ;;
+      esac
+      ;;
+    *)
+      echo 'OK: not RHEL-like'
+      ;;
+  esac
+
+  # apparmor_parser
+  # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L321-L336
+  Echo 'Checking apparmor_parser...'
+  if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = 'Y' ] ; then
+    if ! command -v apparmor_parser > /dev/null ; then
+      Fatal 'apparmor enabled but apparmor_parser missing; see manual'
+    fi
+    echo 'OK: apparmor enabled and tools installed'
+  else
+    echo 'OK: apparmor not enabled'
+  fi
+  
+  # Success
+  Success 'K3s prerequisites checked'
 }
 
 #
@@ -560,7 +625,7 @@ Install_K3s()
         || Fatal "Error parsing K3s version"
     if [ "${_kver}" = "${K3S_VERSION}" ] ; then
       kverok=1
-      Echo 'K3s version ${_kver} is already installed; skipping'
+      Echo "K3s version ${_kver} is already installed; skipping"
     else
       if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
         Warning "Detected K3s version ${_kver} is older than expected version ${K3S_VERSION}"
@@ -592,9 +657,11 @@ Install_K3s()
     # Install K3s
     Echo "Installing K3s version ${K3S_VERSION}"
     local _q='K3s state data directory'
-    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default.  If"
-    echo "${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory,"
-    echo "but it must not be on an NFS-mounted filesystem."
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default."
+    echo "If ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
+    echo 'Note that some filesystem types backing this directory may not be'
+    echo 'suitable or may require special handling, for example NFS, or XFS'
+    echo 'with legacy ftype=0; see the manual for details.'
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"
@@ -606,8 +673,44 @@ Install_K3s()
       ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
       K3S_DATA_DIR="${ANS}"
     fi
-    local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
+    Echo "K3s state data directory: ${K3S_DATA_DIR}"
   
+    # Determine filesystem type
+    Echo "Determining the K3s state data directory filesystem type"
+    if command -v findmnt > /dev/null ; then
+      local _d1="${K3S_DATA_DIR}"
+      until [ -d "${_d1}" ] ; do
+        _d1="$(dirname "${_d1}")"
+      done
+      local _d1="$(findmnt --noheadings --first-only --output=target --target="${_d1}")"
+      local _fstype="$(findmnt --noheadings --first-only --output=fstype --target="${_d1}")"
+      case "${_fstype}" in
+        nfs)
+          Fatal "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is NFS; see manual"
+          ;;
+        xfs)
+          if command -v xfs_info > /dev/null ; then
+            if xfs_info "${_d1}" | grep --quiet 'ftype=0' ; then
+              Fatal "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS with legacy ftype=0; see manual for workaround"
+            elif xfs_info "${_d1}" | grep --quiet 'ftype=1' ; then
+              Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS with ftype=1; proceeding"
+            else
+              Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS but not with legacy ftype=0; proceeding"
+            fi
+          else
+            Warning "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is XFS but ftype unknown (xfs_info not present); proceeding"
+          fi
+          ;;
+        *)
+          Echo "Filesystem type of ${K3S_DATA_DIR} (${_d1}) is ${_fstype}; proceeding"
+          ;;
+      esac
+    else
+      Warning "Filesystem type of ${K3S_DATA_DIR} unknown (findmnt not present); proceeding"
+    fi
+    
+    local _data_dir_args="--data-dir ${K3S_DATA_DIR}"
+
     local _resolv_conf_args='' 
     if [ -r "${LOCKSS_RESOLV_CONF}" ] ; then
       _resolv_conf_args="--resolv-conf ${LOCKSS_RESOLV_CONF}"
@@ -673,6 +776,10 @@ Parse_Command_Line()
 
       --assume-yes|-assume-yes|-y) ASSUME_YES='true' ; shift ;;
 
+      --check-prerequisites|-check-prerequisites|-P) SINGLE_STEP='Check_Prerequisites' ; shift ;;
+
+      --check-system-user|-check-sustem-user) SINGLE_STEP='Check_System_User' ; shift ;;
+
       --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
@@ -695,6 +802,8 @@ Parse_Command_Line()
 
       --retries=*) RETRIES="${1#*=}" ; shift ;;
       -retries) RETRIES="${2}" ; shift 2 ;;
+
+      --skip-check-prerequisites|-skip-check-prerequisites) SKIP_CHECK_PREREQUISITES='true' ; shift ;;
 
       --skip-check-system-user|-skip-check-system-user) SKIP_CHECK_SYSTEM_USER='true' ; shift ;;
 
@@ -731,18 +840,19 @@ Parse_Command_Line()
 Print_Help()
 {
   cat <<MyEOF
-${_0} version ${VERSION}
+${VERSION_STR}
 
 Usage:
 
-  ${_0} [--skip-check-system-user|--skip-configure-coredns|
-      --skip-configure-firewalld|--skip-configure-iptables|--skip-configure-ufw|
-      --skip-install-k3s|--skip-test-k3s] [--assume-yes] [--force-dns-prompt]
+  ${_0} [--skip-check-prerequisites|--skip-check-system-user|
+      --skip-configure-coredns|--skip-configure-firewalld|
+      --skip-configure-iptables|--skip-configure-ufw|--skip-install-k3s|
+      --skip-test-k3s] [--assume-yes] [--force-dns-prompt]
       [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
-  ${_0} {--configure-coredns|--configure-firewalld|--configure-iptables|
-      --configure-ufw|--install-k3s|--test-k3s} [--assume-yes]
-      [--force-dns-prompt] [--k3s-data-dir=DIR|--k3s-data-dir=VER]
-      [--retries=N|--wait=S]
+  ${_0} {--check-prerequisites|--configure-coredns|
+      --configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|
+      --test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
+      --k3s-data-dir=VER] [--retries=N|--wait=S]
   ${_0} {--help|--version}
 
 Options:
@@ -751,11 +861,21 @@ Options:
     Assume that the answer to interactive yes/no questions is Y for "yes", and
     that the answer to other interactive questions is the proposed value
 
+  --check-prerequisites, -check-prerequisites, -P
+    Only check K3s prerequisites and exit
+
+  --check-system-user, -check-system-user
+    Only check that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP})
+    exist and exit
+
   --configure-coredns, -configure-coredns, -C
     Only configure CoreDNS for K3s and exit
 
   --configure-firewalld, -configure-firewalld, -F
     Only configure firewalld for K3s and exit
+
+  --configure-iptables, -configure-firewalld, -I
+    Only configure iptables for K3s and exit
 
   --configure-ufw, -configure-ufw, -U
     Only configure ufw for K3s and exit
@@ -780,6 +900,9 @@ Options:
   --retries=N, -retries N
     Attempt retriable actions N times when testing the K3s node (default: ${DEFAULT_RETRIES}) 
 
+  --skip-check-prerequisites, -skip-check-prerequisites
+    Skip checking K3s prerequisites
+
   --skip-check-system-user, -skip-check-system-user
     Skip checking that the system user (${LOCKSS_USER}) and group (${LOCKSS_GROUP}) exist
 
@@ -796,9 +919,9 @@ Options:
     Skip configuring ufw for K3s
 
   --skip-install-k3s, -skip-install-k3s
-    Skip installing K3s. Implies --skip-check-k3s-config,
-      --skip-configure-coredns, --skip-configure-firewalld,
-      --skip-configure-ufw, --skip-test-k3s.
+    Skip installing K3s. Implies --skip-check-prerequisites,
+    --skip-configure-coredns, --skip-configure-firewalld,
+    --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s.
 
   --skip-test-k3s, -skip-test-k3s
     Skip testing the K3s node
@@ -1011,6 +1134,7 @@ K3S_DATA_DIR="${DEFAULT_K3S_DATA_DIR}"
 K3S_VERSION="${DEFAULT_K3S_VERSION}"
 RETRIES="${DEFAULT_RETRIES}"
 SINGLE_STEP=''
+SKIP_CHECK_PREREQUISITES=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
@@ -1039,14 +1163,15 @@ fi
 while true ; do
   case "${CURRENT_STEP}" in
     '') Fatal "Empty step number" ;;
-    0) Check_System_User ;;
-    1) Configure_Iptables ;;
-    2) Configure_Firewalld ;;
-    3) Configure_Ufw ;;
-    4) Configure_Coredns ;;
-    5) Install_K3s ;;
-    6) Test_K3s ;;
-    7) break ;;
+    0) Check_Prerequisites ;;
+    1) Check_System_User ;;
+    2) Configure_Iptables ;;
+    3) Configure_Firewalld ;;
+    4) Configure_Ufw ;;
+    5) Configure_Coredns ;;
+    6) Install_K3s ;;
+    7) Test_K3s ;;
+    8) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$((CURRENT_STEP + 1))

@@ -2,9 +2,8 @@
 # ---------------------------------------------------------------------------
 # _utils_solr: utility functions to access the java SolrArtifactIndexAdmin tool.
 #  These routines should not be called while solr is running.
-#
-# Copyright (c) 2000-2019, Board of Trustees of Leland Stanford Jr. University
-# All rights reserved.
+
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -54,7 +53,7 @@ SOLR_HOME="lockss-stack-solr-data"
 SOLR_CORE_NAME=lockss-repo
 SOLR_ENDPOINT=http://localhost:8983/solr/${SOLR_CORE_NAME}
 SOLR_IMG="solr"
-SOLR_VERSION="8.9.0-slim"
+SOLR_VERSION="8.11.2-slim"
 SOLR_UPDATE_NAME="lockss_solr_update"
 SOLR_USER="8983:8983"
 REPO_TOOLS_JAR=${LIB_DIR}/${SOLR_TOOLS_JAR}
