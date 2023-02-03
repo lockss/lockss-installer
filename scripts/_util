@@ -462,14 +462,31 @@ read_config() {
   IFS="${OLD_IFS}"
 }
 
+is_replay() {
+  [[ -n "${is_replay}" ]] && return 0
+  return 1
+}
+
 ask_for_input() {
-  case "${1}" in
-    *\?) echo -n "${1} [${2}] " ;;
-    *)   echo -n "${1}: [${2}] " ;;
+  local prompt="${1}"
+  local current="${2}"
+  local default="${3}"
+  if [ -n "${current}" ]; then
+    default="${current}"
+  fi
+  case "${prompt}" in
+    *\?) echo -n "${prompt} [${default}] " ;;
+    *)   echo -n "${prompt}: [${default}] " ;;
   esac
-  read ANS
-  if [ -z "${ANS}" ]; then
-    ANS="${2}"
+  if is_replay && [[ -n "${current}" ]]; then
+    echo "${current}"
+    ANS="${current}"
+    return
+  else
+    read ANS
+    if [ -z "${ANS}" ]; then
+      ANS="${default}"
+    fi
   fi
 }
 
@@ -516,6 +533,11 @@ ask_for_password() {
       # if we have an existing password, and any required secrets are
       # present, don't require reentering the password
       if [ -n "${have_existing_password}" ]; then
+        if is_replay; then
+	  PASSWD_HASH="${old_pass_hash}"
+	  PASSWD_CLEAR="${old_pass_clear}"
+	  return 0
+        fi
 	ask_for_input_shadow "${prompt_msg} (<enter> to leave unchanged)"
 	if [ -z "${ANS}" ]; then
 	  PASSWD_HASH="${old_pass_hash}"
@@ -543,21 +565,49 @@ ask_for_password() {
 }
 
 is_yes() {
-  local WORD="${1}"
-  if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
-    return 0
-  else
-    return 1
-  fi
+  case "${1}" in
+    y | Y | yes | YES | Yes)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+is_true() {
+  case "${1}" in
+    t | T | true | TRUE | True)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 to_yes_no() {
-  local WORD="${1}"
-  if [ "X${WORD}" = Xtrue -o "X${WORD}" = XTRUE ]; then
+  if is_true "${1}"; then
     echo "Y"
   else
     echo "N"
   fi
+}
+
+to_yes_no_or_blank() {
+  [ -z "${1}" ] && return
+  to_yes_no "${1}"
+}
+
+to_true_false() {
+  case "${1}" in
+    y | Y | yes | YES | Yes)
+      echo "true"
+      ;;
+    *)
+      echo "false"
+      ;;
+  esac
 }
 
 is_pos() {

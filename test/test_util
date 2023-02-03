@@ -298,3 +298,52 @@ EOF
   assert_equal "$MATCH_BUILD_NUM" "60"
   assert_equal "$MATCH_SUFFIX" "alpha6"
 }
+
+@test 'is_yes' {
+  assert is_yes Y
+  assert is_yes y
+  assert is_yes yes
+  assert is_yes YES
+  assert is_yes Yes
+  refute is_yes n
+  refute is_yes no
+  refute is_yes foo
+  refute is_yes false
+}
+
+@test 'is_true' {
+  assert is_true TRUE
+  assert is_true true
+  assert is_true T
+  assert is_true t
+  assert is_true True
+  refute is_true false
+  refute is_true False
+  refute is_true random
+  refute is_true f
+}
+
+@test 'to_yes_no' {
+  assert_equal $(to_yes_no T) Y
+  assert_equal $(to_yes_no t) Y
+  assert_equal $(to_yes_no true) Y
+  assert_equal $(to_yes_no True) Y
+  assert_equal $(to_yes_no F) N
+  assert_equal $(to_yes_no False) N
+  assert_equal $(to_yes_no fake) N
+  assert_equal $(to_yes_no) N
+  assert_equal $(to_yes_no_or_blank) ""
+  assert_equal $(to_yes_no_or_blank true) Y
+  assert_equal $(to_yes_no_or_blank foo) N
+}
+
+@test 'to_true_false' {
+  assert_equal $(to_true_false Y) true
+  assert_equal $(to_true_false y) true
+  assert_equal $(to_true_false YES) true
+  assert_equal $(to_true_false Yes) true
+  assert_equal $(to_true_false N) false
+  assert_equal $(to_true_false No) false
+  assert_equal $(to_true_false notinamillionyears) false
+}
+
