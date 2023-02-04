@@ -479,9 +479,8 @@ ask_for_input() {
     *)   echo -n "${prompt}: [${default}] " ;;
   esac
   if is_replay && [[ -n "${current}" ]]; then
-    echo "${current}"
+    echo
     ANS="${current}"
-    return
   else
     read ANS
     if [ -z "${ANS}" ]; then
@@ -662,7 +661,7 @@ init_one_dir() {
       MODE="750"
   fi
   if [ ! -d "${DIR}" ]; then
-    ask_for_input "${DIR} does not exist; shall I create it?" Y
+    ask_for_input "${DIR} does not exist; do you want to create it?" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
       if [ "X${CONFIG_USER}" != "X${USER}" ]; then
@@ -685,7 +684,7 @@ init_one_dir() {
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
   else
-    ask_for_input "${DIR} is not writable; shall I chown/chmod it?" Y
+    ask_for_input "${DIR} is not writable; do you want to make it writable?" Y
     if is_yes "${ANS}"; then
       chown ${USER} "${DIR}"
       chmod ${MODE} "${DIR}"

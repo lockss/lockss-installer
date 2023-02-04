@@ -30,7 +30,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Usage: configure-lockss [-r|--replay]
+# Usage: configure-lockss [-r|--replay] [-h|--help]
 #
 # Revision history:
 # ---------------------------------------------------------------------------
@@ -145,9 +145,6 @@ configure_databases() {
     LOCKSS_SOLR_CORE_REPO=${ANS}
   fi
   # Account for solr user
-  if [ "X${LOCKSS_SOLR_USER}" = X ]; then
-      LOCKSS_SOLR_USER=${LOCKSS_ADMIN_USER}
-  fi
   ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
   LOCKSS_SOLR_USER=${ANS}
 
@@ -194,14 +191,14 @@ configure_services() {
   USE_LOCKSS_REPO=true
 
   #check HDFS service
-  #    ask_for_input "Use LOCKSS HDFS Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_HDFS})" false
+  #    ask_for_input "Use LOCKSS HDFS Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_HDFS})" N
   #    if is_yes "${ANS}"; then
   #        USE_LOCKSS_HDFS=true
   #    else
   #        USE_LOCKSS_HDFS=false
   #    fi
   echo "You can use Pywb and/or Openwayback for content replay..."
-  ask_for_input "Use LOCKSS Pywb Service?" "$(to_yes_no ${USE_LOCKSS_PYWB})"
+  ask_for_input "Use LOCKSS Pywb Service?" "$(to_yes_no ${USE_LOCKSS_PYWB})" N
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
   else
@@ -333,7 +330,6 @@ build_config_file() {
         echo "Illegal hostname: ${ANS}"
       fi
     done
-#    LOCKSS_HOSTNAME=${ANS}
 
     IP_OK=N
     until is_yes ${IP_OK}; do
@@ -415,7 +411,7 @@ build_config_file() {
     if [ "X${LOCKSS_MAILHUB_USER}" != X ]; then
       NEED_USER=Y
     fi
-    ask_for_input "Does the mail relay "${LOCKSS_MAILHUB}" need a username and password?" "${NEED_USER}"
+    ask_for_input "Does the mail relay ${LOCKSS_MAILHUB} need a username and password?" "${NEED_USER}"
     if is_yes "${ANS}"; then
       ask_for_input "User for ${LOCKSS_MAILHUB}" "${LOCKSS_MAILHUB_USER}"
       LOCKSS_MAILHUB_USER="${ANS}"
@@ -474,11 +470,11 @@ build_config_file() {
     prevPaths[0]=${LOCKSS_DATA_DIR}
     curPaths[0]=${LOCKSS_DATA_DIR}
     repoDirs[0]="/content0"
-    ask_for_input "Use additional directories for content data storage?" "$(to_yes_no ${USE_MULTIPLE_CACHES})" N
+    ask_for_input "Use additional directories for content data storage?" "$(to_yes_no ${USE_MULTIPLE_CACHES})"
     if is_yes "${ANS}"; then
       count=1
       until is_yes "${done}"; do
-        ask_for_input "Root path for additional content data storage $count (q to quit)" "${prevPaths[count]}" q
+        ask_for_input "Root path for additional content data storage $count (q to quit)" "${prevPaths[count]}"
         if [ "X${ANS}" = Xq ]; then
           done=Y
         elif [ -n "${ANS}" ]; then
@@ -499,11 +495,6 @@ build_config_file() {
       LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
     fi
     LOG_PATHS_OK=N
-    if [ -n "${LOCKSS_LOGS_DIR}" ]; then
-      log_dir_default="${LOCKSS_LOGS_DIR}"
-    else
-      log_dir_default="${LOCKSS_DATA_DIR}"
-    fi
     until is_yes ${LOG_PATHS_OK}; do
       ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
@@ -526,7 +517,7 @@ build_config_file() {
         USER_OK=Y
       fi
     done
-    ask_for_password "Password for web UI administration user "${LOCKSS_ADMIN_USER}"" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
     LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
     if [ -n "${PASSWD_CLEAR}" ]; then
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
@@ -608,7 +599,7 @@ setup_k8s_cmd() {
 }
 
 usage() {
-  echo "Usage: configure-lockss [-r|--replay]"
+  echo "Usage: configure-lockss [-r|--replay] [-h|--help]"
   echo "  --replay  Prompt only for info not already in the config file"
   exit 2
 }
@@ -616,7 +607,6 @@ usage() {
 is_replay=
 
 # Parse command-line
-set -x
 while [[ -n "$1" ]]; do
   case "$1" in
   -h | --help)
@@ -631,7 +621,6 @@ while [[ -n "$1" ]]; do
   esac
   shift
 done
-set +x
 
 CONFIG_LOGFILE="./lockss-configure.log"
 
