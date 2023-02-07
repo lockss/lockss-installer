@@ -747,7 +747,19 @@ MyEOF
     echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \
         || Fatal 'Could not append to k8s.cfg'
   fi
-      
+
+  # Apply K3s hardening guide
+  # See https://docs.k3s.io/security/hardening-guide
+  $SUDO cp ${CONFIG_DIR}/k8s/sysctl-kubelet.conf /etc/sysctl.d/90-kubelet.conf
+  $SUDO sysctl -p /etc/sysctl.d/90-kubelet.conf
+
+  $SUDO cp ${CONFIG_DIR}/k8s/psa.yaml ${K3S_DATA_DIR}/server/psa.yaml
+
+  $SUDO mkdir -p -m 700 ${K3S_DATA_DIR}/k3s/server/logs
+  $SUDO cp ${CONFIG_DIR}/k8s/audit.yaml ${K3S_DATA_DIR}/server/audit.yaml
+
+  $SUDO cp ${CONFIG_DIR}/k8s/config.yaml /etc/rancher/k3s/config.yaml
+
   # Success
   Success 'Installed K3s'
 }
