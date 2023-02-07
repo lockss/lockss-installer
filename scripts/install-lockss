@@ -723,6 +723,7 @@ Install_K3s()
     # Invoke Rancher's installer
     Download_Url "${K3S_URL}" | \
         INSTALL_K3S_VERSION="${K3S_VERSION}" \
+        INSTALL_K3S_SKIP_START="true" \
         sh -s - \
         --write-kubeconfig-mode 644 \
         --disable-cloud-controller \
@@ -759,6 +760,9 @@ MyEOF
   $SUDO cp ${CONFIG_DIR}/k8s/audit.yaml ${K3S_DATA_DIR}/server/audit.yaml
 
   $SUDO cp ${CONFIG_DIR}/k8s/config.yaml /etc/rancher/k3s/config.yaml
+
+  # Start K3S
+  $SUDO systemctl start k3s.service
 
   # Success
   Success 'Installed K3s'
