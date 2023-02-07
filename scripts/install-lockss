@@ -754,11 +754,13 @@ MyEOF
   $SUDO cp ${CONFIG_DIR}/k8s/sysctl-kubelet.conf /etc/sysctl.d/90-kubelet.conf
   $SUDO sysctl -p /etc/sysctl.d/90-kubelet.conf
 
+  $SUDO mkdir -p ${K3S_DATA_DIR}/server
   $SUDO cp ${CONFIG_DIR}/k8s/psa.yaml ${K3S_DATA_DIR}/server/psa.yaml
 
   $SUDO mkdir -p -m 700 ${K3S_DATA_DIR}/server/logs
   $SUDO cp ${CONFIG_DIR}/k8s/audit.yaml ${K3S_DATA_DIR}/server/audit.yaml
 
+  $SUDO mkdir -p /etc/rancher/k3s
   $SUDO cp ${CONFIG_DIR}/k8s/config.yaml /etc/rancher/k3s/config.yaml
 
   # Start K3S
