@@ -755,7 +755,7 @@ MyEOF
 
   $SUDO cp ${CONFIG_DIR}/k8s/psa.yaml ${K3S_DATA_DIR}/server/psa.yaml
 
-  $SUDO mkdir -p -m 700 ${K3S_DATA_DIR}/k3s/server/logs
+  $SUDO mkdir -p -m 700 ${K3S_DATA_DIR}/server/logs
   $SUDO cp ${CONFIG_DIR}/k8s/audit.yaml ${K3S_DATA_DIR}/server/audit.yaml
 
   $SUDO cp ${CONFIG_DIR}/k8s/config.yaml /etc/rancher/k3s/config.yaml
