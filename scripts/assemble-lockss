@@ -446,12 +446,6 @@ add_stack_volumes() {
     fi
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || logger_error_exit "Unable to create tmp dir: ${mtpoint}"
-    if ["crawl" == "$svc" ]; then
-      if [ ${LOCKSS_PLUGGABLE_CRAWLER_PATH} ]; then
-        mtpoint=${LOCKSS_PLUGGABLE_CRAWLER_PATH}/$stack-crawler-plugins
-        mkdir -p ${mtpoint} || logger_error_exit "Unable to create crawler plugin dir: ${mtpoint}"
-      fi
-    fi
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
