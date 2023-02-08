@@ -154,6 +154,37 @@ configure_databases() {
   fi
 }
 
+configure_crawler_services() {
+  echo ""
+  echo "Configuring crawler service..."
+  echo ""
+  #check crawler service
+  CRAWLER_OK=N
+  until is_yes ${CRAWLER_OK}; do
+    ask_for_input "Use LOCKSS Crawler Service?" $(to_yes_no_or_blank ${USE_LOCKSS_CRAWL}) Y
+    if is_yes "${ANS}"; then
+      USE_LOCKSS_CRAWL=true
+      ask_for_input "Enable usage of LOCKSS crawler?" $(to_yes_no_or_blank ${LOCKSS_CRAWLER_ENABLE}) Y
+      if is_yes "${ANS}"; then
+        LOCKSS_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_CRAWLER_ENABLE=false
+      fi
+      ask_for_input "Enable usage of wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
+      if is_yes "${ANS}"; then
+        LOCKSS_WGET_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_WGET_CRAWLER_ENABLE=false
+      fi
+    else
+      USE_LOCKSS_CRAWL=false
+      CRAWLER_OK=Y
+    fi
+  done
+}
+
 configure_services() {
   echo ""
   echo "Configuring LOCKSS services..."
@@ -175,6 +206,7 @@ configure_services() {
   else
     USE_LOCKSS_MDX=false
   fi
+  configure_crawler_services
 
   # SOAP service
   ask_for_input "Use LOCKSS SOAP Compatibility Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOAP})" N
@@ -281,12 +313,15 @@ LOCKSS_SOLR_PASSWD_HASH="${LOCKSS_SOLR_PASSWD_HASH}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
+LOCKSS_CRAWLER_ENABLE="${LOCKSS_CRAWLER_ENABLE}"
+LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
+USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL:-true}"
 USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP:-false}"
 USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
 USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
