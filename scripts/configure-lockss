@@ -190,6 +190,46 @@ configure_databases() {
   fi
 }
 
+configure_crawler_services() {
+  echo ""
+  echo "Configuring crawler service..."
+  echo ""
+  #check crawler service
+  CRAWLER_OK=N
+  until is_yes ${CRAWLER_OK}; do
+    if [ "X${USE_LOCKSS_CRAWL}" = X ]; then
+      USE_LOCKSS_CRAWL=true
+    fi
+    ask_for_input "Use LOCKSS Crawler Service?" $(to_yes_no ${USE_LOCKSS_CRAWL})
+    if is_yes "${ANS}"; then
+      USE_LOCKSS_CRAWL=true
+      if [ "X${LOCKSS_CRAWLER_ENABLE}" = X ]; then
+        LOCKSS_CRAWLER_ENABLE=true
+      fi
+      ask_for_input "Enable usage of LOCKSS crawler?" $(to_yes_no ${LOCKSS_CRAWLER_ENABLE})
+      if is_yes "${ANS}"; then
+        LOCKSS_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_CRAWLER_ENABLE=false
+      fi
+      if [ "X${LOCKSS_WGET_CRAWLER_ENABLE}" = X ]; then
+        LOCKSS_WGET_CRAWLER_ENABLE=false
+      fi
+      ask_for_input "Enable usage of wget crawler?" $(to_yes_no ${LOCKSS_WGET_CRAWLER_ENABLE})
+      if is_yes "${ANS}"; then
+        LOCKSS_WGET_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_WGET_CRAWLER_ENABLE=false
+      fi
+      if
+    else
+      USE_LOCKSS_CRAWL=false
+      CRAWLER_OK=Y
+    fi
+  done
+}
 
 configure_services() {
   echo ""
@@ -217,6 +257,7 @@ configure_services() {
   else
     USE_LOCKSS_MDX=false
   fi
+  configure_crawler_services
 
   # Check SOAP service
   if [ "X${USE_LOCKSS_SOAP}" = X ]; then
@@ -325,12 +366,15 @@ LOCKSS_SOLR_PASSWD_HASH="${LOCKSS_SOLR_PASSWD_HASH}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
+LOCKSS_CRAWLER_ENABLE="${LOCKSS_CRAWLER_ENABLE}"
+LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
 USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
 USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
+USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL:-true}"
 USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP:-false}"
 USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
 USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"

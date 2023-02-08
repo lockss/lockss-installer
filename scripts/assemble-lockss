@@ -187,6 +187,12 @@ init_service_arrays() {
     lockss_owned+=("pol")
     export HAS_POL=${USE_LOCKSS_POL}
   fi
+  if ${USE_LOCKSS_CRAWL}; then
+    svcs+=("crawl")
+    svcs_confs+=("crawl")
+    lockss_owned+=("crawl")
+    export HAS_CRAWL=${USE_LOCKSS_CRAWL}
+  fi
   if ${USE_LOCKSS_SOAP}; then
     svcs+=("soap")
     svcs_confs+=("soap")
@@ -440,6 +446,12 @@ add_stack_volumes() {
     fi
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || logger_error_exit "Unable to create tmp dir: ${mtpoint}"
+    if ["crawl" == "$svc" ]; then
+      if [ ${LOCKSS_PLUGGABLE_CRAWLER_PATH} ]; then
+        mtpoint=${LOCKSS_PLUGGABLE_CRAWLER_PATH}/$stack-crawler-plugins
+        mkdir -p ${mtpoint} || logger_error_exit "Unable to create crawler plugin dir: ${mtpoint}"
+      fi
+    fi
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug

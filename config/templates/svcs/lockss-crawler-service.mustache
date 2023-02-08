@@ -1,0 +1,227 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawler-service
+spec:
+  ports:
+  - name: "crawl-service-rest-port"
+    port: {{CRAWL_REST_PORT}}
+    targetPort: {{CRAWL_DEFAULT_REST_PORT}}
+  - name: "crawl-service-ui-port"
+    port: {{CRAWL_UI_PORT}}
+    targetPort: {{CRAWL_DEFAULT_UI_PORT}}
+{{#additional_ports POL}}
+  - name: "__PORT_NAME__"
+    port: __HOST_PORT__
+    targetPort: __CONTAINER_PORT__
+{{/additional_ports}}
+
+  selector:
+    io.kompose.service: lockss-crawler-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-logs-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-crawl-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-data-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-crawl-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-tmp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      owner: "lockss-crawl-tmp"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawler-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-crawler-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-crawler-service
+    spec:
+      securityContext:
+        runAsUser: {{LOCKSS_UID}}
+        runAsGroup: {{LOCKSS_GID}}
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: JVM_OPTS_ADDITIONAL
+          value: "{{CRAWL_JVM_OPTS_ADDITIONAL}}"
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
+        - name: LOCKSS_CONFIG_URL
+          value: {{CFG_URL}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
+        - name: LOCKSS_NEEDS_SECRETS
+          value: "true"
+        - name: LOCKSS_WAIT_FOR_200
+          value: "{{CFG_HOST}}:{{CFG_REST_PORT}}"
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{REPO_HOST}}:{{REPO_REST_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        - name: LOCKSS_USER
+          value: {{LOCKSS_USER}}
+        - name: LOCKSS_UID
+          value: '{{LOCKSS_UID}}'
+        - name: LOCKSS_GROUP
+          value: {{LOCKSS_GROUP}}
+        - name: LOCKSS_GID
+          value: '{{LOCKSS_GID}}'
+        image: {{CRAWL_IMG}}:{{CRAWL_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-crawler-service
+        ports:
+        - name: "crawl-rest-port"
+          containerPort: {{CRAWL_DEFAULT_REST_PORT}}
+          hostPort: {{CRAWL_REST_PORT}}
+          protocol: TCP
+        - name: "crawl-ui-port"
+          containerPort: {{CRAWL_DEFAULT_UI_PORT}}
+          hostPort: {{CRAWL_UI_PORT}}
+          protocol: TCP
+{{#additional_ports POL}}
+        - name: "__PORT_NAME__"
+          containerPort: __CONTAINER_PORT__
+          hostPort: __HOST_PORT__
+          protocol: TCP
+{{/additional_ports}}
+
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/configs/lockss_bootstrap
+          name: lockss-bootstrap
+          subPath: lockss_bootstrap
+        - mountPath: /run/configs/lockss_service
+          name: crawl-service
+          subPath: lockss_service
+        - mountPath: /run/configs/lockss_service_opt
+          name: crawl-service-opt
+          subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss_ui_pass
+          name: lockss-ui-pass
+          subPath: lockss_ui_pass
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /data
+          name: lockss-crawl-data
+        - mountPath: /var/log/lockss
+          name: lockss-crawl-logs
+        - mountPath: /tmp/lockss
+          name: lockss-crawl-tmp
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
+      volumes:
+      - configMap:
+          items:
+          - key: lockss-bootstrap
+            path: lockss_bootstrap
+          name: lockss-bootstrap
+        name: lockss-bootstrap
+      - configMap:
+          items:
+          - key: crawl-service
+            path: lockss_service
+          name: crawl-service
+        name: crawl-service
+      - configMap:
+          items:
+          - key: crawl-service-opt
+            path: lockss_service_opt
+          name: crawl-service-opt
+        name: crawl-service-opt
+      - name: lockss-ui-pass
+        secret:
+          secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+          items:
+          - key: lockss-auth
+            path: lockss-auth
+      - name: lockss-crawl-data
+        persistentVolumeClaim:
+          claimName: lockss-crawl-data-pvc
+      - name: lockss-crawl-logs
+        persistentVolumeClaim:
+          claimName: lockss-crawl-logs-pvc
+      - name: lockss-crawl-tmp
+        persistentVolumeClaim:
+          claimName: lockss-crawl-tmp-pvc

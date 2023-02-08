@@ -149,6 +149,11 @@ init_service_arrays() {
     deploy_service_names+=("lockss-repository-service")
     svc_port_map["lockss-repository-service"]="$REPO_REST_PORT:$REPO_DEFAULT_REST_PORT"
   fi
+  if ${USE_LOCKSS_CRAWL}; then
+    svcs+=("crawl")
+    deploy_service_names+=("lockss-crawler-service")
+    svc_port_map["lockss-crawler-service"]="$CRAWL_UI_PORT:$CRAWL_DEFAULT_UI_PORT $CRAWL_REST_PORT:$CRAWL_DEFAULT_REST_PORT"
+  fi
   if ${USE_LOCKSS_POSTGRES}; then
     svcs+=("postgres")
     deploy_service_names+=("lockss-postgres-service")
