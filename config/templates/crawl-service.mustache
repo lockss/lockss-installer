@@ -43,7 +43,10 @@ org.lockss.crawlerservice.pluggableEnabled=true
 # The list of supported crawlers
 org.lockss.crawlerservice.crawlers="classic;wget"
 
-# The lockss crawler
+# The path to the pluggable crawlmanager db
+org.lockss.crawlerservice.dbPath={{CRAWL_DB_PATH}}
+
+#The lockss classic crawler
 org.lockss.crawlerservice.classic.enabled={{LOCKSS_CLASSIC_CRAWLER_ENABLE}}
 
 # The wget crawler
