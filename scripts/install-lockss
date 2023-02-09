@@ -773,7 +773,7 @@ MyEOF
       || Fatal 'Could not create /etc/rancher/k3s'
 
   local _src="${CONFIG_DIR}/templates/k3s/config.yaml.mustache"
-  local _dst="${CONFIG_DIR}/k3s/config.yaml"
+  local _dst="${CONFIG_DIR}/k8s/config.yaml"
   mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
   $SUDO cp "${_dst}" /etc/rancher/k3s/config.yaml \
       || Fatal 'Could not install K3S configuration file'
