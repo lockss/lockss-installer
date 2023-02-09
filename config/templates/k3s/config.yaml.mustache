@@ -1,9 +1,9 @@
 protect-kernel-defaults: true
 secrets-encryption: true
 kube-apiserver-arg:
-  - 'admission-control-config-file=/var/lib/rancher/k3s/server/psa.yaml'
-  - 'audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log'
-  - 'audit-policy-file=/var/lib/rancher/k3s/server/audit.yaml'
+  - 'admission-control-config-file={{K3S_DATA_DIR}}/server/psa.yaml'
+  - 'audit-log-path={{K3S_DATA_DIR}}/server/logs/audit.log'
+  - 'audit-policy-file={{K3S_DATA_DIR}}/server/audit.yaml'
   - 'audit-log-maxage=30'
   - 'audit-log-maxbackup=10'
   - 'audit-log-maxsize=100'

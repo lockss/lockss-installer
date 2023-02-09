@@ -751,20 +751,36 @@ MyEOF
 
   # Apply K3s hardening guide
   # See https://docs.k3s.io/security/hardening-guide
-  $SUDO cp ${CONFIG_DIR}/k8s/sysctl-kubelet.conf /etc/sysctl.d/90-kubelet.conf
-  $SUDO sysctl -p /etc/sysctl.d/90-kubelet.conf
+  $SUDO cp "${CONFIG_DIR}/k8s/sysctl-kubelet.conf" /etc/sysctl.d/90-kubelet.conf \
+      || Fatal 'Could not install sysctl configuration'
 
-  $SUDO mkdir -p ${K3S_DATA_DIR}/server
-  $SUDO cp ${CONFIG_DIR}/k8s/psa.yaml ${K3S_DATA_DIR}/server/psa.yaml
+  $SUDO sysctl -p /etc/sysctl.d/90-kubelet.conf \
+      || Fatal 'Could not apply sysctl configuration'
 
-  $SUDO mkdir -p -m 700 ${K3S_DATA_DIR}/server/logs
-  $SUDO cp ${CONFIG_DIR}/k8s/audit.yaml ${K3S_DATA_DIR}/server/audit.yaml
+  $SUDO mkdir -p "${K3S_DATA_DIR}/server" \
+      || Fatal "Could not create ${K3S_DATA_DIR}/server"
 
-  $SUDO mkdir -p /etc/rancher/k3s
-  $SUDO cp ${CONFIG_DIR}/k8s/config.yaml /etc/rancher/k3s/config.yaml
+  $SUDO cp "${CONFIG_DIR}/k8s/psa.yaml" "${K3S_DATA_DIR}/server/psa.yaml" \
+      || Fatal 'Could not install PodSecurityAdmission (PSA) configuration'
+
+  $SUDO mkdir -p -m 700 "${K3S_DATA_DIR}/server/logs" \
+      || Fatal "Could not create ${K3S_DATA_DIR}/server/logs"
+
+  $SUDO cp "${CONFIG_DIR}/k8s/audit.yaml" "${K3S_DATA_DIR}/server/audit.yaml" \
+      || Fatal 'Could not install PodSecurityAdmission (PSA) configuration'
+
+  $SUDO mkdir -p /etc/rancher/k3s \
+      || Fatal 'Could not create /etc/rancher/k3s'
+
+  local _src="${CONFIG_DIR}/templates/k3s/config.yaml.mustache"
+  local _dst="${CONFIG_DIR}/k3s/config.yaml"
+  mo "${_src}" > "${_dst}" || Fatal "Error rendering ${_src} to ${_dst}"
+  $SUDO cp "${_dst}" /etc/rancher/k3s/config.yaml \
+      || Fatal 'Could not install K3S configuration file'
 
   # Start K3S
-  $SUDO systemctl start k3s.service
+  $SUDO systemctl start k3s.service \
+      || Fatal 'Could not start K3S'
 
   # Success
   Success 'Installed K3s'
