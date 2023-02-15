@@ -203,15 +203,15 @@ configure_crawler_services() {
     ask_for_input "Use LOCKSS Crawler Service?" $(to_yes_no ${USE_LOCKSS_CRAWL})
     if is_yes "${ANS}"; then
       USE_LOCKSS_CRAWL=true
-      if [ "X${LOCKSS__CLASSIC_CRAWLER_ENABLE}" = X ]; then
-        LOCKSS__CLASSIC_CRAWLER_ENABLE=true
+      if [ "X${LOCKSS_CLASSIC_CRAWLER_ENABLE}" = X ]; then
+        LOCKSS_CLASSIC_CRAWLER_ENABLE=true
       fi
-      ask_for_input "Enable Classic crawler in LOCKSS Crawler Service?" $(to_yes_no ${LOCKSS__CLASSIC_CRAWLER_ENABLE})
+      ask_for_input "Enable Classic crawler in LOCKSS Crawler Service?" $(to_yes_no ${LOCKSS_CLASSIC_CRAWLER_ENABLE})
       if is_yes "${ANS}"; then
         LOCKSS_CLASSIC_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
       else
-        LOCKSS__CLASSIC_CRAWLER_ENABLE=false
+        LOCKSS_CLASSIC_CRAWLER_ENABLE=false
       fi
       if [ "X${LOCKSS_WGET_CRAWLER_ENABLE}" = X ]; then
         LOCKSS_WGET_CRAWLER_ENABLE=false
@@ -223,7 +223,6 @@ configure_crawler_services() {
       else
         LOCKSS_WGET_CRAWLER_ENABLE=false
       fi
-      if
     else
       USE_LOCKSS_CRAWL=false
       CRAWLER_OK=Y
