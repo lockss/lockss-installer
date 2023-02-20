@@ -70,9 +70,8 @@ declare -a arr svcs
 declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-set -a
-. "${SYSTEM_CONF_FILE}"
-set +a
+# Source system config file
+source_config
 
 clean_up() { # Perform pre-exit housekeeping
 	return
@@ -189,7 +188,6 @@ reset_solr_index() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
-# Source system config file
 
 if [ ! -r "$SYSTEM_CONF_FILE" ]; then
   err "$_0: The system configuration file does not exist.  This script requires the ./config/system.cfg file."
@@ -217,8 +215,8 @@ Check_Configured
 
 logger_init
 
-read_config ${SYSTEM_CONF_FILE}
-logger_debug "Loaded LOCKSS system configuration"
+#read_config ${SYSTEM_CONF_FILE}
+#logger_debug "Loaded LOCKSS system configuration"
 
 VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
 

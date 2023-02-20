@@ -91,6 +91,25 @@ msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
 
+# Source env.sh and optionally env.sh.opt as env vars
+# source_env <stack-name>
+source_env() {
+  local stack="$1"
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt" ]]; then
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt"
+  fi
+  set +a
+}
+
+# Source system config as env vars
+source_config() {
+  set -a
+  . "${CONFIG_DIR}/system.cfg"
+  set +a
+}
+
 # perform a kubectl command using whichever flavor of k8s that's installed
 kubectl_cmd() {
   if [ -z "${KUBECTL_CMD}" ]; then

@@ -48,9 +48,7 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 # Source system config file
-set -a
-. "${CONFIG_DIR}/system.cfg"
-set +a
+source_config
 
 UPDATE_ARG=""
 WAIT_ARG=""
