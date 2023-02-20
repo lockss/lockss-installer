@@ -39,7 +39,9 @@ _D0=$(dirname "${0}")
 . "${_D0}/_util"
 
 # Source system config file
-source_config
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 STACK_PREFIX="lockss-stack"
 signal_reindex ${STACK_PREFIX}

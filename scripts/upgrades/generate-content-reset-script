@@ -53,8 +53,11 @@ COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 
 STACK_PREFIX="lockss-stack"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 # Source system config file
-source_config
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
 IFS=';' read -r -a contentDirs <<< "${LOCKSS_REPO_HOST_DIRS}"
 

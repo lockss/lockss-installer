@@ -51,7 +51,9 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 # Source system config file
-source_config
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"

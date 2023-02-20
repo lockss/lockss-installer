@@ -56,9 +56,10 @@ USEROPTS_DIR="${CONFIG_DIR}/useropts"
 declare -a arr svcs
 declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
-# Source system config file
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-source_config
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
 clean_up() { # Perform pre-exit housekeeping
   return
@@ -160,8 +161,10 @@ ensure_writable_dir() {
 
 ensure_lockss_owner() {
   local stack=${STACK_PREFIX}$1
-  # Source env.sh
-  source_env
+  stack_env_file="${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  set -a
+  . "${stack_env_file}"
+  set +a
 
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data

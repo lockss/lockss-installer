@@ -56,8 +56,9 @@ _D0=$(dirname "${0}")
 ##
 
 # Files
-# Source system config file
-source_config
+set -a
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 #Data
 declare -a deploy_service_names
@@ -216,8 +217,10 @@ wait_for_ready() {
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-  # Source env.sh
-  source_env "${stack}"
+  # Source config.info and env.sh
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
   check_installed_volumes $stack
   pushd . &>/dev/null
   logger_debug "Deploying services and deployments for stack $stack"

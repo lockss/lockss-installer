@@ -52,9 +52,11 @@ _D0=$(dirname "${0}")
 . "$_D0/_util"
 # shellcheck source=./lib/mo
 . "${_D0}/lib/mo"
-# shellcheck source=./../config/system.cfg
 # Source system config file
-source_config
+set -a
+# shellcheck source=./../config/system.cfg
+. "${CONFIG_DIR}/system.cfg"
+set +a
 
 
 ##
@@ -67,7 +69,6 @@ MK_DIR="${TEMPLATES_DIR}/mk"
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
-OPT_ENV_TMPL="${CONFIG_DIR}/env.mustache.opt"
 
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
@@ -464,8 +465,10 @@ assemble_stack() {
   ensure_writable_dir $LOCKSS_TMPDIR
   local stack=${STACK_PREFIX}$1
   logger_debug "Assembling stack $stack..."
-  # Source env.sh
-  source_env "${stack}"
+  # Source config.info and env.sh for this stack
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
+  set +a
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| logger_error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
@@ -491,7 +494,6 @@ generate_lockss() {
     export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
-    local opt_stack_env_file="${stack_env_file}.opt"
     local stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
     logger_debug "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
     mkdir -p "${STACK_CONFIG_DIR}"
@@ -500,11 +502,9 @@ generate_lockss() {
 
     logger_debug "Generating the stack env.sh file..."
     mo "${ENV_TMPL}" >"${stack_env_file}"
-    if [[ -f "${OPT_ENV_TMPL}" ]]; then
-      mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
-    fi
-    # Source env.sh
-    source_env "${STACK_NAME}"
+    set -a
+    . "${stack_env_file}"
+    set +a
 
     logger_debug "Getting node hostname..."
     export NODE_HOSTNAME=$(kubectl_cmd get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
