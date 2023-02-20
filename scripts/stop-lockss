@@ -48,9 +48,7 @@ _D0=$(dirname "${0}")
 . "${_D0}/_util"
 
 # Source system config file
-set -a
-. "${CONFIG_DIR}/system.cfg"
-set +a
+source_config
 
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
@@ -114,10 +112,8 @@ trap "signal_exit INT" INT
 
 undeploy_stack() {
   local stack=${STACK_PREFIX}$1
-  # Source config.info and env.sh
-  set -a
-  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-  set +a
+  # Source env.sh
+  source_env "${stack}"
   logger_info "Undeploying stack $stack"
   # make the stack unreachable on the network
   kubectl_lockss delete -l lockss-stack-id=${stack} services | logger_debug
