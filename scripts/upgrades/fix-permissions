@@ -161,7 +161,7 @@ ensure_writable_dir() {
 ensure_lockss_owner() {
   local stack=${STACK_PREFIX}$1
   # Source env.sh
-  source_env
+  source_env "${stack}"
 
   for svc in "${lockss_owned[@]}"; do
     data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
