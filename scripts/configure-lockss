@@ -467,52 +467,34 @@ build_config_file() {
     if [ "X${LOCKSS_DATA_DIR}" != X ]; then
       HAD_DATA_DIR=Y
     fi
-    # Content and data storage base
+    # Data storage base
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for primary content data storage" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
       fi
     done
 
-    # Additional content storage base(s)
-    USE_MULTIPLE_CACHES=
-    if [ "X${LOCKSS_REPO_HOST_DIRS}" != X ]; then
-      USE_MULTIPLE_CACHES=N
-      IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-      if test ${#prevPaths[*]} -gt 1; then
-        USE_MULTIPLE_CACHES=Y
+    # Content storage base(s)
+    CONTENT_PATHS_OK=N
+    until is_yes ${CONTENT_PATHS_OK}; do
+      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      if [ "X${ANS}" != X ]; then
+        tmp_repo_host_dirs="${ANS}"
+        IFS=';' read -r -a newPaths <<< "${tmp_repo_host_dirs}"
+        for ((i=0; i<${#newPaths[@]}; i++)); do
+          newPaths[i]="$(normalize_path ${newPaths[i]})"
+          repoDirs[i]="/content$i"
+        done
+        new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
+        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
+        LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
+        CONTENT_PATHS_OK=Y
       fi
-    fi
-    prevPaths[0]=${LOCKSS_DATA_DIR}
-    curPaths[0]=${LOCKSS_DATA_DIR}
-    repoDirs[0]="/content0"
-    ask_for_input "Use additional directories for content data storage?" "${USE_MULTIPLE_CACHES}" N
-    if is_yes "${ANS}"; then
-      count=1
-      until is_yes "${done}"; do
-        ask_for_input "Root path for additional content data storage $count (q to quit)" "${prevPaths[count]:-q}"
-        if [ "X${ANS}" = Xq ]; then
-          done=Y
-        elif [ -n "${ANS}" ]; then
-          curPaths[count]="$(normalize_path ${ANS})"
-          repoDirs[count]="/content$count"
-          count=$((count+1))
-        fi
-      done
-      new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
-      LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
-      LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
-    else
-      if test ${#prevPaths[*]} -gt 1; then
-        echo "Run repo cache updater."
-      fi
-      LOCKSS_REPO_CONTAINER_DIRS="/content0"
-      LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
-    fi
+    done
 
     # Log dir base
     LOG_PATHS_OK=N
