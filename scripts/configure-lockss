@@ -410,7 +410,7 @@ build_config_file() {
     # First set current value of NEED_USER iff we've asked this question before
     NEED_USER=
     if [ "X${LOCKSS_MAILHUB}" != X ]; then
-      if [[ -v LOCKSS_MAILHUB_USER ]]; then
+      if [[ -n "${LOCKSS_MAILHUB_USER}" ]]; then
         NEED_USER=Y
       else
         NEED_USER=N
