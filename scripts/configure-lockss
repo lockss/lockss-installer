@@ -440,7 +440,7 @@ build_config_file() {
     # Props URL
     ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/demo/lockss.xml"
     LOCKSS_PROPS_URL="${ANS}"
-    if echo ${LOCKSS_PROPS_URL} | egrep -is "^https:" >/dev/null; then
+    if echo ${LOCKSS_PROPS_URL} | grep -eis "^https:" >/dev/null; then
       if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
         LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
       else
@@ -562,7 +562,7 @@ build_config_file() {
       CONFIG_OK=Y
 
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-      egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+      grep -esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
       if [ $(command -v mail) >/dev/null ]; then
           if [ -z "${BYPASS_MAIL}" ]; then
