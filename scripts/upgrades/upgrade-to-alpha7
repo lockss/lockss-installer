@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# restart-lockss - "Restart the running LOCKSS stack."
+# upgrade-to-beta1 -
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -30,15 +30,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Usage: restart-lockss [-h|--help] [-u|--update] [-a|--args ARGS_ADDITIONAL]
+# Usage: upgrade-to-beta1 [-h|--help]
+#
 # Revision history:
 # ---------------------------------------------------------------------------
+
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-#
+UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6.?"
+UPGRADE_TO="2.0.0-alpha7"
+
 ## Relative paths
 ##
+
 _0=$(basename "${0}")
 _D0=$(dirname "${0}")
 
@@ -46,22 +51,38 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
-# Source system config file
-source_config
+. "${_D0}/../_util"
 
+COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
+CONFIG_DIR="${COMPOSE_DIR}/config"
+SCRIPTS_DIR="${COMPOSE_DIR}/scripts"
+LIB_DIR="${SCRIPTS_DIR}/lib"
+UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
+DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
+TEMPLATES_DIR="${CONFIG_DIR}/templates"
+USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
-UPDATE_ARG=""
-WAIT_ARG=""
+##
+## Definitions
+##
+declare -a arr svcs
+declare -a arr lockss_owned
+STACK_PREFIX="lockss-stack"
+SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
+POSTGRES_VERSION_NEW='15.2-alpine'
+POSTGRES_VERSION_OLD='9.6.12-alpine'
 clean_up() { # Perform pre-exit housekeeping
-  log_script_exit  "${PROGNAME}"
+	return
 }
 
-logger_error_exit() {
-  logger_fatal "${1:-"Unknown Error"}" >&2
-  clean_up
-  exit 1
+error_exit() {
+	echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+	clean_up
+	exit 1
 }
 
 graceful_exit() {
@@ -72,95 +93,104 @@ graceful_exit() {
 signal_exit() { # Handle trapped signals
 	case $1 in
 		INT)
-			logger_error_exit "Program interrupted by user" ;;
+			error_exit "Program interrupted by user" ;;
 		TERM)
 			echo -e "\n$PROGNAME: Program terminated" >&2
 			graceful_exit ;;
 		*)
-			logger_error_exit "$PROGNAME: Terminating on unknown signal" ;;
+			error_exit "$PROGNAME: Terminating on unknown signal" ;;
 	esac
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help]"
 }
 
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  "Restart a running LOCKSS stack."
+  Update to beta1 from a previous alpha release.
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
-  -u, --update  Force update of LOCKSS docker images
-  -w, --wait Use a wait file to signal stack ready.
-  -s, --services  A semicolon seperated list of services to restart
-  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
-    Where 'ARGS_ADDITIONAL' are the arguments.
 
 _EOF_
   return
 }
 
+upgrade_postgres() {
+  if ${USE_LOCKSS_POSTGRES}; then
+    ${UPDATES_DIR}/upgrade-postgres --old-version ${POSTGRES_VERSION_OLD} --new-version ${POSTGRES_VERSION_NEW} ||
+        err_exit "upgrade to postgres failed."
+  else
+    logger_info "Skipping postgres upgrade.  Only LOCKSS postgres upgrade is supported."
+  fi
+}
+
+###
+## MAIN
+###
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
+# Source system config file
 
+if [ ! -r "$SYSTEM_CONF_FILE" ]; then
+  err "$_0: The system configuration file does not exist.  This script requires the ./config/system.cfg file."
+  err_exit "$_0: Run scripts/configure-lockss first."
+fi
 
-logger_init
-log_script_entry "${PROGNAME}"
-umask 002
-
-ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ $# -gt 0 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
-    -u | --update)
-      UPDATE_ARG="-u"
-      logger_debug "Forcing update of LOCKSS docker images"
-      shift
-      ;;
-    -w | --wait)
-      WAIT_ARG="-w"
-      logger_debug "Setting wait for file on deploy."
-      shift
-      ;;
-    -s | --services)
-      export REQ_SERVICES="$2"
-      logger_debug "Adding list of service to assemble $REQ_SERVICES"
-      shift; shift
-      ;;
-    -a | --args)
-      export ARGS_ADDITIONAL="$2"
-      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
-      shift; shift
-    ;;
-    -*)
+    -* | --*)
       usage
-      logger_error_exit "Unknown option $1" ;;
+      error_exit "Unknown option $1" ;;
     *)
-      logger_debug "Argument $1 to process..."
       shift
       ;;
   esac
 done
 
-# Main logic
+# Sanity checks
 Check_Runnable
+Check_Stopped
 Check_Configured
-Check_Upgraded
 
-if $(am_i_root); then
-  logger_error_exit "This script should not be run as root. Run as the lockss user."
+logger_init
+
+read_config ${SYSTEM_CONF_FILE}
+logger_debug "Loaded LOCKSS system configuration"
+VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
+
+if [ ! -f "${VERSION_FILE}" ]; then
+  error_exit "VERSION file not found in LOCKSS data directory; upgrade not necessary"
 fi
 
-"${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "An error occured while stopping running stack."
-"${SCRIPTS_DIR}"/assemble-lockss ${UPDATE_ARG} || logger_error_exit "Stack reassembly failed."
-"${SCRIPTS_DIR}"/deploy-lockss -a "$ARGS_ADDITIONAL" ${WAIT_ARG} || logger_error_exit "Attempt to redeploy stack failed"
+CUR_VERSION="`cat ${VERSION_FILE}`"
 
-graceful_exit
+if Parse_Lockss_Version "${CUR_VERSION}"; then
+  case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
+    2.0-alpha6)
+      logger_info "Performing upgrade from alpha6"
+      upgrade_postgres
+      ;;
+    2.0-alpha7)
+      logger_info "Upgrade already applied (alpha7)"
+      ;;
+    *)
+      error_exit "Do not know how to upgrade from ${CUR_VERSION}"
+      ;;
+  esac
+else
+  error_exit "Unexpected version: ${CUR_VERSION}"
+fi
 
+logger_debug "Updating LOCKSS version file"
+Set_Lockss_Version "${UPGRADE_TO}"
+
+logger_info "Upgrade completed"

@@ -85,7 +85,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
@@ -99,6 +99,7 @@ help_message() {
   -h, --help  Display this help message and exit.
   -u, --update  force update of LOCKSS docker images
   -w, --wait Use a wait file to signal stack ready.
+  -s, --services  A semicolon seperated list of services to start
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -133,7 +134,12 @@ while [[ $# -gt 0 ]]; do
       export ARGS_ADDITIONAL="$2"
       logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
       shift; shift
-    ;;
+     ;;
+    -s | --services)
+     export REQ_SERVICES="$2"
+     logger_debug "Adding list of service to deploy $REQ_SERVICES"
+     shift; shift
+     ;;
     -* | --*)
       usage
       logger_error_exit "Unknown option $1" ;;

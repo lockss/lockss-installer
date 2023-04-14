@@ -100,6 +100,10 @@ source_env() {
   if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt" ]]; then
   . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt"
   fi
+  if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.upgrade" ]]; then
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.upgrade"
+  fi
+
   set +a
 }
 
@@ -1024,4 +1028,96 @@ Extract_K3s_Version() {
 abspath() {
   ( cd "$(dirname "$1")"
     printf "%s/%s\n" "$(pwd)" "$(basename "$1")" )
+}
+
+init_service_arrays() {
+  if [ -z ${REQ_SERVICES+x} ]; then
+    logger_debug "Setting service array from the config file."
+    init_service_arrays_from_config
+  else
+    logger_debug "Setting service array from commandline arguments."
+    init_service_arrays_from_commandline
+  fi
+}
+
+init_service_arrays_from_commandline() {
+  declare -a svcs_arr
+  IFS=';' read -r -a svcs_arr <<< "$REQ_SERVICES"
+  for svc in "${svcs_arr[@]}"; do
+    case ${svc} in
+      "cfg"|"config")
+        SERVICES+=("cfg")
+        ;;
+      "mdq")
+        SERVICES+=("mdq")
+        ;;
+      "mdx")
+        SERVICES+=("mdx")
+        ;;
+      "pol"|"poll"|"poller")
+        SERVICES+=("pol")
+        ;;
+      "soap")
+        SERVICES+=("soap")
+        ;;
+      "repo")
+        SERVICES+=("repo")
+        ;;
+      "postgres")
+        SERVICES+=("postgres")
+        ;;
+      "solr")
+        SERVICES+=("solr")
+        ;;
+      "hdfs")
+        SERVICES+=("hdfs")
+        ;;
+      "pywb")
+        SERVICES+=("pywb")
+        ;;
+      "openwb"|"openwayback")
+        SERVICES+=("openwayback")
+        ;;
+      *)
+        logger_error "Request to deploy unknown service: ${svc}."
+        ;;
+      esac
+done
+}
+
+#initialize the service arrays based on system.cfg info.
+init_service_arrays_from_config() {
+  if ${USE_LOCKSS_CFG}; then
+    SERVICES+=("cfg")
+  fi
+  if ${USE_LOCKSS_MDQ}; then
+    SERVICES+=("mdq")
+  fi
+  if ${USE_LOCKSS_MDX}; then
+    SERVICES+=("mdx")
+  fi
+  if ${USE_LOCKSS_POL}; then
+    SERVICES+=("pol")
+  fi
+  if ${USE_LOCKSS_SOAP}; then
+    SERVICES+=("soap")
+  fi
+  if ${USE_LOCKSS_REPO}; then
+    SERVICES+=("repo")
+  fi
+  if ${USE_LOCKSS_POSTGRES}; then
+    SERVICES+=("postgres")
+  fi
+  if ${USE_LOCKSS_SOLR}; then
+    SERVICES+=("solr")
+  fi
+  if ${USE_LOCKSS_HDFS}; then
+    SERVICES+=("hdfs")
+  fi
+  if ${USE_LOCKSS_PYWB}; then
+    SERVICES+=("pywb")
+   fi
+  if ${USE_LOCKSS_OPENWB}; then
+    SERVICES+=("openwayback")
+  fi
 }
