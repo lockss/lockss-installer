@@ -50,8 +50,6 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 
 UPGRADE_ENV_TMPL="${CONFIG_DIR}/env.mustache.upgrade"
-declare -a arr svcs
-declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
 
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
