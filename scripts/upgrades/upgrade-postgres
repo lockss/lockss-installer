@@ -53,9 +53,13 @@ UPGRADE_ENV_TMPL="${CONFIG_DIR}/env.mustache.upgrade"
 declare -a arr svcs
 declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
+
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 # Source system config file
 source_config
+STACK_PREFIX="lockss-stack"
+POSTGRES_DATA_DIR="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-postgres-data"
+POSTGRES_DATA_DIR_BAK="${POSTGRES_DATA_DIR}.bak"
 
 clean_up() { # Perform pre-exit housekeeping
   restore_env
@@ -167,10 +171,44 @@ version_compare()
     return 0
 }
 
+dump_old_version()
+{
+  # add the postgres version to the opt file
+  echo POSTGRES_VERSION=${OLD_VERSION} | tee "${UPGRADE_ENV_TMPL}"
+
+  # bring up the old version
+  "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start old postgres failed."
+  podname="deploy/lockss-postgres-service"
+  #wait for the  deployment to be marked as Available
+  kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
+  # dump the old versions content
+  kubectl_lockss exec -it ${podname} -- pg_dumpall -c -U "${LOCKSS_POSTGRES_USER}" --file="/tmp/${DUMP_FILE}" ||
+    logger_error_exit "Unable to exec into pod to perform database dump."
+  # shutdown old version
+  "${SCRIPTS_DIR}"/stop-lockss  || logger_error_exit "Attempt to stop postgres failed."
+  logger_info "moving old postgres directory out of the way..."
+  mv "${POSTGRES_DATA_DIR}" "${POSTGRES_DATA_DIR_BAK}" ||
+    logger_error_exit "Unable to backup data dir: ${POSTGRES_DATA_DIR}"
+  restore_env
+}
+
+restore_dump()
+{
+# bring up the new version -- psql -q -U
+ "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start new postgres failed."
+ kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
+ # load the dump into the new version
+ kubectl_lockss exec -it deploy/lockss-postgres-service -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="/tmp/${DUMP_FILE}" postgres ||
+   logger_error_exit "Unable to exec into pod to perform database restore."
+ # shutdown the new version.
+ "${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running postgres failed."
+}
+
 ###
 ## MAIN
 ###
-# Trap signals
+# Trap signals 1233  sudo rm -rf /lockss/lockss-stack-postgres-data
+
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
@@ -205,42 +243,9 @@ Check_Configured
 
 logger_init
 check_versions
-
-# add the postgres version to the opt file
-echo POSTGRES_VERSION=${OLD_VERSION} | tee "${UPGRADE_ENV_TMPL}"
-dumpfile="/data/${OLD_VERSION}_dump"
-
-# bring up the old version
-"${SCRIPTS_DIR}"/restart-lockss -s "postgres" || logger_error_exit "Attempt to start old postgres failed."
-podname="deploy/lockss-postgres-service"
-#wait for the pod deployment to mark it ready
-kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
-# get the running pod name
-#podname="$(kubectl_lockss get pods -o go-template --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')"
-
-# dump the old versions content
-kubectl_lockss exec -it ${podname} -- pg_dumpall -U $LOCKSS_POSTGRES_USER --file=${dumpfile} ${VERBOSE} ||
-  logger_error_exit "Unable to exec into pod to perform database dump."
-# shutdown old version
-"${SCRIPTS_DIR}"/stop-lockss  || logger_error_exit "Attempt to stop limited stack failed."
-POSTGRES_DATA_DIR_BAK="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-postgres-data.bak"
-POSTGRES_DATA_DIR="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-postgres-data"
-mv "${POSTGRES_DATA_DIR}" "${POSTGRES_DATA_DIR_BAK}" ||  logger_error_exit "Unable to backup data dir: ${POSTGRES_DATA_DIR}"
-mkdir -p ${POSTGRES_DATA_DIR} || logger_error_exit "Unable to create data dir: ${POSTGRES_DATA_DIR}"
-cp "${POSTGRES_DATA_DIR_BAK}/${OLD_VERSION}_dump" "${POSTGRES_DATA_DIR}/"
-echo POSTGRES_VERSION=${NEW_VERSION} | tee "${UPGRADE_ENV_TMPL}"
-
-# bring up the new version
-"${SCRIPTS_DIR}"/restart-lockss -u -s "postgres" || logger_error_exit "Attempt to start new postgres failed."
-kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=300s
-
-#podname="$(kubectl_lockss get pods -o go-template --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')"
-# load the dump into the new version
-kubectl_lockss exec -it ${podname} -- pg_restore -U $LOCKSS_POSTGRES_USER --file=${dumpfile} ${VERBOSE} ||
-  logger_error_exit "Unable to exec into pod to perform database restore."
-
-# shutdown the new version.
-"${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running postgres failed."
+DUMP_FILE="${OLD_VERSION}.dump"
+dump_old_version
+restore_dump
 
 logger_info "Postgres upgrade completed."
 
