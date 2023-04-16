@@ -73,7 +73,7 @@ set -a
 . "${SYSTEM_CONF_FILE}"
 set +a
 
-POSTGRES_VERSION_NEW='15.2-alpine'
+POSTGRES_VERSION_NEW='14.7-alpine'
 POSTGRES_VERSION_OLD='9.6.12-alpine'
 clean_up() { # Perform pre-exit housekeeping
 	return
