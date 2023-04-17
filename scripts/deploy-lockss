@@ -166,7 +166,7 @@ wait_for_ready() {
     do
       sleep 2
     done
-    logger_info "LOCKSS services are now ready for use."
+    logger_info "LOCKSS services are ready; AUs may still be loading."
   else
     logger_info "Pods are ready, LOCKSS services are starting."
   fi
