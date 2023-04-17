@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+remove_journal_files() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    if [ ! -z "${dir}" ]; then
+      logger_debug "Removing journal files under ${dir}/${STACK_PREFIX}-repo-content"
+      find "${dir}/${STACK_PREFIX}-repo-content" -type f -name "lockss-repo.warc" -delete 2> /dev/null
+    fi
+  done
+}
+
+rename_tempwarcs_dir() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    TEMPWARCS_DIR="${dir}/${STACK_PREFIX}-repo-content/tempwarcs"
+    TMP_DIR="${dir}/${STACK_PREFIX}-repo-content/tmp"
+    if [ -d "${TEMPWARCS_DIR}" ]; then
+      logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
+      mkdir -p "${TMP_DIR}"
+      mv "${TEMPWARCS_DIR}" "${TMP_DIR}/warcs"
+    fi
+  done
+}
+
+rename_collections_dir() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
+    NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
+    if [ -d "${COLLECTIONS_DIR}" ]; then
+      logger_debug "Renaming directory (src: ${COLLECTIONS_DIR}, dst: ${NAMESPACES_DIR})"
+      mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
+    fi
+  done
+}
+
+reset_index_state() {
+  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  for dir in "${repoPaths[@]}"; do
+    INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
+    if [ -d "${INDEX_STATE_DIR}" ]; then
+      logger_debug "Removing index state from ${INDEX_STATE_DIR}"
+      rm -f "${INDEX_STATE_DIR}"/reindex*
+      rm -f "${INDEX_STATE_DIR}"/solr/*
+    fi
+  done
+}
+
+reset_solr_index() {
+  local STACK_SOLR_DATA="${STACK_PREFIX}-solr-data"
+  local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}"
+
+  if [ -d "${SOLR_HOME_PATH}" ]; then
+    local SOLR_BACKUP_TGZ="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}.`date +%Y%m%d%H%M`.tar.gz"
+    logger_info "Backing up Solr home directory to ${SOLR_BACKUP_TGZ}; this may take several minutes..."
+    tar -C "${LOCKSS_DATA_DIR}" -czf "${SOLR_BACKUP_TGZ}" "${STACK_SOLR_DATA}"
+    if [ $? -eq 0 ]; then
+      logger_debug "Removing Solr home directory (${SOLR_HOME_PATH})"
+      rm -rf "${SOLR_HOME_PATH}"
+    else
+      err_exit "Failed to backup Solr home directory; exiting."
+    fi
+  fi
+}
