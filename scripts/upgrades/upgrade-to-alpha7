@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# upgrade-to-beta1 -
+# upgrade-to-alpha7 -
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -30,7 +30,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Usage: upgrade-to-beta1 [-h|--help]
+# Usage: upgrade-to-alpha7 [-h|--help]
 #
 # Revision history:
 # ---------------------------------------------------------------------------
@@ -38,8 +38,8 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6.?"
-UPGRADE_TO="2.0.0-alpha7"
+#UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6"
+UPGRADE_TO="2.0.70-alpha7"
 
 ## Relative paths
 ##
@@ -61,6 +61,8 @@ UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
+
+. "${_D0}/_util_upgrade"
 
 ##
 ## Definitions
@@ -109,7 +111,7 @@ usage() {
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Update to beta1 from a previous alpha release.
+  Update to alpha7 from a previous alpha release.
 
   $(usage)
 
@@ -175,6 +177,20 @@ CUR_VERSION="`cat ${VERSION_FILE}`"
 
 if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
+    2.0-alpha5)
+      logger_info "Performing upgrade from alpha5"
+
+      # Repository Service changes
+      rename_collections_dir
+      rename_tempwarcs_dir
+      remove_journal_files
+
+      # Reset Solr for reindex
+      reset_solr_index
+      reset_index_state
+      signal_reindex "${STACK_PREFIX}"
+    # fall through.
+      ;&
     2.0-alpha6)
       logger_info "Performing upgrade from alpha6"
       upgrade_postgres

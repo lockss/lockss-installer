@@ -57,7 +57,6 @@ SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 source_config
 STACK_PREFIX="lockss-stack"
 POSTGRES_DATA_DIR="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-postgres-data"
-POSTGRES_DATA_DIR_BAK="${POSTGRES_DATA_DIR}.bak"
 
 clean_up() { # Perform pre-exit housekeeping
   restore_env
@@ -125,10 +124,10 @@ restore_env() {
 }
 
 check_versions() {
-  if [ -z ${NEW_VERSION+x} ]; then
+  if [ -z ${NEW_VERSION} ]; then
     NEW_VERSION=${POSTGRES_VERSION}
   fi
-  if [ -z ${OLD_VERSION+x} ]; then
+  if [ -z ${OLD_VERSION} ]; then
       logger_error_exit "Unable to determine old container version."
   fi
   version_compare $OLD_VERSION $NEW_VERSION
@@ -140,7 +139,7 @@ check_versions() {
       logger_error_exit "The current version is newer than the upgrade version $NEW_VERSION."
       ;;
     2)
-      logger_info "Upgrading postgres container from ${OLD_VERSION} to ${NEW_VERSION}."
+      logger_info "Upgrading PostgreSQL container from ${OLD_VERSION} to ${NEW_VERSION}."
       ;;
   esac
 }
@@ -175,7 +174,7 @@ dump_old_version()
   echo POSTGRES_VERSION=${OLD_VERSION} | tee "${UPGRADE_ENV_TMPL}"
 
   # bring up the old version
-  "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start old postgres failed."
+  "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start old PostgreSQL failed."
   podname="deploy/lockss-postgres-service"
   #wait for the  deployment to be marked as Available
   kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
@@ -183,8 +182,10 @@ dump_old_version()
   kubectl_lockss exec -it ${podname} -- pg_dumpall -c -U "${LOCKSS_POSTGRES_USER}" --file="/tmp/${DUMP_FILE}" ||
     logger_error_exit "Unable to exec into pod to perform database dump."
   # shutdown old version
-  "${SCRIPTS_DIR}"/stop-lockss  || logger_error_exit "Attempt to stop postgres failed."
-  logger_info "moving old postgres directory out of the way..."
+  "${SCRIPTS_DIR}"/stop-lockss  || logger_error_exit "Attempt to stop PostgreSQL failed."
+  logger_info "Moving old PostgreSQL directory out of the way..."
+  # make this a timed stamp name.
+  POSTGRES_DATA_DIR_BAK="${POSTGRES_DATA_DIR}.`date +%Y%m%d%H%M`.bak"
   mv "${POSTGRES_DATA_DIR}" "${POSTGRES_DATA_DIR_BAK}" ||
     logger_error_exit "Unable to backup data dir: ${POSTGRES_DATA_DIR}"
   restore_env
@@ -193,13 +194,13 @@ dump_old_version()
 restore_dump()
 {
 # bring up the new version -- psql -q -U
- "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start new postgres failed."
+ "${SCRIPTS_DIR}"/start-lockss -s "postgres" || logger_error_exit "Attempt to start new PostgreSQL failed."
  kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
  # load the dump into the new version
  kubectl_lockss exec -it deploy/lockss-postgres-service -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="/tmp/${DUMP_FILE}" postgres ||
    logger_error_exit "Unable to exec into pod to perform database restore."
  # shutdown the new version.
- "${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running postgres failed."
+ "${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running PostgreSQL failed."
 }
 
 ###
@@ -214,7 +215,8 @@ trap "signal_exit INT"  INT
 while [[ $# -gt 0 ]]; do
   case $1 in
     -h | --help)
-      help_message; graceful_exit ;;
+      help_message; graceful_exit
+      ;;
     -n | --new-version)
       NEW_VERSION="$2"
       shift; shift
@@ -226,11 +228,9 @@ while [[ $# -gt 0 ]]; do
     -v | --verbose)
       VERBOSE="--verbose"
       ;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
     *)
-      shift
+      usage
+      error_exit "Unknown option $1"
       ;;
   esac
 done
@@ -245,6 +245,6 @@ DUMP_FILE="${OLD_VERSION}.dump"
 dump_old_version
 restore_dump
 
-logger_info "Postgres upgrade completed."
+logger_info "PostgreSQL upgrade completed."
 
 graceful_exit
