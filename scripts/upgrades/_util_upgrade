@@ -100,16 +100,17 @@ reset_solr_index() {
 
 reset_svc_data_dir() {
   local svc=$1
+  local SUDO=$2
   local STACK_SVC_DATA_DIR="${STACK_PREFIX}-${svc}-data"
   local SVC_DATA_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_SVC_DATA_DIR}"
 
   if [ -d "${SVC_DATA_HOME_PATH}" ]; then
     local DATA_DIR_BACKUP_TGZ="${LOCKSS_DATA_DIR}/${STACK_SVC_DATA_DIR}.`date +%Y%m%d%H%M`.tar.gz"
     logger_info "Backing up ${svc} home directory to ${DATA_DIR_BACKUP_TGZ}; this may take several minutes..."
-    tar -C "${LOCKSS_DATA_DIR}" -czf "${DATA_DIR_BACKUP_TGZ}" "${STACK_SVC_DATA_DIR}"
+    ${SUDO} tar -C "${LOCKSS_DATA_DIR}" -czf "${DATA_DIR_BACKUP_TGZ}" "${STACK_SVC_DATA_DIR}"
     if [ $? -eq 0 ]; then
-      logger_debug "Removing Solr home directory (${SVC_DATA_HOME_PATH})"
-      rm -rf "${SVC_DATA_HOME_PATH}"
+      logger_debug "Removing ${svc} home directory (${SVC_DATA_HOME_PATH})"
+      ${SUDO} rm -rf "${SVC_DATA_HOME_PATH}"
     else
       err_exit "Failed to backup ${svc} home directory; exiting."
     fi
