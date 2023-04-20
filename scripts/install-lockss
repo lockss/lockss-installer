@@ -874,7 +874,7 @@ Options:
   --configure-firewalld, -configure-firewalld, -F
     Only configure firewalld for K3s and exit
 
-  --configure-iptables, -configure-firewalld, -I
+  --configure-iptables, -configure-iptables, -I
     Only configure iptables for K3s and exit
 
   --configure-ufw, -configure-ufw, -U
