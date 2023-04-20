@@ -795,13 +795,13 @@ Parse_Command_Line()
       --install-k3s|-install-k3s|-K) SINGLE_STEP='Install_K3s' ; shift ;;
 
       --k3s-data-dir=*) K3S_DATA_DIR="${1#*=}" ; shift ;;
-      -k3s-data-dir) K3S_DATA_DIR="${2}" ; shift 2 ;;
+      --k3s-data-dir|-k3s-data-dir) K3S_DATA_DIR="${2}" ; shift 2 ;;
 
       --k3s-version=*) K3S_VERSION="${1#*=}" ; shift ;;
-      -k3s-version) K3S_VERSION="${2}" ; shift 2 ;;
+      --k3s-version|-k3s-version) K3S_VERSION="${2}" ; shift 2 ;;
 
       --retries=*) RETRIES="${1#*=}" ; shift ;;
-      -retries) RETRIES="${2}" ; shift 2 ;;
+      --retries|-retries) RETRIES="${2}" ; shift 2 ;;
 
       --skip-check-prerequisites|-skip-check-prerequisites) SKIP_CHECK_PREREQUISITES='true' ; shift ;;
 
@@ -824,7 +824,7 @@ Parse_Command_Line()
       --version|-version|-V) echo "${VERSION}" ; exit 0 ;;
 
       --wait=*) WAIT="${1#*=}" ; shift ;;
-      -wait) WAIT="${2}" ; shift 2 ;;
+      --wait|-wait) WAIT="${2}" ; shift 2 ;;
 
       -*) Fatal "Unknown option: ${1}" ;;
 
@@ -890,14 +890,14 @@ Options:
   --install-k3s, -install-k3s, -K
     Only install K3s and exit
 
-  --k3s-data-dir=DIR, -k3s-data-dir DIR
+  --k3s-data-dir=DIR, --k3s-data-dir DIR, -k3s-data-dir DIR
     Directory to hold K3s state data (default: ${DEFAULT_K3S_DATA_DIR}).
     Should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited.
 
-  --k3s-version=VER, -k3s-version VER
+  --k3s-version=VER, --k3s-version VER, -k3s-version VER
     Install version VER of K3s (default: ${DEFAULT_K3S_VERSION})
 
-  --retries=N, -retries N
+  --retries=N, --retries N, -retries N
     Attempt retriable actions N times when testing the K3s node (default: ${DEFAULT_RETRIES}) 
 
   --skip-check-prerequisites, -skip-check-prerequisites
@@ -932,7 +932,7 @@ Options:
   --version, -version, -V
     Display this script's version number and exit
 
-  --wait=S, -wait S
+  --wait=S, --wait S, -wait S
     Wait S seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT}) 
 
 MyEOF
