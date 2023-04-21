@@ -49,8 +49,8 @@ VERSION_STR="${_0} version ${VERSION}"
 _MO="${_D0}/lib/mo"
 _UTIL="${_D0}/_util"
 
-LOCKSS_GROUP='lockss'
-LOCKSS_USER='lockss'
+LOCKSS_GROUP="${LOCKSS_GROUP:-lockss}"
+LOCKSS_USER="${LOCKSS_USER:-lockss}"
 
 LOCKSS_ETC_DIR='/etc/lockss'
 LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
@@ -61,7 +61,7 @@ K3S_URL='https://get.k3s.io'
 
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.21.5+k3s1'
+DEFAULT_K3S_VERSION='v1.26.3+k3s1'
 
 DEFAULT_RETRIES='5'
 DEFAULT_WAIT='10'

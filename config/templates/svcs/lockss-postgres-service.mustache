@@ -96,7 +96,7 @@ spec:
         io.kompose.service: lockss-postgres-service
     spec:
       containers:
-      - command: ["docker-entrypoint.sh", "-c", "logging_collector=on", "-c", "log_directory=/logs"]
+      - command: ["docker-entrypoint.sh", "-c", "logging_collector=on", "-c", "log_directory=/logs", "-c", "config_file=/run/configs/lockss-postgresql.conf"]
         env:
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
@@ -129,12 +129,34 @@ spec:
           name: lockss-postgres-logs
         - mountPath: /tmp
           name: lockss-postgres-tmp
+        - mountPath: /run/configs/lockss-postgresql.conf
+          name: lockss-postgresql
+          subPath: lockss-postgresql
+{{#OPT_POSTGRES}}
+        - mountPath: /run/configs/opt-postgresql.conf
+          name: lockss-postgresql-opt
+          subPath: lockss-postgresql-opt
+{{/OPT_POSTGRES}}
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
         hostnames:
         - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
       volumes:
+      - configMap:
+          items:
+          - key: lockss-postgresql
+            path: lockss-postgresql
+          name: lockss-postgresql
+        name: lockss-postgresql
+{{#OPT_POSTGRES}}
+      - configMap:
+          items:
+          - key: lockss-postgresql-opt
+            path: lockss-postgresql_opt
+          name: lockss-postgresql-opt
+        name: lockss-postgresql-opt
+{{/OPT_POSTGRES}}
       - name: lockss-postgres-pass
         secret:
           secretName: lockss-postgres-pass

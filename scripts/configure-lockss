@@ -656,7 +656,7 @@ if [ -z "${LOCKSS_TEAM}" ]; then
   LOCKSS_TEAM=lockssdiag@lockss.org
 fi
 umask 002
-LOCKSS_USER="lockss"
+LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
 
 echo "-------------------------------------------------------------"

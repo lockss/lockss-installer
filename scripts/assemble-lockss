@@ -69,7 +69,7 @@ MK_DIR="${TEMPLATES_DIR}/mk"
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 OPT_ENV_TMPL="${CONFIG_DIR}/env.mustache.opt"
 UPGRADE_ENV_TMPL="${CONFIG_DIR}/env.mustache.upgrade"
-
+OPT_POSTGRES_FILE-"${USEROPTS_DIR}/lockss-postgres_opt"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
@@ -77,7 +77,12 @@ EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 # Variables
 declare -i STACK_COUNT=1
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
-declare -a global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties" "lockss-solr-log4j2-xml")
+declare -a global_confs=(
+  "lockss-cluster"
+  "lockss-bootstrap"
+  "repo-properties"
+  "lockss-solr-log4j2-xml"
+  "lockss-postgresql")
 declare -a SERVICES
 
 declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "mdq" "mdx" "pol" "crawl" "soap" "repo" "solr")
@@ -436,6 +441,9 @@ assemble_stack() {
 generate_lockss() {
 	logger_debug "Removing old generated configuration files..."
 	rm -rf "${DOCKER_CONFIGS_DIR}"
+  if [[ -f "${OPT_POSTGRES_FILEz}" ]]; then
+    OPT_POSTGRES="TRUE"
+  fi
 	logger_debug "Generating config files for $STACK_COUNT stacks..."
 	for ((num = 1; num <= $STACK_COUNT; num++)); do
 		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
@@ -514,13 +522,22 @@ generate_lockss() {
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_debug "Generating the user configuration files..."
+    logger_debug "Generating the user configuration file templates..."
     for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
       if [[ -f "${f}" ]]; then
         src="${f}"
         dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
         logger_debug "Rendering ${src} to ${dst}..."
         mo "${src}" >"${dst}"
+      fi
+    done
+    logger_debug "Moving the user configuration file..."
+    for f in ${USEROPTS_DIR}/*_opt; do
+      if [[ -f "${f}" ]]; then
+        src="${f}"
+        dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
+        logger_debug "Rendering ${src} to ${dst}..."
+        cp "${src}" "${dst}"
       fi
     done
   done
