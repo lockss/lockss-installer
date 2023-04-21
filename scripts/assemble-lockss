@@ -441,7 +441,7 @@ assemble_stack() {
 generate_lockss() {
 	logger_debug "Removing old generated configuration files..."
 	rm -rf "${DOCKER_CONFIGS_DIR}"
-  if [[ -f "${OPT_POSTGRES_FILEz}" ]]; then
+  if [[ -f "${OPT_POSTGRES_FILE}" ]]; then
     OPT_POSTGRES="TRUE"
   fi
 	logger_debug "Generating config files for $STACK_COUNT stacks..."
