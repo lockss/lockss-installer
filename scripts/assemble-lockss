@@ -69,7 +69,7 @@ MK_DIR="${TEMPLATES_DIR}/mk"
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
 OPT_ENV_TMPL="${CONFIG_DIR}/env.mustache.opt"
 UPGRADE_ENV_TMPL="${CONFIG_DIR}/env.mustache.upgrade"
-OPT_POSTGRES_FILE-"${USEROPTS_DIR}/lockss-postgres_opt"
+OPT_POSTGRES_FILE="${USEROPTS_DIR}/lockss-postgres_opt"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
