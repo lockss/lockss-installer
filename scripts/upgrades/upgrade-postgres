@@ -286,17 +286,18 @@ logger_init
 check_versions
 
 DUMP_FILE_NAME="${OLD_VERSION}.dump"
-logger_info "Dumping contents of $OLD_VERSION of PostgreSQL to ${POSTGRES_TMP_DIR}/${DUMP_FILE_NAME}."
 DUMP_FILE="/tmp/${DUMP_FILE_NAME}"
 
-#dump_old_version
+logger_info "Dumping contents of $OLD_VERSION of PostgreSQL to ${POSTGRES_TMP_DIR}/${DUMP_FILE_NAME}."
+dump_old_version
 logger_info "Successfully dumped data from $OLD_VERSION of PostgreSQL."
 
 # wait for things to settle
 sleep 5
 logger_info "Starting $NEW_VERSION of PostgreSQL to begin data restore."
-#restore_dump
+restore_dump
 logger_info "Successfully restored data to $NEW_VERSION of PostgreSQL."
+
 logger_info "Upgrading the stored Password for $LOCKSS_POSTGRES_USER"
 update_password
 logger_info "PostgreSQL upgrade completed."
