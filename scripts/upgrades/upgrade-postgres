@@ -175,7 +175,7 @@ version_compare()
     # This is effectively a 10 1/2 min wait.
 		for i in {1..20}
 		do
-  		 kubectl_lockss exec ${PODNAME} -- pg_isready -U "${LOCKSS_POSTGRES_USER}"
+  		 kubectl_lockss exec ${PODNAME} -- pg_isready -U "${LOCKSS_POSTGRES_USER}" &>/dev/null
   			case $? in
     		0)
       		logger_info "PostgreSQL is ready for sql commands."
@@ -209,7 +209,7 @@ start_postgres_service()
 dump_old_version()
 {
   # add the postgres version to the opt file
-  echo POSTGRES_VERSION=${OLD_VERSION} | tee "${UPGRADE_ENV_TMPL}"
+  echo POSTGRES_VERSION=${OLD_VERSION} > "${UPGRADE_ENV_TMPL}"
   # bring up the old version
   start_postgres_service
   # dump the old versions content -c to clear the database on restore
@@ -229,14 +229,14 @@ dump_old_version()
 
 restore_dump()
 {
-	echo POSTGRES_VERSION=${NEW_VERSION} | tee "${UPGRADE_ENV_TMPL}"
+	echo POSTGRES_VERSION=${NEW_VERSION} > "${UPGRADE_ENV_TMPL}"
 	# bring up the new version
 	start_postgres_service
+	err_file="${LOCKSS_DATA_DIR}/restore-`date +%Y%m%d%H%M`.err"
 	# load the dump into the new version psql -q -U
-  kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="${DUMP_FILE}" --dbname=postgres >/dev/null ||
+  kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="${DUMP_FILE}" --dbname=postgres >/dev/null 2>"${err_file}" ||
    logger_error_exit "Unable to exec into pod to perform database restore."
   logger_info "Successfully restored data to $NEW_VERSION of PostgreSQL."
-
   logger_info "Upgrading the stored Password for PostgreSQL user $LOCKSS_POSTGRES_USER"
   update_password
   #shutdown the service
@@ -250,7 +250,7 @@ update_password()
 #  start_postgres_service
   logger_info "Updating stored password to SCRAM-SHA-256..."
 	db_pass=$(kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}' | base64 --decode)
-  kubectl_lockss exec ${PODNAME} -- psql -U "${LOCKSS_POSTGRES_USER}" --dbname=postgres -c "ALTER USER \"$LOCKSS_POSTGRES_USER\" with password '$db_pass';" ||
+  kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --dbname=postgres -c "ALTER USER \"$LOCKSS_POSTGRES_USER\" with password '$db_pass';" ||
     logger_error_exit "Attempt to update stored password failed."
  # restore_env
 }
