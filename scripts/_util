@@ -466,7 +466,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(kubectl_lockss get pods | grep 'lockss-configuration-service')" ]
+  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-configuration-service'
 }
 
 #
