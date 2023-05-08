@@ -620,7 +620,7 @@ build_config_file() {
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
       egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
-      if [ $(command -v mail) >/dev/null ]; then
+      if [ $(command -v mail) > /dev/null ]; then
           if [ -z "${BYPASS_MAIL}" ]; then
               if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
                   mail_sent=1
@@ -654,7 +654,7 @@ setup_k8s_cmd() {
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
     local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) >/dev/null ]; then
+    if [ $(command -v ${first_word}) > /dev/null ]; then
       KUBECTL_CMD="${ANS}"
       KUBCTL_OK=Y
     fi
