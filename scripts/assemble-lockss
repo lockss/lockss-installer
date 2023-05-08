@@ -427,10 +427,8 @@ assemble_stack() {
   ensure_writable_dir $LOCKSS_TMPDIR
   local stack=${STACK_PREFIX}$1
   logger_debug "Assembling stack $stack..."
-  # Source config.info and env.sh for this stack
-  set -a
-  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-  set +a
+  # Source env.sh
+  source_env "${stack}"
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| logger_error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
@@ -443,6 +441,9 @@ assemble_stack() {
 generate_lockss() {
 	logger_debug "Removing old generated configuration files..."
 	rm -rf "${DOCKER_CONFIGS_DIR}"
+  if [[ -f "${OPT_POSTGRES_FILE}" ]]; then
+    OPT_POSTGRES="TRUE"
+  fi
 	logger_debug "Generating config files for $STACK_COUNT stacks..."
 	for ((num = 1; num <= $STACK_COUNT; num++)); do
 		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
@@ -456,6 +457,8 @@ generate_lockss() {
     export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
+    local opt_stack_env_file="${stack_env_file}.opt"
+    local upgrade_stack_env_file="${stack_env_file}.upgrade"
     local stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
     logger_debug "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
     mkdir -p "${STACK_CONFIG_DIR}"
@@ -464,9 +467,14 @@ generate_lockss() {
 
     logger_debug "Generating the stack env.sh file..."
     mo "${ENV_TMPL}" >"${stack_env_file}"
-    set -a
-    . "${stack_env_file}"
-    set +a
+    if [[ -f "${OPT_ENV_TMPL}" ]]; then
+      mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
+    fi
+     if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
+       mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
+     fi
+   # Source env.sh
+    source_env "${STACK_NAME}"
 
     logger_debug "Getting node hostname..."
     export NODE_HOSTNAME=$(kubectl_cmd get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
@@ -514,13 +522,22 @@ generate_lockss() {
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_debug "Generating the user configuration files..."
+    logger_debug "Generating the user configuration file templates..."
     for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
       if [[ -f "${f}" ]]; then
         src="${f}"
         dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
         logger_debug "Rendering ${src} to ${dst}..."
         mo "${src}" >"${dst}"
+      fi
+    done
+    logger_debug "Moving the user configuration file..."
+    for f in ${USEROPTS_DIR}/*_opt; do
+      if [[ -f "${f}" ]]; then
+        src="${f}"
+        dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
+        logger_debug "Rendering ${src} to ${dst}..."
+        cp "${src}" "${dst}"
       fi
     done
   done
@@ -567,6 +584,11 @@ while [[ -n $1 ]]; do
   -h | --help)
     help_message
     graceful_exit
+    ;;
+  -s | --services)
+    export REQ_SERVICES="$2"
+    logger_debug "Adding list of service to assemble $REQ_SERVICES"
+    shift; shift
     ;;
   -u | --update)
     PULL_POLICY="Always"

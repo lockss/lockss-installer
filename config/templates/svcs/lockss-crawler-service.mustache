@@ -14,7 +14,7 @@ spec:
   - name: "crawl-service-ui-port"
     port: {{CRAWL_UI_PORT}}
     targetPort: {{CRAWL_DEFAULT_UI_PORT}}
-{{#additional_ports POL}}
+{{#additional_ports CRAWL}}
   - name: "__PORT_NAME__"
     port: __HOST_PORT__
     targetPort: __CONTAINER_PORT__
@@ -150,7 +150,7 @@ spec:
           containerPort: {{CRAWL_DEFAULT_UI_PORT}}
           hostPort: {{CRAWL_UI_PORT}}
           protocol: TCP
-{{#additional_ports POL}}
+{{#additional_ports CRAWL}}
         - name: "__PORT_NAME__"
           containerPort: __CONTAINER_PORT__
           hostPort: __HOST_PORT__
