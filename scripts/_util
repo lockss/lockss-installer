@@ -1057,6 +1057,9 @@ init_service_arrays_from_commandline() {
       "pol"|"poll"|"poller")
         SERVICES+=("pol")
         ;;
+      "crawl"|"crawler")
+        SERVICES+=("crawl")
+        ;;
       "soap")
         SERVICES+=("soap")
         ;;
@@ -1099,7 +1102,10 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_POL}; then
     SERVICES+=("pol")
   fi
-  if ${USE_LOCKSS_SOAP}; then
+   if ${USE_LOCKSS_CRAWL}; then
+     SERVICES+=("crawl")
+   fi
+ if ${USE_LOCKSS_SOAP}; then
     SERVICES+=("soap")
   fi
   if ${USE_LOCKSS_REPO}; then
