@@ -156,7 +156,7 @@ configure_databases() {
 
 configure_crawler_services() {
   echo ""
-  echo "Configuring crawler service..."
+  echo "Configuring Crawler Service..."
   echo ""
   #check crawler service
   CRAWLER_OK=N
@@ -164,14 +164,14 @@ configure_crawler_services() {
     ask_for_input "Use LOCKSS Crawler Service?" $(to_yes_no_or_blank ${USE_LOCKSS_CRAWL}) Y
     if is_yes "${ANS}"; then
       USE_LOCKSS_CRAWL=true
-      ask_for_input "Enable usage of LOCKSS crawler?" $(to_yes_no_or_blank ${LOCKSS_CLASSIC_CRAWLER_ENABLE}) Y
+      ask_for_input "Enable classic LOCKSS crawler?" $(to_yes_no_or_blank ${LOCKSS_CLASSIC_CRAWLER_ENABLE}) Y
       if is_yes "${ANS}"; then
         LOCKSS_CLASSIC_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
       else
         LOCKSS_CLASSIC_CRAWLER_ENABLE=false
       fi
-      ask_for_input "Enable usage of wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
+      ask_for_input "Enable wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
       if is_yes "${ANS}"; then
         LOCKSS_WGET_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
@@ -191,6 +191,8 @@ configure_services() {
   echo ""
   USE_LOCKSS_CFG=true
 
+  configure_crawler_services
+
   # Metadata query service
   ask_for_input "Use LOCKSS Metadata Query Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDQ})" Y
   if is_yes "${ANS}"; then
@@ -206,7 +208,6 @@ configure_services() {
   else
     USE_LOCKSS_MDX=false
   fi
-  configure_crawler_services
 
   # SOAP service
   ask_for_input "Use LOCKSS SOAP Compatibility Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOAP})" N
@@ -356,12 +357,9 @@ build_config_file() {
   Clear_Secrets
   CONFIG_OK=N
   until is_yes ${CONFIG_OK}; do
-    if [ "X${LOCKSS_HOSTNAME}" = X ]; then
-      LOCKSS_HOSTNAME=${LOCAL_HOSTNAME}
-    fi
     HOSTNAME_OK=N
     until is_yes ${HOSTNAME_OK}; do
-      ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}"
+      ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}" "${LOCAL_HOSTNAME}"
       if valid_hostname "${ANS}"; then
         LOCKSS_HOSTNAME="${ANS}"
         HOSTNAME_OK=Y
@@ -370,13 +368,9 @@ build_config_file() {
       fi
     done
 
-    LOCKSS_HOSTNAME=${ANS}
-    if [ "X${LOCKSS_IPADDR}" = X ]; then
-      LOCKSS_IPADDR=${LOCAL_IPADDR}
-    fi
     IP_OK=N
     until is_yes ${IP_OK}; do
-      ask_for_input "IP address of this machine" ${LOCKSS_IPADDR}
+      ask_for_input "IP address of this machine" "${LOCKSS_IPADDR}" "${LOCAL_IPADDR}"
       if valid_ip4_address "${ANS}"; then
         LOCKSS_IPADDR="${ANS}"
         IP_OK=Y
@@ -388,11 +382,11 @@ build_config_file() {
     if [ "${LOCKSS_EXTERNAL_IPADDR}X" != X ]; then
       NAT=Y
     fi
-    ask_for_input "Is this machine behind NAT?" ${NAT}
+    ask_for_input "Is this machine behind NAT?" "${NAT}"
     if is_yes "${ANS}"; then
       EXT_OK=N
       until is_yes ${EXT_OK}; do
-        ask_for_input "External IP address for NAT" ${LOCKSS_EXTERNAL_IPADDR}
+        ask_for_input "External IP address for NAT" "${LOCKSS_EXTERNAL_IPADDR}"
         if valid_ip4_address ${ANS}; then
           LOCKSS_EXTERNAL_IPADDR=${ANS}
           EXT_OK=Y
@@ -406,7 +400,7 @@ build_config_file() {
     fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet(s) for admin UI access" ${LOCKSS_ACCESS_SUBNET}
+      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
       if valid_subnet_list "${ANS}"; then
         LOCKSS_ACCESS_SUBNET="${ANS}"
         SUBNET_OK=Y
@@ -427,42 +421,42 @@ build_config_file() {
         # No record of previous CNI0_SUBNET, can't tell whether it
         # changed or user previously entered a different subnet
         echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
-        ask_for_input "Do you want to change it?" Y
+        ask_for_input "Do you want to change it?" "" Y
         if is_yes "${ANS}"; then
           LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
         fi
       fi
     fi
-    SUBNET_OK=N
-    until is_yes ${SUBNET_OK}; do
-      ask_for_input "Container subnet for inter-service access control" ${LOCKSS_CONTAINER_SUBNETS}
+    CONTAINER_SUBNET_OK=N
+    until is_yes ${CONTAINER_SUBNET_OK}; do
+      ask_for_input "Container subnet for inter-service access control" "${LOCKSS_CONTAINER_SUBNETS}"
       if valid_subnet "${ANS}"; then
         LOCKSS_CONTAINER_SUBNETS="${ANS}"
-        SUBNET_OK=Y
+        CONTAINER_SUBNET_OK=Y
       fi
     done
-    if [ "X${LOCKSS_V3_PORT}" = X ]; then
-      LOCKSS_V3_PORT=9729
-    fi
-    ask_for_input "LCAP V3 protocol port" ${LOCKSS_V3_PORT}
+
+    # LCAP V3 port
+    ask_for_input "LCAP V3 protocol port" "${LOCKSS_V3_PORT}" 9729
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_V3_PORT="${ANS}"
     fi
-    if [ "X${LOCKSS_UI_PORT}" = X ]; then
-      LOCKSS_UI_PORT=24600
+
+    # Mail relay
+    # First set current value of NEED_USER iff we've asked this question before
+    NEED_USER=
+    if [ "X${LOCKSS_MAILHUB}" != X ]; then
+      if [[ -n "${LOCKSS_MAILHUB_USER}" ]]; then
+        NEED_USER=Y
+      else
+        NEED_USER=N
+      fi
     fi
-    if [ "X${LOCKSS_MAILHUB}" = X ]; then
-      LOCKSS_MAILHUB=localhost
-    fi
-    ask_for_input "Mail relay for this machine" ${LOCKSS_MAILHUB}
+    ask_for_input "Mail relay for this machine" "${LOCKSS_MAILHUB}" localhost
     LOCKSS_MAILHUB="${ANS}"
-    NEED_USER=N
-    if [ "X${LOCKSS_MAILHUB_USER}" != X ]; then
-      NEED_USER=Y
-    fi
-    ask_for_input "Does the mail relay ${LOCKSS_MAILHUB} need a username and password?" ${NEED_USER}
+    ask_for_input "Does the mail relay ${LOCKSS_MAILHUB} need a username and password?" "${NEED_USER}" N
     if is_yes "${ANS}"; then
-      ask_for_input "User for ${LOCKSS_MAILHUB}" ${LOCKSS_MAILHUB_USER}
+      ask_for_input "User for ${LOCKSS_MAILHUB}" "${LOCKSS_MAILHUB_USER}"
       LOCKSS_MAILHUB_USER="${ANS}"
       ask_for_password "Password for ${LOCKSS_MAILHUB_USER}@${LOCKSS_MAILHUB}" "" "${LOCKSS_MAILHUB_PASSWORD}" ""
       LOCKSS_MAILHUB_PASSWORD="${PASSWD_CLEAR}"
@@ -472,110 +466,94 @@ build_config_file() {
     fi
     EMAIL_OK=N
     until is_yes ${EMAIL_OK}; do
-      ask_for_input "E-mail address for administrator" ${LOCKSS_EMAIL}
+      ask_for_input "E-mail address for administrator" "${LOCKSS_EMAIL}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_EMAIL="${ANS}"
         EMAIL_OK=Y
       fi
     done
-    if [ "X${LOCKSS_PROPS_URL}" = X ]; then
-      LOCKSS_PROPS_URL="http://props.lockss.org:8001/demo/lockss.xml"
-    fi
-    ask_for_input "Configuration URL" ${LOCKSS_PROPS_URL}
-    LOCKSS_PROPS_URL="${ANS}"
 
-    if echo ${LOCKSS_PROPS_URL} | egrep -is "^https:" >/dev/null; then
-      if [ "X${LOCKSS_PROPS_AUTHENTICATE_SERVER}" = X ]; then
-        LOCKSS_PROPS_AUTHENTICATE_SERVER="Y"
+    # Props URL
+    ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/demo/lockss.xml"
+    LOCKSS_PROPS_URL="${ANS}"
+    if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
+      if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
+        LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
+      else
+        LOCKSS_PROPS_AUTHENTICATE_SERVER=N
       fi
-      ask_for_input "Verify configuration server authenticity?" ${LOCKSS_PROPS_AUTHENTICATE_SERVER}
+      ask_for_input "Verify configuration server authenticity?" "${LOCKSS_PROPS_AUTHENTICATE_SERVER}"
       if is_yes "${ANS}"; then
-        if [ "X${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" = X ]; then
-          LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="lockss-ca"
-        fi
-        ask_for_input "Server certificate keystore" ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}
+        ask_for_input "Server certificate keystore" "${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" "lockss-ca"
         LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
       else
         unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
       fi
     fi
 
-    if [ "X${LOCKSS_PROPS_PROXY}" = X ]; then
-      LOCKSS_PROPS_PROXY="NONE"
-    fi
-    ask_for_input "Configuration proxy (host:port)" ${LOCKSS_PROPS_PROXY}
+    # Props proxy
+    ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
     LOCKSS_PROPS_PROXY="${ANS}"
 
-    if [ "X${LOCKSS_PRESERVATION_GROUP}" = X ]; then
-      LOCKSS_PRESERVATION_GROUP="demo"
-    fi
-    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}"
+    # Preservation group(s)
+    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "demo"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
+
+    HAD_DATA_DIR=
+    if [ "X${LOCKSS_DATA_DIR}" != X ]; then
+      HAD_DATA_DIR=Y
+    fi
+    # Data storage base
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for primary content data storage" ${LOCKSS_DATA_DIR}
+      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
       fi
     done
-    USE_MULTIPLE_CACHES=false
-    if [ "X${LOCKSS_REPO_HOST_DIRS}" != X ]; then
-     IFS=';' read -r -a prevPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-     if test ${#prevPaths[*]} -gt 1; then
-      USE_MULTIPLE_CACHES=true
-     fi
-    fi
-    prevPaths[0]=${LOCKSS_DATA_DIR}
-    curPaths[0]=${LOCKSS_DATA_DIR}
-    repoDirs[0]="/content0"
-    ask_for_input "Use additional directories for content data storage?" $(to_yes_no ${USE_MULTIPLE_CACHES})
-    if is_yes "${ANS}"; then
-      count=1
-      until is_yes "${done}"; do
-        ask_for_input "Root path for additional content data storage $count (q to quit)" ${prevPaths[count]}
-        if [ "X${ANS}" = Xq ]; then
-          done=Y
-        elif [ -n "${ANS}" ]; then
-          curPaths[count]="$(normalize_path ${ANS})"
-          repoDirs[count]="/content$count"
-          count=$((count+1))
-        fi
-      done
-      new_repo_vols=$( IFS=';' ; echo "${curPaths[*]}" )
-      [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
-      LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
-      LOCKSS_REPO_HOST_DIRS=${new_repo_vols}
-    else
-      if test ${#prevPaths[*]} -gt 1; then
-        echo "Run repo cache updater."
+
+    # Content storage base(s)
+    CONTENT_PATHS_OK=N
+    until is_yes ${CONTENT_PATHS_OK}; do
+      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      if [ "X${ANS}" != X ]; then
+        tmp_repo_host_dirs="${ANS}"
+        IFS=';' read -r -a newPaths <<< "${tmp_repo_host_dirs}"
+        for ((i=0; i<${#newPaths[@]}; i++)); do
+          newPaths[i]="$(normalize_path ${newPaths[i]})"
+          repoDirs[i]="/content$i"
+        done
+        new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
+        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
+        LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
+        CONTENT_PATHS_OK=Y
       fi
-      LOCKSS_REPO_CONTAINER_DIRS="/content0"
-      LOCKSS_REPO_HOST_DIRS="${LOCKSS_DATA_DIR}"
-    fi
+    done
+
+    # Log dir base
     LOG_PATHS_OK=N
-    if [ -n "${LOCKSS_LOGS_DIR}" ]; then
-      log_dir_default="${LOCKSS_LOGS_DIR}"
-    else
-      log_dir_default="${LOCKSS_DATA_DIR}"
-    fi
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for log data storage" ${log_dir_default}
+      ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
       fi
     done
-    if [ "X${LOCKSS_TMPDIR}" = X ]; then
-      LOCKSS_TMPDIR=${LOCKSS_DATA_DIR}
-    fi
-    ask_for_input "Root path for temporary data storage (local storage preferred)" ${LOCKSS_TMPDIR}
+
+    # Tempdir dir base
+    ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
     fi
-#     ask_for_input "Directory for storing install script logs" ${LOCKSS_SCRIPT_LOG_DIR}
+
+    # Script logs not configurable
+#     ask_for_input "Directory for storing install script logs" "${LOCKSS_SCRIPT_LOG_DIR}" "${LOCKSS_DATA_DIR}/lockss-script-logs"
 #     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
+
+    # Admin UI user/pass
     USER_OK=N
     until is_yes ${USER_OK}; do
       ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
@@ -590,10 +568,12 @@ build_config_file() {
       Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
       Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
     fi
+
     # Configure databases
     configure_databases
     # Configure the individual services
     configure_services
+
     TMP_CONFIG=${CONFIG_DIR}/config.tmp
     export LOCKSS_CONFIG_VERSION=2
     export LOCKSS_USER
@@ -605,7 +585,7 @@ build_config_file() {
     ask_for_input "OK to store this configuration?" Y
     if is_yes "${ANS}"; then
       if ! cp ${TMP_CONFIG} ${1}; then
-        echo "Config not installed, left in ${TMP_CONFIG}"
+        echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
         exit 1
       fi
       rm -f ${TMP_CONFIG}
@@ -618,9 +598,9 @@ build_config_file() {
       CONFIG_OK=Y
 
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-      egrep -sv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+      grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
-      if [ $(command -v mail) > /dev/null ]; then
+      if [ $(command -v mail) >/dev/null ]; then
           if [ -z "${BYPASS_MAIL}" ]; then
               if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
                   mail_sent=1
@@ -654,7 +634,7 @@ setup_k8s_cmd() {
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
     local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) > /dev/null ]; then
+    if [ $(command -v ${first_word}) >/dev/null ]; then
       KUBECTL_CMD="${ANS}"
       KUBCTL_OK=Y
     fi
@@ -664,6 +644,33 @@ setup_k8s_cmd() {
   K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
   write_k8s_cfg ${K8S_CONF_FILE}|| err_exit "Attempt to write ${K8S_CONF_FILE} failed."
 }
+
+usage() {
+  echo "Usage: configure-lockss [-r|--replay] [-h|--help]"
+  echo "  --replay  Prompt only for info not already in the config file. Useful when"
+  echo "            running configure-lockss after upgrading to a new version of the"
+  echo "            LOCKSS services."
+  echo "  --help    Print this text."
+  exit 2
+}
+
+is_replay=
+
+# Parse command-line
+while [[ -n "$1" ]]; do
+  case "$1" in
+  -h | --help)
+    usage
+    ;;
+  -r | --replay)
+    is_replay=1
+    ;;
+  *)
+    usage
+    ;;
+  esac
+  shift
+done
 
 CONFIG_LOGFILE="./lockss-configure.log"
 
@@ -685,7 +692,7 @@ if [ -z "${LOCKSS_TEAM}" ]; then
   LOCKSS_TEAM=lockssdiag@lockss.org
 fi
 umask 002
-LOCKSS_USER="lockss"
+LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
 
 echo "-------------------------------------------------------------"
