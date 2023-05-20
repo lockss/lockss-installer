@@ -356,6 +356,10 @@ build_config_file() {
   echo "Building config file ${1} for user ${2}..."
   Clear_Secrets
   CONFIG_OK=N
+  # Arrange to skip "Ok to store" question iff no questions were asked
+  # (in replay mode)
+  OK_TO_STORE_WITHOUT_CONFIRMATION="Y"
+
   until is_yes ${CONFIG_OK}; do
     HOSTNAME_OK=N
     until is_yes ${HOSTNAME_OK}; do
@@ -582,7 +586,7 @@ build_config_file() {
     echo "Configuration:"
     cat ${TMP_CONFIG}
 
-    ask_for_input "OK to store this configuration?" Y
+    ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
     if is_yes "${ANS}"; then
       if ! cp ${TMP_CONFIG} ${1}; then
         echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"

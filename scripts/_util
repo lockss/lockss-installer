@@ -505,6 +505,8 @@ ask_for_input() {
     echo
     ANS="${current}"
   else
+    # force "OK to store this configuration" question
+    OK_TO_STORE_WITHOUT_CONFIRMATION=""
     read ANS
     if [ -z "${ANS}" ]; then
       ANS="${default}"
