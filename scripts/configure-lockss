@@ -161,10 +161,10 @@ configure_crawler_services() {
   #check crawler service
   CRAWLER_OK=N
   until is_yes ${CRAWLER_OK}; do
-    ask_for_input "Use LOCKSS Crawler Service?" $(to_yes_no_or_blank ${USE_LOCKSS_CRAWL}) Y
+    ask_for_input "Use LOCKSS Crawler Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_CRAWL})" Y
     if is_yes "${ANS}"; then
       USE_LOCKSS_CRAWL=true
-      ask_for_input "Enable classic LOCKSS crawler?" $(to_yes_no_or_blank ${LOCKSS_CLASSIC_CRAWLER_ENABLE}) Y
+      ask_for_input "Enable classic LOCKSS crawler?" "$(to_yes_no_or_blank ${LOCKSS_CLASSIC_CRAWLER_ENABLE})" Y
       if is_yes "${ANS}"; then
         LOCKSS_CLASSIC_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
@@ -319,17 +319,17 @@ LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
-USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
-USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
+USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ}"
+USE_LOCKSS_MDX="${USE_LOCKSS_MDX}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
-USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL:-true}"
-USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP:-false}"
-USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
-USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
-USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
+USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL}"
+USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP}"
+USE_LOCKSS_REPO="${USE_LOCKSS_REPO}"
+USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES}"
+USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
-USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
-USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
+USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB}"
+USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB}"
 EOF
   OS_NAME="$(os_release_name)"
   if [ -n "${OS_NAME}" ]; then
