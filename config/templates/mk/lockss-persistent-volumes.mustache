@@ -873,3 +873,88 @@ spec:
           operator: In
           values:
           - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-crawl-data-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-crawl-data
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_DATA_ROOT}}/{{STACK}}-crawl-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-crawl-logs-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-crawl-logs
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-crawl-logs
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lockss-crawl-tmp-pv
+  labels:
+    type: hostPath
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    owner: lockss-crawl-tmp
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{MK_TMP_ROOT}}/{{STACK}}-crawl-tmp
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{NODE_HOSTNAME}}
+---

@@ -75,7 +75,7 @@ declare -A -r SERVICE_NAMES=(
  [solr]="lockss-solr-service"
  [hdfs]="lockss-hdfs-service"
  [pywb]="lockss-pywb-service"
- [openwayback]="lockss-openwayback-service"
+ [openwb]="lockss-openwayback-service"
 )
 STACK_PREFIX="lockss-stack"
 

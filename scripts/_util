@@ -1079,7 +1079,7 @@ init_service_arrays_from_commandline() {
         SERVICES+=("pywb")
         ;;
       "openwb"|"openwayback")
-        SERVICES+=("openwayback")
+        SERVICES+=("openwb")
         ;;
       *)
         logger_error "Request to deploy unknown service: ${svc}."
@@ -1124,6 +1124,6 @@ init_service_arrays_from_config() {
     SERVICES+=("pywb")
    fi
   if ${USE_LOCKSS_OPENWB}; then
-    SERVICES+=("openwayback")
+    SERVICES+=("openwb")
   fi
 }
