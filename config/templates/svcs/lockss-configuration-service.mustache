@@ -117,6 +117,8 @@ spec:
         runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
+        - name: ARGS_THIS_SERVICE
+          value: "--cfg--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: JVM_OPTS_ADDITIONAL
