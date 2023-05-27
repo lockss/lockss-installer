@@ -127,7 +127,7 @@ spec:
         runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
-        - name: ARGS_THIS_SERVICE
+        - name: JVM_OPTS_SERVICE_ID
           value: "--pol--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
