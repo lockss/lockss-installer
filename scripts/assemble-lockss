@@ -102,6 +102,8 @@ NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 PORT_BASE=245
 PULL_POLICY="IfNotPresent"
+# the string "false" will be treated as an empty value for the purposes of conditionals.
+MO_FALSE_IS_EMPTY=true
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
