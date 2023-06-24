@@ -51,4 +51,25 @@ org.lockss.crawlerservice.classic.enabled={{LOCKSS_CLASSIC_CRAWLER_ENABLE}}
 
 # The wget crawler
 org.lockss.crawlerservice.wget.enabled={{LOCKSS_WGET_CRAWLER_ENABLE}}
-org.lockss.crawlerservice.wget.crawler=org.lockss.laaws.crawler.
+
+# the wget crawler specification
+org.lockss.crawlerservice.wget.crawler=org.lockss.laaws.crawler.wget.WgetCmdLineCrawler
+# The level of wget output in decreasing detail: --debug, --verbose, --no-verbose, --quiet
+# Default is verbose set to no-verbose
+org.lockss.crawlerservice.wget.outputLevel=no-verbose
+
+# The permitted return code to indicate a successful crawl
+org.lockss.crawlerservice.wget.successCode=0;8
+
+#time between fetches
+org.lockss.crawlerservice.wget.opt.wait=5
+
+#network timeouts
+#org.lockss.crawlerservice.wget.opt.timeout
+#org.lockss.crawlerservice.wget.opt.dns-timeout
+#org.lockss.crawlerservice.wget.opt.connect-timeout
+#org.lockss.crawlerservice.wget.opt.read-timeout
+
+# warc details
+org.lockss.crawlerservice.wget.opt.warc-keep-log=off
+#org.lockss.crawlerservice.wget.opt.no-warc-compression=false
