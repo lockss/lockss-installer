@@ -143,10 +143,6 @@ spec:
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_NEEDS_SECRETS
           value: "true"
-        - name: LOCKSS_WAIT_FOR_200
-          value: "{{CFG_HOST}}:{{CFG_REST_PORT}}"
-        - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{REPO_HOST}}:{{REPO_REST_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER
