@@ -4,21 +4,24 @@ metadata:
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-soap-service
-  name: lockss-soap-service
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawler-service
 spec:
   ports:
-  - name: "soap-service-ws-port"
-    port: {{SOAP_WS_PORT}}
-    targetPort: {{SOAP_DEFAULT_WS_PORT}}
-{{#additional_ports SOAP}}
+  - name: "crawl-service-rest-port"
+    port: {{CRAWL_REST_PORT}}
+    targetPort: {{CRAWL_DEFAULT_REST_PORT}}
+  - name: "crawl-service-ui-port"
+    port: {{CRAWL_UI_PORT}}
+    targetPort: {{CRAWL_DEFAULT_UI_PORT}}
+{{#additional_ports CRAWL}}
   - name: "__PORT_NAME__"
     port: __HOST_PORT__
     targetPort: __CONTAINER_PORT__
 {{/additional_ports}}
 
   selector:
-    io.kompose.service: lockss-soap-service
+    io.kompose.service: lockss-crawler-service
   type: ClusterIP
 ---
 apiVersion: v1
@@ -27,8 +30,8 @@ metadata:
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-soap-service
-  name: lockss-soap-logs-pvc
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-logs-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -39,7 +42,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-soap-logs"
+      owner: "lockss-crawl-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -47,8 +50,8 @@ metadata:
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-soap-service
-  name: lockss-soap-data-pvc
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -59,7 +62,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-soap-data"
+      owner: "lockss-crawl-data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -67,8 +70,8 @@ metadata:
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-soap-service
-  name: lockss-soap-tmp-pvc
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawl-tmp-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -79,7 +82,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-soap-tmp"
+      owner: "lockss-crawl-tmp"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -87,13 +90,13 @@ metadata:
   labels:
     app: lockss
     lockss-stack-id: {{STACK}}
-    io.kompose.service: lockss-soap-service
-  name: lockss-soap-service
+    io.kompose.service: lockss-crawler-service
+  name: lockss-crawler-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: lockss-soap-service
+      io.kompose.service: lockss-crawler-service
   strategy:
     type: Recreate
   template:
@@ -102,7 +105,7 @@ spec:
         app: lockss
         lockss-stack-id: {{STACK}}
         io.kompose.network/{{STACK}}-network: "true"
-        io.kompose.service: lockss-soap-service
+        io.kompose.service: lockss-crawler-service
     spec:
       securityContext:
         runAsUser: {{LOCKSS_UID}}
@@ -110,17 +113,19 @@ spec:
       containers:
       - env:
         - name: JVM_OPTS_SERVICE_ID
-          value: "--soap--"
+          value: "--crawl--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: JVM_OPTS_ADDITIONAL
-          value: "{{SOAP_JVM_OPTS_ADDITIONAL}}"
-        - name: LOCKSS_IS_SOAP
-          value: "true"
+          value: "{{CRAWL_JVM_OPTS_ADDITIONAL}}"
+        - name: LOCKSS_ADMIN_USER
+          value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
           value: {{CFG_URL}}
+        - name: LOCKSS_PRESERVATION_GROUP
+          value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_NEEDS_SECRETS
-          value: "false"
+          value: "true"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER
@@ -131,15 +136,19 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
-        image: {{SOAP_IMG}}:{{SOAP_VERSION}}
+        image: {{CRAWL_IMG}}:{{CRAWL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
-        name: lockss-soap-service
+        name: lockss-crawler-service
         ports:
-        - name: "soap-ws-port"
-          containerPort: {{SOAP_DEFAULT_WS_PORT}}
-          hostPort: {{SOAP_WS_PORT}}
+        - name: "crawl-rest-port"
+          containerPort: {{CRAWL_DEFAULT_REST_PORT}}
+          hostPort: {{CRAWL_REST_PORT}}
           protocol: TCP
-{{#additional_ports SOAP}}
+        - name: "crawl-ui-port"
+          containerPort: {{CRAWL_DEFAULT_UI_PORT}}
+          hostPort: {{CRAWL_UI_PORT}}
+          protocol: TCP
+{{#additional_ports CRAWL}}
         - name: "__PORT_NAME__"
           containerPort: __CONTAINER_PORT__
           hostPort: __HOST_PORT__
@@ -152,20 +161,23 @@ spec:
           name: lockss-bootstrap
           subPath: lockss_bootstrap
         - mountPath: /run/configs/lockss_service
-          name: soap-service
+          name: crawl-service
           subPath: lockss_service
         - mountPath: /run/configs/lockss_service_opt
-          name: soap-service-opt
+          name: crawl-service-opt
           subPath: lockss_service_opt
+        - mountPath: /run/secrets/lockss_ui_pass
+          name: lockss-ui-pass
+          subPath: lockss_ui_pass
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
         - mountPath: /data
-          name: lockss-soap-data
+          name: lockss-crawl-data
         - mountPath: /var/log/lockss
-          name: lockss-soap-logs
+          name: lockss-crawl-logs
         - mountPath: /tmp/lockss
-          name: lockss-soap-tmp
+          name: lockss-crawl-tmp
       restartPolicy: Always
       hostAliases:
       - ip: "{{LOCKSS_IPADDR}}"
@@ -180,28 +192,34 @@ spec:
         name: lockss-bootstrap
       - configMap:
           items:
-          - key: soap-service
+          - key: crawl-service
             path: lockss_service
-          name: soap-service
-        name: soap-service
+          name: crawl-service
+        name: crawl-service
       - configMap:
           items:
-          - key: soap-service-opt
+          - key: crawl-service-opt
             path: lockss_service_opt
-          name: soap-service-opt
-        name: soap-service-opt
+          name: crawl-service-opt
+        name: crawl-service-opt
+      - name: lockss-ui-pass
+        secret:
+          secretName: lockss-ui-pass
+          items:
+          - key: lockss-ui-pass
+            path: lockss_ui_pass
       - name: lockss-auth
         secret:
           secretName: lockss-auth
           items:
           - key: lockss-auth
             path: lockss-auth
-      - name: lockss-soap-data
+      - name: lockss-crawl-data
         persistentVolumeClaim:
-          claimName: lockss-soap-data-pvc
-      - name: lockss-soap-logs
+          claimName: lockss-crawl-data-pvc
+      - name: lockss-crawl-logs
         persistentVolumeClaim:
-          claimName: lockss-soap-logs-pvc
-      - name: lockss-soap-tmp
+          claimName: lockss-crawl-logs-pvc
+      - name: lockss-crawl-tmp
         persistentVolumeClaim:
-          claimName: lockss-soap-tmp-pvc
+          claimName: lockss-crawl-tmp-pvc

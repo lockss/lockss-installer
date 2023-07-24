@@ -102,6 +102,8 @@ NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 PORT_BASE=245
 PULL_POLICY="IfNotPresent"
+# the string "false" will be treated as an empty value for the purposes of conditionals.
+MO_FALSE_IS_EMPTY=true
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -405,7 +407,8 @@ add_stack_volumes() {
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
-  ensure_lockss_owner $stack
+  # Slow, and only necessary if we rearrange users/permissions
+  # ensure_lockss_owner $stack
 }
 
 add_repo_content_volumes() {

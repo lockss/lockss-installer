@@ -171,10 +171,11 @@ version_compare()
 
 	check_pg_ready()
 	{
-
-		for i in {1..10}
+    echo -n "Waiting for PostgreSQL to be ready for connections. This may take some time."
+    # This is effectively a 10 1/2 min wait.
+		for i in {1..20}
 		do
-  		 kubectl_lockss exec ${PODNAME} -- pg_isready -U LOCKSS
+  		 kubectl_lockss exec ${PODNAME} -- pg_isready -U "${LOCKSS_POSTGRES_USER}" &>/dev/null
   			case $? in
     		0)
       		logger_info "PostgreSQL is ready for sql commands."
@@ -187,26 +188,31 @@ version_compare()
       		logger_error_exit "Unable to connect to PostgreSQL container - Invalid arguments."
       		;;
       esac
+      echo -n "."
       sleep 30
   	done
   	return 1
 	}
 
+start_postgres_service()
+{
+    #start the postgres service
+  	"${SCRIPTS_DIR}"/start-lockss --upgrading -s "postgres" || logger_error_exit "Attempt to start old PostgreSQL failed."
+    #wait for the  deployment to be marked as Available
+    kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
+  	# get the pod name
+  	PODNAME=$(kubectl get pods -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
+  	# check that the postgres is ready for sql commands
+  	check_pg_ready  ||  logger_error_exit "Timed out waiting for PostgreSQL to allow sql commands."
+}
+
 dump_old_version()
 {
   # add the postgres version to the opt file
-  echo POSTGRES_VERSION=${OLD_VERSION} | tee "${UPGRADE_ENV_TMPL}"
-
+  echo POSTGRES_VERSION=${OLD_VERSION} > "${UPGRADE_ENV_TMPL}"
   # bring up the old version
-	  "${SCRIPTS_DIR}"/start-lockss -U -s "postgres" || logger_error_exit "Attempt to start old PostgreSQL failed."
-
-  #wait for the  deployment to be marked as Available
-  kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
-	  # get the pod name
-	  PODNAME=$(kubectl get pods -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
-		# check that the postgres is ready for sql commands
-	  check_pg_ready  ||  logger_error_exit "Timed out waiting for PostgreSQL to allow sql commands."
-  # dump the old versions content
+  start_postgres_service
+  # dump the old versions content -c to clear the database on restore
 	  kubectl_lockss exec ${PODNAME} -- pg_dumpall -U ${LOCKSS_POSTGRES_USER} -c --if-exists --file="${DUMP_FILE}" ||
 	  	logger_error_exit "Unable to perform database dump."
   # shutdown old version
@@ -223,20 +229,30 @@ dump_old_version()
 
 restore_dump()
 {
-	  echo POSTGRES_VERSION=${NEW_VERSION} | tee "${UPGRADE_ENV_TMPL}"
-		# bring up the new version
-	 	"${SCRIPTS_DIR}"/start-lockss -U -s "postgres" || logger_error_exit "Attempt to start new PostgreSQL failed."
- kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
-	  PODNAME=$(kubectl get pods -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
-		# check that the postgres is ready for sql commands
-	  check_pg_ready  ||  logger_error_exit "Timed out waiting for PostgreSQL to allow sql commands."
-	 	# load the dump into the new version psql -q -U
-	 	kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="${DUMP_FILE}" --dbname=postgres >/dev/null ||
+	echo POSTGRES_VERSION=${NEW_VERSION} > "${UPGRADE_ENV_TMPL}"
+	# bring up the new version
+	start_postgres_service
+	err_file="${LOCKSS_DATA_DIR}/restore-`date +%Y%m%d%H%M`.err"
+	# load the dump into the new version psql -q -U
+  kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --file="${DUMP_FILE}" --dbname=postgres >/dev/null 2>"${err_file}" ||
    logger_error_exit "Unable to exec into pod to perform database restore."
- # shutdown the new version.
- "${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running PostgreSQL failed."
+  logger_info "Successfully restored data to $NEW_VERSION of PostgreSQL."
+  logger_info "Upgrading the stored Password for PostgreSQL user $LOCKSS_POSTGRES_USER"
+  update_password
+  #shutdown the service
+  "${SCRIPTS_DIR}"/stop-lockss || logger_error_exit "Attempt to stop running PostgreSQL failed."
+  restore_env
+}
 
-	  restore_env
+update_password()
+{
+# 	echo POSTGRES_VERSION=${NEW_VERSION} | tee "${UPGRADE_ENV_TMPL}"
+#  start_postgres_service
+  logger_info "Updating stored password to SCRAM-SHA-256..."
+	db_pass=$(kubectl get secret -n lockss lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}' | base64 --decode)
+  kubectl_lockss exec ${PODNAME} -- psql -q -U "${LOCKSS_POSTGRES_USER}" --dbname=postgres -c "ALTER USER \"$LOCKSS_POSTGRES_USER\" with password '$db_pass';" ||
+    logger_error_exit "Attempt to update stored password failed."
+ # restore_env
 }
 
 ###
@@ -276,17 +292,17 @@ logger_init
 check_versions
 
 DUMP_FILE_NAME="${OLD_VERSION}.dump"
-logger_info "Dumping contents of $OLD_VERSION of PostgreSQL to ${POSTGRES_TMP_DIR}/${DUMP_FILE_NAME}."
 DUMP_FILE="/tmp/${DUMP_FILE_NAME}"
 
+logger_info "Dumping contents of PostgreSQL $OLD_VERSION to ${POSTGRES_TMP_DIR}/${DUMP_FILE_NAME}."
 dump_old_version
-logger_info "Successfully dumped data from $OLD_VERSION of PostgreSQL."
+logger_info "Successfully dumped data from PostgreSQL $OLD_VERSION."
 
 # wait for things to settle
 sleep 5
 logger_info "Starting $NEW_VERSION of PostgreSQL to begin data restore."
 restore_dump
-logger_info "Successfully restored data to $NEW_VERSION of PostgreSQL."
 logger_info "PostgreSQL upgrade completed."
+ # shutdown the new version.
 
 graceful_exit

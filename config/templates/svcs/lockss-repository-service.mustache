@@ -131,6 +131,8 @@ spec:
         runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
+        - name: JVM_OPTS_SERVICE_ID
+          value: "--repo--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: JVM_OPTS_ADDITIONAL
@@ -154,7 +156,7 @@ spec:
         - name: LOCKSS_SOLR_PORT
           value: "{{SOLR_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: {{SOLR_HOST}}:{{SOLR_PORT}}
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{SOLR_HOST}}:{{SOLR_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER

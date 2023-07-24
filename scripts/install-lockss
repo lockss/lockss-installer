@@ -778,7 +778,7 @@ Parse_Command_Line()
 
       --check-prerequisites|-check-prerequisites|-P) SINGLE_STEP='Check_Prerequisites' ; shift ;;
 
-      --check-system-user|-check-sustem-user) SINGLE_STEP='Check_System_User' ; shift ;;
+      --check-system-user|-check-system-user|-L) SINGLE_STEP='Check_System_User' ; shift ;;
 
       --configure-coredns|-configure-coredns|-C) SINGLE_STEP='Configure_Coredns' ; shift ;;
 

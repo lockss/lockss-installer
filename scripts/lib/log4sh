@@ -3628,7 +3628,7 @@ _log4sh_cleanup()
       # newer trap command
       ${__LOG4SH_DEBUG} 'newer POSIX trap command'
       _lc__restoreTrap=${LOG4SH_TRUE}
-      _lc__oldTrap=`grep -e "(${_lc__trap}|${_lc__signal})$" "${__log4sh_trapsFile}" |\
+      _lc__oldTrap=`grep -E "(${_lc__trap}|${_lc__signal})$" "${__log4sh_trapsFile}" |\
         sed "s/^trap -- '\(.*\)' [A-Z]*$/\1/"`
     elif [ `grep "[0-9]*: " "${__log4sh_trapsFile}" >/dev/null; echo $?` -eq 0 ]
     then

@@ -135,7 +135,7 @@ shared_buffers = 12GB			# min 128kB
 					# (change requires restart)
 # Caution: it is not advisable to set max_prepared_transactions nonzero unless
 # you actively intend to use prepared transactions.
-work_mem = 10GB				# min 64kB default 4MB
+work_mem = 5GB				# min 64kB default 4MB
 #hash_mem_multiplier = 1.0		# 1-1000.0 multiplier on hash table work_mem
 #maintenance_work_mem = 64MB		# min 1MB
 #autovacuum_work_mem = -1		# min 1MB, or -1 to use maintenance_work_mem
@@ -437,24 +437,24 @@ effective_cache_size = 10GB
 					# requires logging_collector to be on.
 
 # This is used when logging to stderr:
-#logging_collector = off		# Enable capturing of stderr and csvlog
+logging_collector = on		# Enable capturing of stderr and csvlog
 					# into log files. Required to be on for
 					# csvlogs.
 					# (change requires restart)
 
 # These are only used if logging_collector is on:
-#log_directory = 'log'			# directory where log files are written,
+log_directory = '/logs'			# directory where log files are written,
 					# can be absolute or relative to PGDATA
-log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'	# log file name pattern,
+log_filename = 'postgresql-%a.log'	# log file name pattern,
 					# can include strftime() escapes
-#log_file_mode = 0600			# creation mode for log files,
+log_file_mode = 0644			# creation mode for log files,
 					# begin with 0 to use octal notation
-#log_rotation_age = 1d			# Automatic rotation of logfiles will
+log_rotation_age = 1d			# Automatic rotation of logfiles will
 					# happen after that time.  0 disables.
 #log_rotation_size = 10MB		# Automatic rotation of logfiles will
 					# happen after that much log output.
 					# 0 disables.
-#log_truncate_on_rotation = off		# If on, an existing log file with the
+log_truncate_on_rotation = on		# If on, an existing log file with the
 					# same name as the new log file will be
 					# truncated rather than appended to.
 					# But such truncation only occurs on
@@ -475,7 +475,7 @@ log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'	# log file name pattern,
 
 # - When to Log -
 
-#log_min_messages = warning		# values in order of decreasing detail:
+log_min_messages = info		# values in order of decreasing detail:
 					#   debug5
 					#   debug4
 					#   debug3
@@ -540,7 +540,7 @@ log_checkpoints = on
 #log_duration = off
 #log_error_verbosity = default		# terse, default, or verbose messages
 #log_hostname = off
-log_line_prefix =   '%t'
+log_line_prefix =   '%t '
                     #'%m [%p] '		# default - special values:
 					#   %a = application name
 					#   %u = user name

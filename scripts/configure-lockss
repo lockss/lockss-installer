@@ -154,11 +154,44 @@ configure_databases() {
   fi
 }
 
+configure_crawler_services() {
+  echo ""
+  echo "Configuring Crawler Service..."
+  echo ""
+  #check crawler service
+  CRAWLER_OK=N
+  until is_yes ${CRAWLER_OK}; do
+    ask_for_input "Use LOCKSS Crawler Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_CRAWL})" Y
+    if is_yes "${ANS}"; then
+      USE_LOCKSS_CRAWL=true
+      ask_for_input "Enable classic LOCKSS crawler?" "$(to_yes_no_or_blank ${LOCKSS_CLASSIC_CRAWLER_ENABLE})" Y
+      if is_yes "${ANS}"; then
+        LOCKSS_CLASSIC_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_CLASSIC_CRAWLER_ENABLE=false
+      fi
+      ask_for_input "Enable wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
+      if is_yes "${ANS}"; then
+        LOCKSS_WGET_CRAWLER_ENABLE=true
+        CRAWLER_OK=Y
+      else
+        LOCKSS_WGET_CRAWLER_ENABLE=false
+      fi
+    else
+      USE_LOCKSS_CRAWL=false
+      CRAWLER_OK=Y
+    fi
+  done
+}
+
 configure_services() {
   echo ""
   echo "Configuring LOCKSS services..."
   echo ""
   USE_LOCKSS_CFG=true
+
+  configure_crawler_services
 
   # Metadata query service
   ask_for_input "Use LOCKSS Metadata Query Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDQ})" Y
@@ -281,19 +314,22 @@ LOCKSS_SOLR_PASSWD_HASH="${LOCKSS_SOLR_PASSWD_HASH}"
 LOCKSS_CLEAR_TMPDIR="${LOCKSS_CLEAR_TMPDIR:-yes}"
 LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
+LOCKSS_CLASSIC_CRAWLER_ENABLE="${LOCKSS_CLASSIC_CRAWLER_ENABLE}"
+LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
-USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ:-true}"
-USE_LOCKSS_MDX="${USE_LOCKSS_MDX:-true}"
+USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ}"
+USE_LOCKSS_MDX="${USE_LOCKSS_MDX}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
-USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP:-false}"
-USE_LOCKSS_REPO="${USE_LOCKSS_REPO:-true}"
-USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES:-true}"
-USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR:-true}"
+USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL}"
+USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP}"
+USE_LOCKSS_REPO="${USE_LOCKSS_REPO}"
+USE_LOCKSS_POSTGRES="${USE_LOCKSS_POSTGRES}"
+USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
-USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB:-true}"
-USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB:-false}"
+USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB}"
+USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB}"
 EOF
   OS_NAME="$(os_release_name)"
   if [ -n "${OS_NAME}" ]; then
@@ -320,6 +356,10 @@ build_config_file() {
   echo "Building config file ${1} for user ${2}..."
   Clear_Secrets
   CONFIG_OK=N
+  # Arrange to skip "Ok to store" question iff no questions were asked
+  # (in replay mode)
+  OK_TO_STORE_WITHOUT_CONFIRMATION="Y"
+
   until is_yes ${CONFIG_OK}; do
     HOSTNAME_OK=N
     until is_yes ${HOSTNAME_OK}; do
@@ -440,7 +480,7 @@ build_config_file() {
     # Props URL
     ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/demo/lockss.xml"
     LOCKSS_PROPS_URL="${ANS}"
-    if echo ${LOCKSS_PROPS_URL} | grep -eis "^https:" >/dev/null; then
+    if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
       if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
         LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
       else
@@ -546,7 +586,7 @@ build_config_file() {
     echo "Configuration:"
     cat ${TMP_CONFIG}
 
-    ask_for_input "OK to store this configuration?" Y
+    ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
     if is_yes "${ANS}"; then
       if ! cp ${TMP_CONFIG} ${1}; then
         echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
@@ -562,7 +602,7 @@ build_config_file() {
       CONFIG_OK=Y
 
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-      grep -esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+      grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
       mail_sent=""
       if [ $(command -v mail) >/dev/null ]; then
           if [ -z "${BYPASS_MAIL}" ]; then

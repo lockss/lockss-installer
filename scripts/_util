@@ -466,7 +466,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(kubectl_lockss get pods | grep 'lockss-configuration-service')" ]
+  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-configuration-service'
 }
 
 #
@@ -505,6 +505,8 @@ ask_for_input() {
     echo
     ANS="${current}"
   else
+    # force "OK to store this configuration" question
+    OK_TO_STORE_WITHOUT_CONFIRMATION=""
     read ANS
     if [ -z "${ANS}" ]; then
       ANS="${default}"
@@ -1057,6 +1059,9 @@ init_service_arrays_from_commandline() {
       "pol"|"poll"|"poller")
         SERVICES+=("pol")
         ;;
+      "crawl"|"crawler")
+        SERVICES+=("crawl")
+        ;;
       "soap")
         SERVICES+=("soap")
         ;;
@@ -1076,7 +1081,7 @@ init_service_arrays_from_commandline() {
         SERVICES+=("pywb")
         ;;
       "openwb"|"openwayback")
-        SERVICES+=("openwayback")
+        SERVICES+=("openwb")
         ;;
       *)
         logger_error "Request to deploy unknown service: ${svc}."
@@ -1099,7 +1104,10 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_POL}; then
     SERVICES+=("pol")
   fi
-  if ${USE_LOCKSS_SOAP}; then
+   if ${USE_LOCKSS_CRAWL}; then
+     SERVICES+=("crawl")
+   fi
+ if ${USE_LOCKSS_SOAP}; then
     SERVICES+=("soap")
   fi
   if ${USE_LOCKSS_REPO}; then
@@ -1118,6 +1126,6 @@ init_service_arrays_from_config() {
     SERVICES+=("pywb")
    fi
   if ${USE_LOCKSS_OPENWB}; then
-    SERVICES+=("openwayback")
+    SERVICES+=("openwb")
   fi
 }

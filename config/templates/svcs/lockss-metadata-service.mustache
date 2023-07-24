@@ -109,6 +109,8 @@ spec:
         runAsGroup: {{LOCKSS_GID}}
       containers:
       - env:
+        - name: JVM_OPTS_SERVICE_ID
+          value: "--mdq--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: JVM_OPTS_ADDITIONAL
@@ -121,10 +123,8 @@ spec:
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_NEEDS_SECRETS
           value: "true"
-        - name: LOCKSS_WAIT_FOR_200
-          value: "{{CFG_HOST}}:{{CFG_REST_PORT}} {{REPO_HOST}}:{{REPO_REST_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
-          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{CFG_HOST}}:{{CFG_REST_PORT}}"
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}}"
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER
