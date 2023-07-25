@@ -718,8 +718,20 @@ Install_K3s()
   
     if [ "${K3S_VERSION}" != "${DEFAULT_K3S_VERSION}" ] ; then
       Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
-    fi 
-  
+    fi
+
+    local _line=''
+    _line="$("${_iptables_cmd}" --version)"
+    local _ver=''
+    _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
+
+    # Skip if older than 1.8.0
+    local _use_bundled_iptables=''
+    if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
+      Echo "Iptables version is less than 1.8.8; using bundled iptables"
+      _use_bundled_iptables='--prefer-bundled-bin'
+    fi
+
     # Invoke Rancher's installer
     Download_Url "${K3S_URL}" | \
         INSTALL_K3S_VERSION="${K3S_VERSION}" \
@@ -727,6 +739,7 @@ Install_K3s()
         --write-kubeconfig-mode 644 \
         --disable-cloud-controller \
         --disable traefik \
+        ${_use_bundled_iptables} \
         ${_resolv_conf_args} \
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
@@ -784,8 +797,6 @@ Parse_Command_Line()
 
       --configure-firewalld|-configure-firewalld|-F) SINGLE_STEP='Configure_Firewalld' ; shift ;;
 
-      --configure-iptables|-configure-iptables|-I) SINGLE_STEP='Configure_Iptables' ; shift ;;
-
       --configure-ufw|-configure-ufw|-U) SINGLE_STEP='Configure_Ufw' ; shift ;;
 
       --force-dns-prompt|-force-dns-prompt) FORCE_DNS_PROMPT='true' ; shift ;;
@@ -810,8 +821,6 @@ Parse_Command_Line()
       --skip-configure-coredns|-skip-configure-coredns) SKIP_CONFIGURE_COREDNS='true' ; shift ;;
 
       --skip-configure-firewalld|-skip-configure-firewalld) SKIP_CONFIGURE_FIREWALLD='true' ; shift ;;
-
-      --skip-configure-iptables|-skip-configure-iptables) SKIP_CONFIGURE_IPTABLES='true' ; shift ;;
 
       --skip-configure-ufw|-skip-configure-ufw) SKIP_CONFIGURE_UFW='true' ; shift ;;
 
@@ -846,11 +855,11 @@ Usage:
 
   ${_0} [--skip-check-prerequisites|--skip-check-system-user|
       --skip-configure-coredns|--skip-configure-firewalld|
-      --skip-configure-iptables|--skip-configure-ufw|--skip-install-k3s|
+      --skip-configure-ufw|--skip-install-k3s|
       --skip-test-k3s] [--assume-yes] [--force-dns-prompt]
       [--k3s-data-dir=DIR|--k3s-version=VER] [--retries=N|--wait=S]
   ${_0} {--check-prerequisites|--configure-coredns|
-      --configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|
+      --configure-firewalld|--configure-ufw|--install-k3s|
       --test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR|
       --k3s-data-dir=VER] [--retries=N|--wait=S]
   ${_0} {--help|--version}
@@ -873,9 +882,6 @@ Options:
 
   --configure-firewalld, -configure-firewalld, -F
     Only configure firewalld for K3s and exit
-
-  --configure-iptables, -configure-iptables, -I
-    Only configure iptables for K3s and exit
 
   --configure-ufw, -configure-ufw, -U
     Only configure ufw for K3s and exit
@@ -912,16 +918,13 @@ Options:
   --skip-configure-firewalld, -skip-configure-firewalld
     Skip configuring firewalld for K3s
 
-  --skip-configure-iptables, -skip-configure-iptables
-    Skip configuring iptables for K3s
-
   --skip-configure-ufw, -skip-configure-ufw
     Skip configuring ufw for K3s
 
   --skip-install-k3s, -skip-install-k3s
     Skip installing K3s. Implies --skip-check-prerequisites,
     --skip-configure-coredns, --skip-configure-firewalld,
-    --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s.
+    --skip-configure-ufw, --skip-test-k3s.
 
   --skip-test-k3s, -skip-test-k3s
     Skip testing the K3s node
@@ -1138,7 +1141,6 @@ SKIP_CHECK_PREREQUISITES=''
 SKIP_CHECK_SYSTEM_USER=''
 SKIP_CONFIGURE_COREDNS=''
 SKIP_CONFIGURE_FIREWALLD=''
-SKIP_CONFIGURE_IPTABLES=''
 SKIP_CONFIGURE_UFW=''
 SKIP_INSTALL_K3S=''
 SKIP_TEST_K3S=''
@@ -1165,13 +1167,12 @@ while true ; do
     '') Fatal "Empty step number" ;;
     0) Check_Prerequisites ;;
     1) Check_System_User ;;
-    2) Configure_Iptables ;;
-    3) Configure_Firewalld ;;
-    4) Configure_Ufw ;;
-    5) Configure_Coredns ;;
-    6) Install_K3s ;;
-    7) Test_K3s ;;
-    8) break ;;
+    2) Configure_Firewalld ;;
+    3) Configure_Ufw ;;
+    4) Configure_Coredns ;;
+    5) Install_K3s ;;
+    6) Test_K3s ;;
+    7) break ;;
     *) Fatal "Invalid step number: ${CURRENT_STEP}" ;; 
   esac
   CURRENT_STEP=$((CURRENT_STEP + 1))
