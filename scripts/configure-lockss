@@ -510,7 +510,7 @@ build_config_file() {
     # Data storage base
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path for data storage" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
@@ -520,7 +520,7 @@ build_config_file() {
     # Content storage base(s)
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path(s) for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
         IFS=';' read -r -a newPaths <<< "${tmp_repo_host_dirs}"
@@ -529,7 +529,7 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed or reordered content storage directories, you must run scripts/reindex-artifacts"
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
@@ -539,7 +539,7 @@ build_config_file() {
     # Log dir base
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path for log storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
@@ -547,7 +547,7 @@ build_config_file() {
     done
 
     # Tempdir dir base
-    ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
+    ask_for_input "Root path for temporary storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
     if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
       LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
