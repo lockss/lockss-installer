@@ -510,7 +510,7 @@ build_config_file() {
     # Data storage base
     DATA_PATHS_OK=N
     until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for data storage" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
         DATA_PATHS_OK=Y
