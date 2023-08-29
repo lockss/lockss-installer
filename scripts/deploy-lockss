@@ -56,14 +56,27 @@ _D0=$(dirname "${0}")
 ##
 
 # Files
-set -a
-. "${CONFIG_DIR}/system.cfg"
-set +a
+# Source system config file
+source_config
 
 #Data
 declare -a deploy_service_names
-declare -a svcs
+declare -a SERVICES
 declare -A svc_port_map
+declare -A -r SERVICE_NAMES=(
+ [cfg]="lockss-configuration-service"
+ [mdq]="lockss-metadata-service"
+ [mdx]="lockss-metadata-extraction-service"
+ [pol]="lockss-poller-service"
+ [crawl]="lockss-crawler-service"
+ [soap]="lockss-soap-service"
+ [repo]="lockss-repository-service"
+ [postgres]="lockss-postgres-service"
+ [solr]="lockss-solr-service"
+ [hdfs]="lockss-hdfs-service"
+ [pywb]="lockss-pywb-service"
+ [openwb]="lockss-openwayback-service"
+)
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -97,19 +110,20 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
+  echo -e "Usage: $PROGNAME [-h|--help] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
   cat <<-_EOF_
   $PROGNAME ver. $VERSION
-  Deploy the lockss stacks to docker.
+  Deploy the lockss stacks to the kubernetes cluster.
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
   -w, --wait Use a wait file to signal stack ready.
+  -s, --services  A semicolon seperated list of services to deploy
   -a, --args ARGS_ADDITIONAL  Add additional runtime options.
     Where 'ARGS_ADDITIONAL' is the additional arguments.
 
@@ -117,63 +131,7 @@ _EOF_
   return
 }
 
-#initialize the service arrays based on system.cfg info.
-init_service_arrays() {
-  if ${USE_LOCKSS_CFG}; then
-    svcs+=("cfg")
-    deploy_service_names+=("lockss-configuration-service")
-    svc_port_map["lockss-configuration-service"]="$CFG_UI_PORT:$CFG_DEFAULT_UI_PORT $CFG_REST_PORT:$CFG_DEFAULT_REST_PORT"
-  fi
-  if ${USE_LOCKSS_MDQ}; then
-    svcs+=("mdq")
-    deploy_service_names+=("lockss-metadata-service")
-    svc_port_map["lockss-metadata-service"]="$MDQ_UI_PORT:$MDQ_DEFAULT_UI_PORT $MDQ_REST_PORT:$MDQ_DEFAULT_REST_PORT"
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    svcs+=("mdx")
-    deploy_service_names+=("lockss-metadata-extraction-service")
-    svc_port_map["lockss-metadata-extraction-service"]="$MDX_UI_PORT:$MDX_DEFAULT_UI_PORT $MDX_REST_PORT:$MDX_DEFAULT_REST_PORT"
-  fi
-  if ${USE_LOCKSS_POL}; then
-    svcs+=("pol")
-    deploy_service_names+=("lockss-poller-service")
-    svc_port_map["lockss-poller-service"]="$POL_UI_PORT:$POL_DEFAULT_UI_PORT $POL_REST_PORT:$POL_DEFAULT_REST_PORT"
-  fi
-  if ${USE_LOCKSS_SOAP}; then
-    svcs+=("soap")
-    deploy_service_names+=("lockss-soap-service")
-    svc_port_map["lockss-soap-service"]="$SOAP_WS_PORT:$SOAP_DEFAULT_WS_PORT"
-  fi
-  if ${USE_LOCKSS_REPO}; then
-    svcs+=("repo")
-    deploy_service_names+=("lockss-repository-service")
-    svc_port_map["lockss-repository-service"]="$REPO_REST_PORT:$REPO_DEFAULT_REST_PORT"
-  fi
-  if ${USE_LOCKSS_POSTGRES}; then
-    svcs+=("postgres")
-    deploy_service_names+=("lockss-postgres-service")
-    svc_port_map["lockss-postgres-service"]="$POSTGRES_PORT:$POSTGRES_DEFAULT_PORT"
-  fi
-  if ${USE_LOCKSS_SOLR}; then
-    svcs+=("solr")
-    deploy_service_names+=("lockss-solr-service")
-    svc_port_map["lockss-solr-service"]="$SOLR_PORT:$SOLR_DEFAULT_PORT"
-  fi
-  if ${USE_LOCKSS_HDFS}; then
-    svcs+=("hdfs")
-    deploy_service_names+=("lockss-hdfs-service")
-  fi
-  if ${USE_LOCKSS_PYWB}; then
-    svcs+=("pywb")
-    deploy_service_names+=("lockss-pywb-service")
-    svc_port_map["lockss-pywb-service"]="$PYWB_PORT:$PYWB_DEFAULT_PORT"
-  fi
-  if ${USE_LOCKSS_OPENWB}; then
-    svcs+=("openwayback")
-    deploy_service_names+=("lockss-openwayback-service")
-    svc_port_map["lockss-openwayback-service"]="$OPENWB_PORT:$OPENWB_DEFAULT_PORT"
-  fi
-}
+
 
 # Check our secrets
 check_installed_secrets() {
@@ -188,7 +146,7 @@ check_installed_volumes() {
   local stack=$1
   local wait_file
   # Check the mountpoints
-  for svc in "${svcs[@]}"; do
+  for svc in "${SERVICES[@]}"; do
     logger_debug "clearing  wait file in ${LOCKSS_DATA_DIR}/$stack-${svc}-data"
     wait_file="${LOCKSS_DATA_DIR}/$stack-${svc}-data/${LOCKSS_WAIT_FILE}"
     if [ -f $wait_file ]; then
@@ -208,7 +166,7 @@ wait_for_ready() {
     do
       sleep 2
     done
-    logger_info "LOCKSS services are now ready for use."
+    logger_info "LOCKSS services are ready; AUs may still be loading."
   else
     logger_info "Pods are ready, LOCKSS services are starting."
   fi
@@ -217,21 +175,19 @@ wait_for_ready() {
 # Deploy the stack with incoming stack num
 deploy_stack() {
   local stack=${STACK_PREFIX}$1
-  # Source config.info and env.sh
-  set -a
-  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-  set +a
+  # Source env.sh
+  source_env "${stack}"
   check_installed_volumes $stack
   pushd . &>/dev/null
   logger_debug "Deploying services and deployments for stack $stack"
-  for svc in "${deploy_service_names[@]}"; do
-    logger_trace "Deploying service from ${svc}..."
-    if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml" >/dev/null ; then
+  for svc in "${SERVICES[@]}"; do
+    service_name=${SERVICE_NAMES[$svc]}
+    logger_trace "Deploying service ${service_name}..."
+    if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml" >/dev/null ; then
       popd &>/dev/null
-      logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${svc}.yaml"
+      logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml"
       logger_error_exit "Fix the error then run scripts/restart-lockss."
     fi
-#    kubectl_cmd expose deployment $svc
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
   popd &>/dev/null
@@ -262,6 +218,11 @@ while [[ $# -gt 0 ]]; do
   -a | --args)
     export ARGS_ADDITIONAL="$2"
     logger_debug "Adding additional runtime args $ARGS_ADDITIONAL"
+    shift; shift
+    ;;
+  -s | --services)
+    export REQ_SERVICES="$2"
+    logger_debug "Adding list of service to deploy $REQ_SERVICES"
     shift; shift
     ;;
   -w | --wait)

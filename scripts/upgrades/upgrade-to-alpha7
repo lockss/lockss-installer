@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# upgrade-to-alpha6 -
+# upgrade-to-alpha7 -
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -30,17 +30,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Usage: upgrade-to-alpha6 [-h|--help]
+# Usage: upgrade-to-alpha7 [-h|--help]
 #
 # Revision history:
-# 2022-09-22 version 1
 # ---------------------------------------------------------------------------
 
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6.?"
-UPGRADE_TO="2.0.60-alpha6"
+#UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6"
+UPGRADE_TO="2.0.71-alpha7"
 
 ## Relative paths
 ##
@@ -63,6 +62,8 @@ DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
+. "${_D0}/_util_upgrade"
+
 ##
 ## Definitions
 ##
@@ -70,9 +71,12 @@ declare -a arr svcs
 declare -a arr lockss_owned
 STACK_PREFIX="lockss-stack"
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
-# Source system config file
-source_config
+set -a
+. "${SYSTEM_CONF_FILE}"
+set +a
 
+POSTGRES_VERSION_NEW='14.7-alpine'
+POSTGRES_VERSION_OLD='9.6.12-alpine'
 clean_up() { # Perform pre-exit housekeeping
 	return
 }
@@ -107,7 +111,7 @@ usage() {
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Updates content from a previous alpha release to alpha6.
+  Update to alpha7 from a previous alpha release.
 
   $(usage)
 
@@ -118,67 +122,12 @@ _EOF_
   return
 }
 
-remove_journal_files() {
-  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-  for dir in "${repoPaths[@]}"; do
-    if [ ! -z "${dir}" ]; then
-      logger_debug "Removing journal files under ${dir}/${STACK_PREFIX}-repo-content"
-      find "${dir}/${STACK_PREFIX}-repo-content" -type f -name "lockss-repo.warc" -delete 2> /dev/null
-    fi
-  done
-}
-
-rename_tempwarcs_dir() {
-  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-  for dir in "${repoPaths[@]}"; do
-    TEMPWARCS_DIR="${dir}/${STACK_PREFIX}-repo-content/tempwarcs"
-    TMP_DIR="${dir}/${STACK_PREFIX}-repo-content/tmp"
-    if [ -d "${TEMPWARCS_DIR}" ]; then
-      logger_debug "Renaming directory (src: ${TEMPWARCS_DIR}, dst: ${TMP_DIR})"
-      mkdir -p "${TMP_DIR}"
-      mv "${TEMPWARCS_DIR}" "${TMP_DIR}/warcs"
-    fi
-  done
-}
-
-rename_collections_dir() {
-  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-  for dir in "${repoPaths[@]}"; do
-    COLLECTIONS_DIR="${dir}/${STACK_PREFIX}-repo-content/collections"
-    NAMESPACES_DIR="${dir}/${STACK_PREFIX}-repo-content/ns"
-    if [ -d "${COLLECTIONS_DIR}" ]; then
-      logger_debug "Renaming directory (src: ${COLLECTIONS_DIR}, dst: ${NAMESPACES_DIR})"
-      mv "${COLLECTIONS_DIR}" "${NAMESPACES_DIR}"
-    fi
-  done
-}
-
-reset_index_state() {
-  IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-  for dir in "${repoPaths[@]}"; do
-    INDEX_STATE_DIR="${dir}/${STACK_PREFIX}-repo-data/state/index"
-    if [ -d "${INDEX_STATE_DIR}" ]; then
-      logger_debug "Removing index state from ${INDEX_STATE_DIR}"
-      rm -f "${INDEX_STATE_DIR}"/reindex*
-      rm -f "${INDEX_STATE_DIR}"/solr/*
-    fi
-  done
-}
-
-reset_solr_index() {
-  local STACK_SOLR_DATA="${STACK_PREFIX}-solr-data"
-  local SOLR_HOME_PATH="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}"
-
-  if [ -d "${SOLR_HOME_PATH}" ]; then
-    local SOLR_BACKUP_TGZ="${LOCKSS_DATA_DIR}/${STACK_SOLR_DATA}.`date +%Y%m%d%H%M`.tar.gz"
-    logger_info "Backing up Solr home directory to ${SOLR_BACKUP_TGZ}; this may take several minutes..."
-    tar -C "${LOCKSS_DATA_DIR}" -czf "${SOLR_BACKUP_TGZ}" "${STACK_SOLR_DATA}"
-    if [ $? -eq 0 ]; then
-      logger_debug "Removing Solr home directory (${SOLR_HOME_PATH})"
-      rm -rf "${SOLR_HOME_PATH}"
-    else
-      err_exit "Failed to backup Solr home directory; exiting."
-    fi
+upgrade_postgres() {
+  if ${USE_LOCKSS_POSTGRES}; then
+    ${UPDATES_DIR}/upgrade-postgres --old-version ${POSTGRES_VERSION_OLD} --new-version ${POSTGRES_VERSION_NEW} ||
+        err_exit "upgrade to postgres failed."
+  else
+    logger_info "Skipping postgres upgrade.  Only LOCKSS postgres upgrade is supported."
   fi
 }
 
@@ -188,6 +137,7 @@ reset_solr_index() {
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
+# Source system config file
 
 if [ ! -r "$SYSTEM_CONF_FILE" ]; then
   err "$_0: The system configuration file does not exist.  This script requires the ./config/system.cfg file."
@@ -215,9 +165,8 @@ Check_Configured
 
 logger_init
 
-#read_config ${SYSTEM_CONF_FILE}
-#logger_debug "Loaded LOCKSS system configuration"
-
+read_config ${SYSTEM_CONF_FILE}
+logger_debug "Loaded LOCKSS system configuration"
 VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
 
 if [ ! -f "${VERSION_FILE}" ]; then
@@ -230,6 +179,8 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
     2.0-alpha5)
       logger_info "Performing upgrade from alpha5"
+      # upgrade postgres first - since we need the solr dir.
+      upgrade_postgres
 
       # Repository Service changes
       rename_collections_dir
@@ -240,10 +191,14 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
       reset_solr_index
       reset_index_state
       signal_reindex "${STACK_PREFIX}"
-
+      logger_info "Upgrade from alpha5 completed."
       ;;
     2.0-alpha6)
-      logger_info "Upgrade already applied (alpha6)"
+      logger_info "Performing upgrade from alpha6"
+      upgrade_postgres
+      ;;
+    2.0-alpha7)
+      logger_info "Upgrade already applied (alpha7)"
       ;;
     *)
       error_exit "Do not know how to upgrade from ${CUR_VERSION}"
@@ -257,4 +212,3 @@ logger_debug "Updating LOCKSS version file"
 Set_Lockss_Version "${UPGRADE_TO}"
 
 logger_info "Upgrade completed"
-graceful_exit

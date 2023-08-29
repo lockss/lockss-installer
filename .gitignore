@@ -10,6 +10,7 @@
 /config/resolv.conf
 /config/k8s.cfg
 /config/*.sec
+/config/env.mustache.opt
 /config/configs/*
 /config/useropts/*
 /config/useropts/templates/*

@@ -48,9 +48,7 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 # Source system config file
-set -a
-. "${CONFIG_DIR}/system.cfg"
-set +a
+source_config
 
 
 UPDATE_ARG=""
@@ -84,7 +82,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-a|--args ARGS_ADDITIONAL]"
+	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
 }
 
 help_message() {
@@ -97,7 +95,9 @@ help_message() {
   Options:
   -h, --help  Display this help message and exit.
   -u, --update  Force update of LOCKSS docker images
+  -U, --upgrading Upgrading LOCKSS do not perform upgrade check.
   -w, --wait Use a wait file to signal stack ready.
+  -s, --services  A semicolon seperated list of services to restart
   -a, --args ARGS_ADDITIONAL  Add additional runtime options."
     Where 'ARGS_ADDITIONAL' are the arguments.
 
@@ -125,10 +125,20 @@ while [[ $# -gt 0 ]]; do
       logger_debug "Forcing update of LOCKSS docker images"
       shift
       ;;
+    -U | --upgrading)
+      UPGRADING_LOCKSS="true"
+      logger_debug "Upgrading LOCKSS, do not check perform upgrade check."
+      shift
+      ;;
     -w | --wait)
       WAIT_ARG="-w"
       logger_debug "Setting wait for file on deploy."
       shift
+      ;;
+    -s | --services)
+      export REQ_SERVICES="$2"
+      logger_debug "Adding list of service to assemble $REQ_SERVICES"
+      shift; shift
       ;;
     -a | --args)
       export ARGS_ADDITIONAL="$2"
@@ -148,7 +158,9 @@ done
 # Main logic
 Check_Runnable
 Check_Configured
-Check_Upgraded
+if [ "${UPGRADING_LOCKSS}X" == X ]; then
+  Check_Upgraded
+fi
 
 if $(am_i_root); then
   logger_error_exit "This script should not be run as root. Run as the lockss user."

@@ -31,3 +31,11 @@
 
 org.lockss.ui.start=no
 org.lockss.restAuth.allowUnauthenticatedRead={{REPO_ALLOWS_NOPASS}}
+
+org.lockss.repositoryDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
+org.lockss.repositoryDbManager.datasource.serverName={{POSTGRES_HOST}}
+org.lockss.repositoryDbManager.datasource.portNumber={{POSTGRES_PORT}}
+org.lockss.repositoryDbManager.datasource.user={{POSTGRES_USER}}
+org.lockss.repositoryDbManager.datasource.password={{POSTGRES_PASSWD}}
+org.lockss.repositoryDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
+org.lockss.repositoryDbManager.datasource.dbcp.enabled=true

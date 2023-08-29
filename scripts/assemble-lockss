@@ -52,11 +52,9 @@ _D0=$(dirname "${0}")
 . "$_D0/_util"
 # shellcheck source=./lib/mo
 . "${_D0}/lib/mo"
-# Source system config file
-set -a
 # shellcheck source=./../config/system.cfg
-. "${CONFIG_DIR}/system.cfg"
-set +a
+# Source system config file
+source_config
 
 
 ##
@@ -69,7 +67,9 @@ MK_DIR="${TEMPLATES_DIR}/mk"
 
 # Files
 ENV_TMPL="${CONFIG_DIR}/env.mustache"
-
+OPT_ENV_TMPL="${CONFIG_DIR}/env.mustache.opt"
+UPGRADE_ENV_TMPL="${CONFIG_DIR}/env.mustache.upgrade"
+OPT_POSTGRES_FILE="${USEROPTS_DIR}/lockss-postgres_opt"
 EMPTY_LOCKSS_TXT="${TEMPLATES_DIR}/blank_lockss.txt"
 EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 
@@ -77,10 +77,24 @@ EMPTY_LOCKSS_OPT="${TEMPLATES_DIR}/blank_lockss.opt"
 # Variables
 declare -i STACK_COUNT=1
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
-declare -a global_confs=("lockss-cluster" "lockss-bootstrap" "repo-properties" "lockss-solr-log4j2-xml")
-declare -a svcs
-declare -a svcs_confs
-declare -a lockss_owned
+declare -a global_confs=(
+  "lockss-cluster"
+  "lockss-bootstrap"
+  "repo-properties"
+  "lockss-solr-log4j2-xml"
+  "lockss-postgresql")
+declare -a SERVICES
+
+declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "mdq" "mdx" "pol" "crawl" "soap" "repo" "solr")
+declare -A -r SERVICE_CONFS=(
+ [cfg]="cfg-service"
+ [mdq]="mdq-service"
+ [mdx]="mdx-service"
+ [pol]="pol-service"
+ [crawl]="crawl-service"
+ [repo]="repo-service"
+ [soap]="soap-service"
+)
 
 STACK_PREFIX="lockss-stack"
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
@@ -88,6 +102,8 @@ NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 PORT_BASE=245
 PULL_POLICY="IfNotPresent"
+# the string "false" will be treated as an empty value for the purposes of conditionals.
+MO_FALSE_IS_EMPTY=true
 
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
@@ -120,7 +136,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help]  [-u|--update] [<num stacks>]"
+  echo -e "Usage: $PROGNAME [-h|--help]  [-u|--update] [-s|--services] [<num stacks>]"
 }
 
 help_message() {
@@ -133,6 +149,7 @@ help_message() {
   Options:
   -h, --help  Display this help message and exit.
   -u, --update  force update of LOCKSS docker images
+  -s, --services  A semicolon seperated list of services to deploy
   <num stacks> Optional number of stacks to run on this host.
 
 _EOF_
@@ -157,63 +174,6 @@ Check_Physical_Volumes() {
   fi
   if [ -z "${LOCKSS_TMPDIR}" ]; then
     logger_error_exit "LOCKSS_TMPDIR are not set; exiting"
-  fi
-}
-
-
-#initialize the service arrays based on system.cfg info.
-init_service_arrays() {
-  if ${USE_LOCKSS_CFG}; then
-    svcs+=("cfg")
-    svcs_confs+=("cfg")
-    lockss_owned+=("cfg")
-    export HAS_CFG=${USE_LOCKSS_CFG}
-  fi
-  if ${USE_LOCKSS_MDQ}; then
-    svcs+=("mdq")
-    svcs_confs+=("mdq")
-    lockss_owned+=("mdq")
-    export HAS_MDQ=${USE_LOCKSS_MDQ}
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    svcs+=("mdx")
-    svcs_confs+=("mdx")
-    lockss_owned+=("mdx")
-    export HAS_MDX=${USE_LOCKSS_MDX}
-  fi
-  if ${USE_LOCKSS_POL}; then
-    svcs+=("pol")
-    svcs_confs+=("pol")
-    lockss_owned+=("pol")
-    export HAS_POL=${USE_LOCKSS_POL}
-  fi
-  if ${USE_LOCKSS_SOAP}; then
-    svcs+=("soap")
-    svcs_confs+=("soap")
-    lockss_owned+=("soap")
-    export HAS_SOAP=${USE_LOCKSS_SOAP}
-  fi
-  if ${USE_LOCKSS_REPO}; then
-    svcs+=("repo")
-    svcs_confs+=("repo")
-    lockss_owned+=("repo")
-    export HAS_REPO=${USE_LOCKSS_REPO}
-  fi
-  if ${USE_LOCKSS_POSTGRES}; then
-    svcs+=("postgres")
-  fi
-  if ${USE_LOCKSS_SOLR}; then
-    svcs+=("solr")
-    lockss_owned+=("solr")
-  fi
-  if ${USE_LOCKSS_HDFS}; then
-    svcs+=("hdfs")
-  fi
-  if ${USE_LOCKSS_PYWB}; then
-    svcs+=("pywb")
-  fi
-  if ${USE_LOCKSS_OPENWB}; then
-    svcs+=("openwb")
   fi
 }
 
@@ -246,21 +206,23 @@ ensure_writable_dir() {
 
 ensure_lockss_owner() {
   local stack=$1
-  for svc in "${lockss_owned[@]}"; do
-    local data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
-    logger_debug "Checking files in $data_dir"
-    if ! find "${data_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      logger_error_exit "${data_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
-    fi
-    local logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
-    logger_debug "Checking files in $logs_dir"
-    if ! find "${logs_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      logger_error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
-    fi
-    local tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
-    logger_debug "Checking files in $tmp_dir"
-    if ! find "${tmp_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
-      logger_error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
+  for svc in "${SERVICES[@]}"; do
+    if [[ " ${LOCKSS_OWNED_SERVICE[@]} " =~ " ${svc} " ]]; then
+      local data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
+      logger_debug "Checking files in $data_dir"
+      if ! find "${data_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+        logger_error_exit "${data_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
+      fi
+      local logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
+      logger_debug "Checking files in $logs_dir"
+      if ! find "${logs_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+        logger_error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
+      fi
+      local tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
+      logger_debug "Checking files in $tmp_dir"
+      if ! find "${tmp_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+        logger_error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
+      fi
     fi
   done
 }
@@ -283,14 +245,16 @@ add_stack_configs() {
   done
   # Create the configs for each lockss service
   logger_debug "Adding service config files"
-  for sconf in "${svcs_confs[@]}"; do
-    key=${sconf}-service
-    logger_debug "adding service config ${key}..."
-   if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
+  for svc in "${SERVICES[@]}"; do
+    if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
+      key=${SERVICE_CONFS[$svc]}
+      logger_debug "adding service config ${key}..."
+      if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
       logger_error_exit "${_0}: error creating config ${key}"
-    fi
-    if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
+      fi
+      if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
       logger_error_exit "${_0}: error creating config ${key}-opt"
+      fi
     fi
   done
 }
@@ -428,7 +392,7 @@ add_stack_volumes() {
   mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
 
   logger_debug "Creating data and log volumes for $stack"
- for svc in "${svcs[@]}"; do
+ for svc in "${SERVICES[@]}"; do
     logger_debug "Creating data and log volumes for $stack-${svc}..."
     mtpoint=${LOCKSS_DATA_DIR}/$stack-${svc}-data
     mkdir -p ${mtpoint} || logger_error_exit "Unable to create data dir: ${mtpoint}"
@@ -443,7 +407,8 @@ add_stack_volumes() {
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
-  ensure_lockss_owner $stack
+  # Slow, and only necessary if we rearrange users/permissions
+  # ensure_lockss_owner $stack
 }
 
 add_repo_content_volumes() {
@@ -465,10 +430,8 @@ assemble_stack() {
   ensure_writable_dir $LOCKSS_TMPDIR
   local stack=${STACK_PREFIX}$1
   logger_debug "Assembling stack $stack..."
-  # Source config.info and env.sh for this stack
-  set -a
-  . "${DOCKER_CONFIGS_DIR}/$stack/env.sh"
-  set +a
+  # Source env.sh
+  source_env "${stack}"
   pushd . &>/dev/null
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| logger_error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
@@ -481,6 +444,9 @@ assemble_stack() {
 generate_lockss() {
 	logger_debug "Removing old generated configuration files..."
 	rm -rf "${DOCKER_CONFIGS_DIR}"
+  if [[ -f "${OPT_POSTGRES_FILE}" ]]; then
+    OPT_POSTGRES="TRUE"
+  fi
 	logger_debug "Generating config files for $STACK_COUNT stacks..."
 	for ((num = 1; num <= $STACK_COUNT; num++)); do
 		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
@@ -494,6 +460,8 @@ generate_lockss() {
     export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
+    local opt_stack_env_file="${stack_env_file}.opt"
+    local upgrade_stack_env_file="${stack_env_file}.upgrade"
     local stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
     logger_debug "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
     mkdir -p "${STACK_CONFIG_DIR}"
@@ -502,9 +470,14 @@ generate_lockss() {
 
     logger_debug "Generating the stack env.sh file..."
     mo "${ENV_TMPL}" >"${stack_env_file}"
-    set -a
-    . "${stack_env_file}"
-    set +a
+    if [[ -f "${OPT_ENV_TMPL}" ]]; then
+      mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
+    fi
+     if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
+       mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
+     fi
+   # Source env.sh
+    source_env "${STACK_NAME}"
 
     logger_debug "Getting node hostname..."
     export NODE_HOSTNAME=$(kubectl_cmd get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
@@ -552,13 +525,22 @@ generate_lockss() {
       logger_debug "Rendering ${src} to ${dst}..."
       mo "${src}" >"${dst}"
     done
-    logger_debug "Generating the user configuration files..."
+    logger_debug "Generating the user configuration file templates..."
     for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
       if [[ -f "${f}" ]]; then
         src="${f}"
         dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
         logger_debug "Rendering ${src} to ${dst}..."
         mo "${src}" >"${dst}"
+      fi
+    done
+    logger_debug "Moving the user configuration file..."
+    for f in ${USEROPTS_DIR}/*_opt; do
+      if [[ -f "${f}" ]]; then
+        src="${f}"
+        dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt)-opt"
+        logger_debug "Rendering ${src} to ${dst}..."
+        cp "${src}" "${dst}"
       fi
     done
   done
@@ -605,6 +587,11 @@ while [[ -n $1 ]]; do
   -h | --help)
     help_message
     graceful_exit
+    ;;
+  -s | --services)
+    export REQ_SERVICES="$2"
+    logger_debug "Adding list of service to assemble $REQ_SERVICES"
+    shift; shift
     ;;
   -u | --update)
     PULL_POLICY="Always"

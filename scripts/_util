@@ -91,6 +91,29 @@ msg() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
 }
 
+# Source env.sh and optionally env.sh.opt as env vars
+# source_env <stack-name>
+source_env() {
+  local stack="$1"
+  set -a
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt" ]]; then
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt"
+  fi
+  if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.upgrade" ]]; then
+  . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.upgrade"
+  fi
+
+  set +a
+}
+
+# Source system config as env vars
+source_config() {
+  set -a
+  . "${CONFIG_DIR}/system.cfg"
+  set +a
+}
+
 # perform a kubectl command using whichever flavor of k8s that's installed
 kubectl_cmd() {
   if [ -z "${KUBECTL_CMD}" ]; then
@@ -138,7 +161,7 @@ Check_Runnable() {
 # Checks whether the "lockss" namespace contains any active deployments
 Check_Stopped() {
   if ! kubectl_cmd get deployments -n lockss 2>&1 | grep -q "No resources found" ; then
-    err_exit "LOCKSS components are still deployed under Kubernetes; exiting..."
+    err_exit "LOCKSS components are still deployed under Kubernetes; please stop LOCKSS and try again."
   fi
 }
 
@@ -443,7 +466,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  [ "$(kubectl_lockss get pods | grep 'lockss-configuration-service')" ]
+  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-configuration-service'
 }
 
 #
@@ -462,14 +485,32 @@ read_config() {
   IFS="${OLD_IFS}"
 }
 
+is_replay() {
+  [[ -n "${is_replay}" ]] && return 0
+  return 1
+}
+
 ask_for_input() {
-  case "${1}" in
-    *\?) echo -n "${1} [${2}] " ;;
-    *)   echo -n "${1}: [${2}] " ;;
+  local prompt="${1}"
+  local current="${2}"
+  local default="${3}"
+  if [ -n "${current}" ]; then
+    default="${current}"
+  fi
+  case "${prompt}" in
+    *\?) echo -n "${prompt} [${default}] " ;;
+    *)   echo -n "${prompt}: [${default}] " ;;
   esac
-  read ANS
-  if [ -z "${ANS}" ]; then
-    ANS="${2}"
+  if is_replay && [[ -n "${current}" ]]; then
+    echo
+    ANS="${current}"
+  else
+    # force "OK to store this configuration" question
+    OK_TO_STORE_WITHOUT_CONFIRMATION=""
+    read ANS
+    if [ -z "${ANS}" ]; then
+      ANS="${default}"
+    fi
   fi
 }
 
@@ -516,6 +557,11 @@ ask_for_password() {
       # if we have an existing password, and any required secrets are
       # present, don't require reentering the password
       if [ -n "${have_existing_password}" ]; then
+        if is_replay; then
+	  PASSWD_HASH="${old_pass_hash}"
+	  PASSWD_CLEAR="${old_pass_clear}"
+	  return 0
+        fi
 	ask_for_input_shadow "${prompt_msg} (<enter> to leave unchanged)"
 	if [ -z "${ANS}" ]; then
 	  PASSWD_HASH="${old_pass_hash}"
@@ -543,21 +589,49 @@ ask_for_password() {
 }
 
 is_yes() {
-  local WORD="${1}"
-  if [ "X${WORD}" = Xy -o "X${WORD}" = XY ]; then
-    return 0
-  else
-    return 1
-  fi
+  case "${1}" in
+    y | Y | yes | YES | Yes)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+is_true() {
+  case "${1}" in
+    t | T | true | TRUE | True)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 to_yes_no() {
-  local WORD="${1}"
-  if [ "X${WORD}" = Xtrue -o "X${WORD}" = XTRUE ]; then
+  if is_true "${1}"; then
     echo "Y"
   else
     echo "N"
   fi
+}
+
+to_yes_no_or_blank() {
+  [ -z "${1}" ] && return
+  to_yes_no "${1}"
+}
+
+to_true_false() {
+  case "${1}" in
+    y | Y | yes | YES | Yes)
+      echo "true"
+      ;;
+    *)
+      echo "false"
+      ;;
+  esac
 }
 
 is_pos() {
@@ -612,7 +686,7 @@ init_one_dir() {
       MODE="750"
   fi
   if [ ! -d "${DIR}" ]; then
-    ask_for_input "${DIR} does not exist; shall I create it?" Y
+    ask_for_input "${DIR} does not exist; do you want to create it?" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
       if [ "X${CONFIG_USER}" != "X${USER}" ]; then
@@ -635,7 +709,7 @@ init_one_dir() {
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
   else
-    ask_for_input "${DIR} is not writable; shall I chown/chmod it?" Y
+    ask_for_input "${DIR} is not writable; do you want to make it writable?" Y
     if is_yes "${ANS}"; then
       chown ${USER} "${DIR}"
       chmod ${MODE} "${DIR}"
@@ -956,4 +1030,102 @@ Extract_K3s_Version() {
 abspath() {
   ( cd "$(dirname "$1")"
     printf "%s/%s\n" "$(pwd)" "$(basename "$1")" )
+}
+
+init_service_arrays() {
+  if [ -z ${REQ_SERVICES+x} ]; then
+    logger_debug "Setting service array from the config file."
+    init_service_arrays_from_config
+  else
+    logger_debug "Setting service array from commandline arguments."
+    init_service_arrays_from_commandline
+  fi
+}
+
+init_service_arrays_from_commandline() {
+  declare -a svcs_arr
+  IFS=';' read -r -a svcs_arr <<< "$REQ_SERVICES"
+  for svc in "${svcs_arr[@]}"; do
+    case ${svc} in
+      "cfg"|"config")
+        SERVICES+=("cfg")
+        ;;
+      "mdq")
+        SERVICES+=("mdq")
+        ;;
+      "mdx")
+        SERVICES+=("mdx")
+        ;;
+      "pol"|"poll"|"poller")
+        SERVICES+=("pol")
+        ;;
+      "crawl"|"crawler")
+        SERVICES+=("crawl")
+        ;;
+      "soap")
+        SERVICES+=("soap")
+        ;;
+      "repo")
+        SERVICES+=("repo")
+        ;;
+      "postgres")
+        SERVICES+=("postgres")
+        ;;
+      "solr")
+        SERVICES+=("solr")
+        ;;
+      "hdfs")
+        SERVICES+=("hdfs")
+        ;;
+      "pywb")
+        SERVICES+=("pywb")
+        ;;
+      "openwb"|"openwayback")
+        SERVICES+=("openwb")
+        ;;
+      *)
+        logger_error "Request to deploy unknown service: ${svc}."
+        ;;
+      esac
+done
+}
+
+#initialize the service arrays based on system.cfg info.
+init_service_arrays_from_config() {
+  if ${USE_LOCKSS_CFG}; then
+    SERVICES+=("cfg")
+  fi
+  if ${USE_LOCKSS_MDQ}; then
+    SERVICES+=("mdq")
+  fi
+  if ${USE_LOCKSS_MDX}; then
+    SERVICES+=("mdx")
+  fi
+  if ${USE_LOCKSS_POL}; then
+    SERVICES+=("pol")
+  fi
+   if ${USE_LOCKSS_CRAWL}; then
+     SERVICES+=("crawl")
+   fi
+ if ${USE_LOCKSS_SOAP}; then
+    SERVICES+=("soap")
+  fi
+  if ${USE_LOCKSS_REPO}; then
+    SERVICES+=("repo")
+  fi
+  if ${USE_LOCKSS_POSTGRES}; then
+    SERVICES+=("postgres")
+  fi
+  if ${USE_LOCKSS_SOLR}; then
+    SERVICES+=("solr")
+  fi
+  if ${USE_LOCKSS_HDFS}; then
+    SERVICES+=("hdfs")
+  fi
+  if ${USE_LOCKSS_PYWB}; then
+    SERVICES+=("pywb")
+   fi
+  if ${USE_LOCKSS_OPENWB}; then
+    SERVICES+=("openwb")
+  fi
 }

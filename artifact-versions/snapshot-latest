@@ -1,0 +1,29 @@
+# Artifact versions on develop branch Thu 10 Aug 2023 05:41:01 PM PDT
+
+org.lockss.laaws:laaws-configuration-service	2.9.0-SNAPSHOT
+org.lockss.laaws:laaws-crawler-service	1.1.0-SNAPSHOT
+org.lockss.laaws:laaws-metadata-extraction-service	2.8.0-SNAPSHOT
+org.lockss.laaws:laaws-metadataextractor-common	2.10.0-SNAPSHOT
+org.lockss.laaws:laaws-metadata-service	2.7.0-SNAPSHOT
+org.lockss.laaws:laaws-poller	2.7.0-SNAPSHOT
+org.lockss.laaws:laaws-repository-service	2.15.0-SNAPSHOT
+org.lockss.laaws:laaws-repository-tools	2.13.0-SNAPSHOT
+org.lockss.laaws:laaws-soap-service	1.5.0-SNAPSHOT
+org.lockss.laaws:lockss-core	2.9.0-SNAPSHOT
+org.lockss:lockss-parent-pom	1.17.0-SNAPSHOT
+org.lockss.laaws:lockss-plugin-compat	1.6.0-SNAPSHOT
+org.lockss:lockss-plugins-archetype	1.4.0-SNAPSHOT
+org.lockss:lockss-core-bundle	2.9.0-SNAPSHOT
+org.lockss:lockss-core-tests-bundle	2.9.0-SNAPSHOT
+org.lockss:lockss-junit4-bundle	1.8.0-SNAPSHOT
+org.lockss:lockss-junit5-bundle	1.8.0-SNAPSHOT
+org.lockss:lockss-plugins-parent-pom	1.6.0-SNAPSHOT
+org.lockss:lockss-pom-bundles	1.9.0-SNAPSHOT
+org.lockss:lockss-spring-bundle	2.15.0-SNAPSHOT
+org.lockss:lockss-tdb-processor	1.8.0-SNAPSHOT
+org.lockss.laaws:lockss-tdbxml-maven-plugin	1.9.0-SNAPSHOT
+org.lockss:lockss-tdb-tools	1.8.0-SNAPSHOT
+org.lockss:lockss-util-core	1.14.0-SNAPSHOT
+org.lockss:lockss-util-entities	1.6.0-SNAPSHOT
+org.lockss:lockss-util-rest	1.6.0-SNAPSHOT
+org.lockss:lockss-util	1.15.0-SNAPSHOT
