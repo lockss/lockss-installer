@@ -171,7 +171,7 @@ configure_crawler_services() {
       else
         LOCKSS_CLASSIC_CRAWLER_ENABLE=false
       fi
-      ask_for_input "Enable wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
+      ask_for_input "Enable Wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
       if is_yes "${ANS}"; then
         LOCKSS_WGET_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
