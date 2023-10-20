@@ -61,10 +61,10 @@ org.lockss.crawlerservice.wget.outputLevel=no-verbose
 # The permitted return code to indicate a successful crawl
 org.lockss.crawlerservice.wget.successCode=0;8
 
-#time between fetches
-org.lockss.crawlerservice.wget.opt.wait=5
+#time between fetches - use lockss default
+#org.lockss.crawlerservice.wget.opt.wait=.5
 
-#network timeouts
+#network timeouts - use lockss default
 #org.lockss.crawlerservice.wget.opt.timeout
 #org.lockss.crawlerservice.wget.opt.dns-timeout
 #org.lockss.crawlerservice.wget.opt.connect-timeout
@@ -72,4 +72,15 @@ org.lockss.crawlerservice.wget.opt.wait=5
 
 # warc details
 org.lockss.crawlerservice.wget.opt.warc-keep-log=off
-#org.lockss.crawlerservice.wget.opt.no-warc-compression=false
+
+# whether we will send compressed or uncompressed warcs to repo.
+org.lockss.crawlerservice.wget.preferCompressedWarcs=false
+
+# parameters to be excluded from the wget command line
+org.lockss.crawlerservice.wget.unsupportedParams=--no-warc-compression
+
+# the extension wget uses for its compressed warcs
+org.lockss.crawlerservice.wget.compressedWarcExt=.warc.gz
+
+# the extension wget uses for its uncompressed warcs
+org.lockss.crawlerservice.wget.uncompressedWarcExt=.warc

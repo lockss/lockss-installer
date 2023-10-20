@@ -179,6 +179,8 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
   case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
     2.0-alpha5)
       logger_info "Performing upgrade from alpha5"
+      # upgrade postgres first - since we need the solr dir.
+      upgrade_postgres
 
       # Repository Service changes
       rename_collections_dir
@@ -189,8 +191,8 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
       reset_solr_index
       reset_index_state
       signal_reindex "${STACK_PREFIX}"
-    # fall through.
-      ;&
+      logger_info "Upgrade from alpha5 completed."
+      ;;
     2.0-alpha6)
       logger_info "Performing upgrade from alpha6"
       upgrade_postgres
