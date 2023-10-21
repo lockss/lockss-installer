@@ -644,8 +644,7 @@ setup_k8s_cmd() {
     fi
   done
   echo "Kubectl command alias set to $KUBECTL_CMD"
-  KUBECTL="${KUBECTL_CMD}"
-  K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
+  K8S_VERSION=$($KUBECTL_CMD version --short | grep 'Server Version:' | awk '{print $3}')
   write_k8s_cfg ${K8S_CONF_FILE}|| err_exit "Attempt to write ${K8S_CONF_FILE} failed."
 }
 
