@@ -421,7 +421,7 @@ Configure_Iptables()
   local _iptables_cmd=''
   _iptables_cmd="$(command -v iptables)"
   # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
-  if [ -n "${_iptables_cmd}" ] ; then
+  if [ -z "${_iptables_cmd}" ] ; then
     _iptables_cmd='/etc/alternatives/iptables'
     if [ ! -x "${_iptables_cmd}" ] ; then
       Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
@@ -720,28 +720,32 @@ Install_K3s()
       Warning "Custom K3s version (--k3s-version): ${K3S_VERSION}"
     fi
 
-    # Skip if not on PATH nor via Alternatives
+    # Determine whether to use bundled iptables
+    local _use_bundled_iptables=''
     local _iptables_cmd=''
     _iptables_cmd="$(command -v iptables)"
-    # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
-    if [ -n "${_iptables_cmd}" ] ; then
+
+    if [ -z "${_iptables_cmd}" ] ; then
       _iptables_cmd='/etc/alternatives/iptables'
       if [ ! -x "${_iptables_cmd}" ] ; then
-        Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
-        return
+        Warn 'iptables is not on the PATH (nor run via Alternatives); using bundled iptables'
+        _use_bundled_iptables='--prefer-bundled-bin'
+        _iptables_cmd=''
       fi
     fi
 
-    local _line=''
-    _line="$("${_iptables_cmd}" --version)"
-    local _ver=''
-    _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
+    if [ -n "${_iptables_cmd}" ] ; then
+      # Get iptables version
+      local _line=''
+      _line="$("${_iptables_cmd}" --version)"
+      local _ver=''
+      _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
 
-    # Skip if older than 1.8.0
-    local _use_bundled_iptables=''
-    if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
-      Echo "Iptables version is less than 1.8.8; using bundled iptables"
-      _use_bundled_iptables='--prefer-bundled-bin'
+      # Use bundled iptables if iptables is older than 1.8.8
+      if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
+        Echo "Iptables version is less than 1.8.8; using bundled iptables"
+        _use_bundled_iptables='--prefer-bundled-bin'
+      fi
     fi
 
     # Invoke Rancher's installer
