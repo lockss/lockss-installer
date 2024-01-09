@@ -47,6 +47,14 @@ TEMPLATES_DIR="${CONFIG_DIR}/templates"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 ##
+## Constants
+##
+K3S_URL='https://get.k3s.io'
+DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
+DEFAULT_K3S_DATA_DIR_ROOT='/var'
+DEFAULT_K3S_VERSION='v1.28.2+k3s1'
+
+##
 ## Logging and messaging utilities.
 ##
 log_script_entry() {
@@ -1024,6 +1032,22 @@ compare_versions_lt() {
 #
 Extract_K3s_Version() {
   echo "${1}" | sed -e 's/\+k3s/./'
+}
+
+Check_K3S_Version() {
+  local EXPECTED_K3S_VERSION="${1}"
+  if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
+    local _kver=''
+    Check_Command 'awk'
+    _kver="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
+        || err_exit "Error parsing K3s version"
+    if [ "${_kver}" != "${EXPECTED_K3S_VERSION}" ] ; then
+      if compare_versions_lt "${_kver}" "${EXPECTED_K3S_VERSION}"; then
+        err "Detected K3s version ${_kver} is older than expected version ${EXPECTED_K3S_VERSION}"
+        err_exit "Please re-run scripts/install-lockss to upgrade K3S to latest supported version"
+      fi
+    fi
+  fi
 }
 
 # return absolute path of $1

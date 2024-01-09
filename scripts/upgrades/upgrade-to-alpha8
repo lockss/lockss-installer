@@ -161,6 +161,7 @@ done
 # Sanity checks
 Check_Runnable
 Check_Stopped
+Check_K3S_Version "${DEFAULT_K3S_VERSION}"
 Check_Configured
 
 logger_init

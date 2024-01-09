@@ -57,12 +57,6 @@ LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
 SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
 ETC_RESOLV_CONF='/etc/resolv.conf'
 
-K3S_URL='https://get.k3s.io'
-
-DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
-DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.28.2+k3s1'
-
 DEFAULT_RETRIES='5'
 DEFAULT_WAIT='10'
 
