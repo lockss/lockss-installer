@@ -1128,6 +1128,10 @@ Test_K3s()
 # Main
 #
 
+for _f in "${_MO}" "${_UTIL}" ; do
+  . "${_f}" || Fatal "A dependent script is not available: ${_f}"
+done
+
 ASSUME_YES=''
 CURRENT_STEP=0
 DOWNLOADER=''
@@ -1146,10 +1150,6 @@ SKIP_TEST_K3S=''
 SUDO=''
 SUDO_LOCKSS=''
 WAIT="${DEFAULT_WAIT}"
-
-for _f in "${_MO}" "${_UTIL}" ; do
-  . "${_f}" || Fatal "A dependent script is not available: ${_f}"
-done
 
 Parse_Command_Line "$@"
 
