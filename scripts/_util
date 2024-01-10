@@ -1047,6 +1047,7 @@ Extract_K3s_Version() {
 
 Check_K3S_Version() {
   local EXPECTED_K3S_VERSION="${1}"
+  set_k3s_bin_dir
   if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
     local _kver=''
     Check_Command 'awk'
