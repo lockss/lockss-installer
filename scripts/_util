@@ -237,6 +237,17 @@ Parse_Lockss_Version() {
   return 1
 }
 
+#
+# Check_Command
+# $1: command
+#
+Check_Command()
+{
+  if ! command -v "${1}" > /dev/null ; then
+    Fatal "A dependent utility is not available: ${1}"
+  fi
+}
+
 Check_K8s_Command() {
     if [ "X${KUBECTL_CMD}" = X ]; then
     if kubepath=$(command -v k3s); then
