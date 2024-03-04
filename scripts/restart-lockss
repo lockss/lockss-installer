@@ -161,6 +161,7 @@ Check_Configured
 if [ "${UPGRADING_LOCKSS}X" == X ]; then
   Check_Upgraded
 fi
+Check_Configured_Version
 
 if $(am_i_root); then
   logger_error_exit "This script should not be run as root. Run as the lockss user."

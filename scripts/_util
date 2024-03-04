@@ -198,8 +198,23 @@ Check_Upgraded() {
   fi
 }
 
+Check_Configured_Version() {
+  local CONFIG_VERSION_FILE="${LOCKSS_DATA_DIR}/CONFIGURED_VERSION"
+  local INSTALLED_VERSION_FILE="${COMPOSE_DIR}/VERSION"
+
+  [ ! -f "${CONFIG_VERSION_FILE}" ] && err_exit "Run scripts/configure-lockss to configure the system."
+
+  if ! diff -iwB --new-file "${CONFIG_VERSION_FILE}" "${INSTALLED_VERSION_FILE}" &> /dev/null; then
+    err_exit "Run scripts/configure-lockss -r to update the system configuration."
+  fi
+}
+
 Copy_Lockss_Version() {
   cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
+}
+
+Copy_Configured_Lockss_Version() {
+  cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}/CONFIGURED_VERSION
 }
 
 Set_Lockss_Version() {

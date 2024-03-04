@@ -763,6 +763,7 @@ esac
 #build config file
 echo "Building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
 if build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT} ; then
+    Copy_Configured_Lockss_Version
     echo "Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
     exit 0
 else
