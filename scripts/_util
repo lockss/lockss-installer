@@ -109,6 +109,7 @@ source_env() {
 
 # Source system config as env vars
 source_config() {
+  [ ! -f "${CONFIG_DIR}/system.cfg" ] && err_exit "You must run scripts/configure-lockss to configure the system before running any other scripts."
   set -a
   . "${CONFIG_DIR}/system.cfg"
   set +a
@@ -194,10 +195,8 @@ Check_Configured_Version() {
   local CONFIG_VERSION_FILE="${LOCKSS_DATA_DIR}/CONFIGURED_VERSION"
   local INSTALLED_VERSION_FILE="${COMPOSE_DIR}/VERSION"
 
-  [ ! -f "${CONFIG_VERSION_FILE}" ] && err_exit "Run scripts/configure-lockss to configure the system."
-
-  if ! diff -iwB --new-file "${CONFIG_VERSION_FILE}" "${INSTALLED_VERSION_FILE}" &> /dev/null; then
-    err_exit "Run scripts/configure-lockss -r to update the system configuration."
+  if [ ! -f "${CONFIG_VERSION_FILE}" ] || ! diff -iwB --new-file "${CONFIG_VERSION_FILE}" "${INSTALLED_VERSION_FILE}" &> /dev/null; then
+      err_exit "Run scripts/configure-lockss -r to update the system configuration."
   fi
 }
 
