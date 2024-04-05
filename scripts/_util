@@ -172,6 +172,11 @@ Check_Configured() {
   Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
   Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
   Check_VarDef "KUBECTL_CMD"
+  Check_Secret "lockss-solr-pass"
+  Check_Secret "solr-auth"
+  Check_Secret "lockss-postgres-pass"
+  Check_Secret "lockss-ui-pass"
+  Check_Secret "lockss-auth"
 #TODO: Add container subnet change check
 }
 
@@ -257,8 +262,9 @@ Check_K8s_Command() {
     fi
   fi
 }
+
 Check_LOCKSS_User() {
-  if ! id "lockss" >/dev/null; then
+  if ! id "${LOCKSS_USER}" >/dev/null; then
     err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
   fi
 }
@@ -430,9 +436,9 @@ Get_Timezone() {
     fi
   fi
   if [ -z "${timezone}" ]; then
-    if -r /etc/timezone; then
+    if [ -r /etc/timezone ]; then
       timezone=$(cat /etc/timezone)
-    elif -r /etc/localtime; then
+    elif [ -r /etc/localtime ]; then
       timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
     fi
   fi
@@ -480,7 +486,7 @@ am_i_root() {
 }
 
 is_lockss_running() {
-  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-configuration-service'
+  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-'
 }
 
 #

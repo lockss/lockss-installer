@@ -163,6 +163,10 @@ Check_Runnable
 Check_Stopped
 Check_Configured
 
+if am_i_root; then
+  logger_error_exit "This script should not be run as root. Run as the lockss user."
+fi
+
 logger_init
 
 read_config ${SYSTEM_CONF_FILE}

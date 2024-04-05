@@ -158,6 +158,9 @@ done
 # Main logic
 Check_Runnable
 Check_Configured
+
+init_service_arrays
+
 if [ "${UPGRADING_LOCKSS}X" == X ]; then
   Check_Upgraded
 fi

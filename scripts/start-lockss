@@ -168,10 +168,6 @@ if am_i_root; then
   logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
-if is_lockss_running; then
-  logger_warn "There is already a running lockss stack."
-  logger_error_exit "Call restart-lockss  to run lockss again."
-fi
 
 logger_debug "Scripts dir ${SCRIPTS_DIR}"
 

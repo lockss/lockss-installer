@@ -697,6 +697,7 @@ if [ -z "${LOCKSS_TEAM}" ]; then
 fi
 umask 002
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
+echo $LOCKSS_USER
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
 
 echo "-------------------------------------------------------------"
