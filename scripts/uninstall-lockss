@@ -134,7 +134,7 @@ while [[ -n $1 ]]; do
 done
 
 echo "Running this script will not delete any of your preserved content but will remove the passwords necessary for the system to access that content."
-ask_for_input "Do you want to display your saved passwords now, for you to record them?" "" N
+ask_for_input "Do you want to display your saved passwords now, so you can record them?" "" N
 if is_yes "${ANS}" ; then
   for key in "${!SECRETS_AR[@]}"
   do
@@ -144,17 +144,18 @@ if is_yes "${ANS}" ; then
 fi
 ask_for_input "Okay to uninstall lockss?" "" N
 if is_yes "${ANS}" ; then
-  logger_info "Uninstalling LOCKSS..."
  # Make sure we stop any running service by calling remove all stacks
  logger_info "Stopping the lockss stack."
  "${SCRIPTS_DIR}"/stop-lockss || echo "Stop request failed. Continuing with uninstall..."
+ logger_info "Uninstalling LOCKSS..."
  if kubectl_cmd get namespace "lockss" >/dev/null; then
    kubectl_lockss delete pods svc,deployments,pvc,secrets,configmaps --all | logger_debug
  fi
  kubectl_cmd delete pv -l app=lockss | logger_debug
+ #kubectl_cm delete ns lockss | logger_debug
  logger_info ""
- logger_info "Successfully removed all running service and uninstalled lockss."
- logger_info "You will need to rerun configure-lockss and start-lockss to run again."
+ logger_info "Successfully removed all running LOCKSS services and uninstalled LOCKSS."
+ logger_info "To run again, you will need to rerun configure-lockss and start-lockss "
 fi
 
 graceful_exit

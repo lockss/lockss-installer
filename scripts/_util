@@ -265,7 +265,7 @@ Check_K8s_Command() {
 
 Check_LOCKSS_User() {
   if ! id "${LOCKSS_USER}" >/dev/null; then
-    err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
+    err_exit "${_0}: There is no LOCKSS user account $LOCKSS_USER. Please create one to continue."
   fi
 }
 

@@ -52,7 +52,21 @@ source_config
 
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
-
+declare -a SERVICES
+declare -A -r SERVICE_NAMES=(
+ [cfg]="lockss-configuration-service"
+ [mdq]="lockss-metadata-service"
+ [mdx]="lockss-metadata-extraction-service"
+ [pol]="lockss-poller-service"
+ [crawl]="lockss-crawler-service"
+ [soap]="lockss-soap-service"
+ [repo]="lockss-repository-service"
+ [postgres]="lockss-postgres-service"
+ [solr]="lockss-solr-service"
+ [hdfs]="lockss-hdfs-service"
+ [pywb]="lockss-pywb-service"
+ [openwb]="lockss-openwayback-service"
+)
 STACK_PREFIX="lockss-stack"
 
 clean_up() { # Perform pre-exit housekeeping
@@ -98,6 +112,7 @@ help_message() {
 
   Options:
   -h, --help  Display this help message and exit.
+  -s, --services  A semicolon seperated list of services to stop
 
 _EOF_
   return
@@ -119,15 +134,16 @@ undeploy_stack() {
     service_name=${SERVICE_NAMES[$svc]}
     logger_trace "Stopping service ${service_name}..."
     # make the stack unreachable on the network
-    kubectl_lockss delete -l lockss-stack-id=${stack} -l name=$service_name services | logger_debug
-    # remove the the spec that controls the number of expected pods
-    kubectl_lockss delete -l lockss-stack-id=${stack} -l name=$service_name deployments | logger_debug
+    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${service_name}
     # wait until all pods are deleted
-    logger_info "Waiting for pods to shutdown..."
-    podname=$(kubectl_lockss get pods l lockss-stack-id=${stack} --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | grep ${service_name})
-    kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --grace-period=120s --force | logger_debug
-    logger_info "Pod shutdown complete"
   done
+  logger_info "Waiting for pods to shutdown..."
+  for svc in "${SERVICES[@]}"; do
+    service_name=${SERVICE_NAMES[$svc]}
+    podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack}  | grep '${service_name}' )
+    kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
+  done
+  logger_info "Pod shutdown complete"
 }
 
 # Source system config file
@@ -168,7 +184,7 @@ done
 # Sanity checks
 Check_Runnable
 Check_Configured
-init_services_arrays
+init_service_arrays
 
 if [[ ${STACK_NUM} -eq 0 ]]; then
   undeploy_stack ""

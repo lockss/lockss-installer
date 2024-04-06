@@ -127,8 +127,9 @@ dashboard_install() {
   if kubectl_cmd get ns kubernetes-dashboard ; then
       kubectl_cmd delete all --all -n kubernetes-dashboard >/dev/null
   fi
-  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" &>/dev/null
+  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" &>/dev/null
   echo "Waiting for pods to be marked 'Ready'..."
+  kubectl_cmd -n kubernetes-dashboard wait --for=condition=Ready --all pods
   echo
   echo "To access the Dashboard, create a secure channel to your K3s cluster:"
   echo "$KUBECTL_CMD proxy &"
@@ -140,7 +141,7 @@ dashboard_install() {
   dashboard_token
 }
 
-dashboard_expose() {
+dashboard_proxy() {
   $KUBECTL_CMD proxy &
 }
 
@@ -159,7 +160,7 @@ dashboard_update() {
 }
 
 dashboard_token() {
-  kubectl_cmd -n kubernetes-dashboard describe secret admin-user-token | grep '^token:' | awk '{print $2}'
+  kubectl_cmd -n kubernetes-dashboard describe secret admin-user | grep '^token:' | awk '{print $2}'
 }
 
 ##
@@ -186,8 +187,8 @@ case $1 in
     help_message; graceful_exit ;;
   -i | --install)
     dashboard_install; graceful_exit ;;
-  -e | --expose)
-    dashboard_expose; graceful_exit ;;
+  -p | --proxy)
+    dashboard_proxy; graceful_exit ;;
   -r | --remove)
     dashboard_remove; graceful_exit ;;
   -u | --update)
