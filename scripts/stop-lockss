@@ -134,14 +134,16 @@ undeploy_stack() {
     service_name=${SERVICE_NAMES[$svc]}
     logger_trace "Stopping service ${service_name}..."
     # make the stack unreachable on the network
-    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${service_name}
+    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${service_name} | logger_debug
     # wait until all pods are deleted
   done
   logger_info "Waiting for pods to shutdown..."
   for svc in "${SERVICES[@]}"; do
     service_name=${SERVICE_NAMES[$svc]}
-    podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack}  | grep '${service_name}' )
-    kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
+    podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${service_name}" )
+    if [ ! -z "${podanme}" ]; then
+      kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
+    fi
   done
   logger_info "Pod shutdown complete"
 }
@@ -191,5 +193,9 @@ if [[ ${STACK_NUM} -eq 0 ]]; then
 else
   undeploy_stack ${STACK_NUM}
 fi
+echo "========================================="
+echo "Running the following LOCKSS Services"
+kubectl_lockss get svc -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+echo "========================================="
 
 graceful_exit

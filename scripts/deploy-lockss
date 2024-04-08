@@ -275,7 +275,7 @@ else
   logger_error_exit "Unable to find generated stack info for ${STACK_NUM}"
 fi
 echo "========================================="
-echo "Now running the following LOCKSS Services"
+echo "Running the following LOCKSS Services"
 kubectl_lockss get svc -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
 echo "========================================="
 graceful_exit
