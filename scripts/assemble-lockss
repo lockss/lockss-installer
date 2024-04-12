@@ -197,7 +197,7 @@ additional_ports() {
 ensure_writable_dir() {
   local DIR="$1"
   local USER=$(stat -c '%u' ${DIR})
-  if [ $USER -eq ${LOCKSS_UID} ]; then
+  if [ $USER -eq $LOCKSS_UID ]; then
      return 0
   else
     logger_error_exit "${DIR} is not writable by ${LOCKSS_USER}. Run scripts/fix-permissions."

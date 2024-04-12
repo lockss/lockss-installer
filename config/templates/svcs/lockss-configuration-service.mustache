@@ -190,7 +190,6 @@ spec:
           protocol: TCP
         - name: "jms-port"
           containerPort: {{JMS_DEFAULT_PORT}}
-          hostPort: {{JMS_PORT}}
           protocol: TCP
 {{#additional_ports CFG}}
         - name: "__PORT_NAME__"
