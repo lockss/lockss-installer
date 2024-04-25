@@ -164,7 +164,7 @@ Check_Stopped
 Check_Configured
 
 if ! am_i_lockss; then
-  logger_error_exit "Please re-run the upgrade script as the ${LOCKSS_USER} user"
+  error_exit "Please re-run the upgrade script as the ${LOCKSS_USER} user"
 fi
 
 logger_init
