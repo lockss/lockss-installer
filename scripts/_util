@@ -485,6 +485,11 @@ am_i_root() {
   [ "$(id -u)" -eq 0 ]
 }
 
+# Check if running as the LOCKSS user
+am_i_lockss() {
+  [ "$(id -un)" == "${LOCKSS_USER}" ]
+}
+
 is_lockss_running() {
   kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-'
 }
