@@ -171,10 +171,10 @@ logger_init
 
 read_config ${SYSTEM_CONF_FILE}
 logger_debug "Loaded LOCKSS system configuration"
-VERSION_FILE="${LOCKSS_DATA_DIR}/CONFIGURED_VERSION"
+VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
 
 if [ ! -f "${VERSION_FILE}" ]; then
-  error_exit "Could not determine currently configured version (${VERSION_FILE} is missing)"
+  error_exit "Could not determine previous LOCKSS version (${VERSION_FILE} is missing)"
 fi
 
 CUR_VERSION="`cat ${VERSION_FILE}`"
