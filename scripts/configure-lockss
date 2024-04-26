@@ -185,20 +185,23 @@ configure_crawler_services() {
   done
 }
 
+]
 configure_migration() {
   echo ""
   echo "Configuring V1 To V2 Migration..."
   echo ""
   ask_for_input "Are V1 and V2 running on the same machine?" "" N
   if is_yes "${ANS}"; then
-    if  [ ! -f /etc/lockss/config.dat ]; then
+     declare -A props
+     v1file="/etc/lockss/config.dat"
+
+   if  [ ! -f ${v1file} ]; then
       echo "Unable to find V1 configuration file: /etc/lockss/config.dat."
       echo "Confirm V1 is running on local machine and contact LOCKSS support."
       exit 1
     fi
     # read /etc/lockss/config.dat
-    declare -A props
-    eval `grep -v '^#' $PROPS_FILE | sed -e 's/"/\\"/g;s/\${\([^}]*\)}/${props[\1]}/g;s/^\([^=]*\)=\(.*\)$/props[\1]="\2"/'`
+    eval `grep -v '^#' ${v1file} | sed -e 's/"/\\"/g;s/\${\([^}]*\)}/${props[\1]}/g;s/^\([^=]*\)=\(.*\)$/props[\1]="\2"/'`
     # Copy LOCKSS_EXTERNAL_IPADDR, LOCKSS_IPADDR, and LOCKSS_V3_PORT from config.dat to same configure-lockss vars
     LOCKSS_EXTERNAL_IPADDR=${props[LOCKSS_EXTERNAL_IPADDR]}
     LOCKSS_IPADDR=${props[LOCKSS_IPADDR]}
@@ -812,8 +815,6 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   read_config ${K8S_CONF_FILE}
 fi
 echo "Checking system state..."
-BYPASS_KUBE_COMMANDS=true
-
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
   setup_k8s_cmd
