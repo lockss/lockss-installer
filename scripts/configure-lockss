@@ -191,7 +191,7 @@ configure_migration() {
   echo "Configuring LOCKSS 1.x To LOCKSS 2.x Migration..."
   echo ""
   # add a variable and write it out.
-  ask_for_input "Are LOCKSS 1.x and LOCKSS 2.x running on the same host?" "to_yes_no_or_blank {LOCKSS_SAME_HOST_MIGRATION}" N
+  ask_for_input "Are LOCKSS 1.x and LOCKSS 2.x running on the same host?" "$(to_yes_no_or_blank {LOCKSS_SAME_HOST_MIGRATION})" N
   if is_yes "${ANS}"; then
     LOCKSS_SAME_HOST_MIGRATION=true
     declare -A props
