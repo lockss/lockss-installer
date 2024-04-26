@@ -185,19 +185,21 @@ configure_crawler_services() {
   done
 }
 
-]
+
 configure_migration() {
   echo ""
-  echo "Configuring V1 To V2 Migration..."
+  echo "Configuring LOCKSS 1.x To LOCKSS 2.x Migration..."
   echo ""
-  ask_for_input "Are V1 and V2 running on the same machine?" "" N
+  # add a variable and write it out.
+  ask_for_input "Are LOCKSS 1.x and LOCKSS 2.x running on the same host?" "to_yes_no_or_blank {LOCKSS_SAME_HOST_MIGRATION}" N
   if is_yes "${ANS}"; then
-     declare -A props
-     v1file="/etc/lockss/config.dat"
+    LOCKSS_SAME_HOST_MIGRATION=true
+    declare -A props
+    v1file="/etc/lockss/config.dat"
 
    if  [ ! -f ${v1file} ]; then
-      echo "Unable to find V1 configuration file: /etc/lockss/config.dat."
-      echo "Confirm V1 is running on local machine and contact LOCKSS support."
+      echo "Unable to find LOCKSS 1.x configuration file: /etc/lockss/config.dat."
+      echo "Confirm LOCKSS 1.x is installed on this machine and contact LOCKSS support."
       exit 1
     fi
     # read /etc/lockss/config.dat
@@ -217,10 +219,13 @@ configure_migration() {
     done
   else
    unset LOCKSS_MIGRATE_LCAP_PORT
+   unset LOCKSS_EXTERNAL_IPADDR
+   LOCKSS_SAME_HOST_MIGRATION=false
+
    # Set LOCKSS_EXTERNAL_IPADDR and LOCKSS_V3_PORT to V1 LCAP ID
     EXT_OK=N
     until is_yes ${EXT_OK}; do
-      ask_for_input "V1 machine IP address or external IP if V1 is behind NAT?" "${LOCKSS_EXTERNAL_IPADDR}"
+      ask_for_input "LOCKSS 1.x host IP address or external IP if LOCKSS 1.x is behind NAT?" "${LOCKSS_EXTERNAL_IPADDR}"
       if valid_ip4_address ${ANS}; then
         LOCKSS_EXTERNAL_IPADDR=${ANS}
         EXT_OK=Y
@@ -228,7 +233,7 @@ configure_migration() {
     done
     PORT_OK=N
     until is_yes ${PORT_OK}; do
-      ask_for_input "V1 machine LCAP port" "${LOCKSS_V3_PORT}" "9729"
+      ask_for_input "LOCKSS 1.x host LCAP port" "${LOCKSS_V3_PORT}" "9729"
       if [ "X${ANS}" != "X" ]; then
         LOCKSS_V3_PORT="${ANS}"
         PORT_OK=Y
@@ -372,6 +377,7 @@ LOCKSS_CLASSIC_CRAWLER_ENABLE="${LOCKSS_CLASSIC_CRAWLER_ENABLE}"
 LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 LOCKSS_MIGRATE_LCAP_PORT="${LOCKSS_MIGRATE_LCAP_PORT}"
 LOCKSS_IN_MIGRATION_MODE="${LOCKSS_IN_MIGRATION_MODE:-false}"
+LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
@@ -443,10 +449,12 @@ build_config_file() {
     else
       # confirm exit from migration mode - abort if
       if is_yes "${LOCKSS_IN_MIGRATION_MODE}"; then
-        ask_for_input "Do you want to reconfigure V2 to no longer be in migration mode?" "" "Y"
+        ask_for_input "Do you want to reconfigure LOCKSS 2.x to no longer be in migration mode?" "" "Y"
         if is_yes "${ANS}"; then
           LOCKSS_IN_MIGRATION_MODE=false
+          LOCKSS_SAME_HOST_MIGRATION=false
           unset LOCKSS_MIGRATE_LCAP_PORT
+          unset LOCKSS_EXTERNAL_IPADDR
         else
           "Rerun scripts/configure-lockss with -m or --migrate"
         fi
@@ -724,7 +732,7 @@ usage() {
   echo "  --replay  Prompt only for info not already in the config file. Useful when"
   echo "            running configure-lockss after upgrading to a new version of the"
   echo "            LOCKSS services."
-  echo "  --migrate  Set up LOCKSS services for migration from LOCKSS 1.0"
+  echo "  --migrate Set up LOCKSS 2.x for migration from LOCKSS 1.x."
   echo "  --help    Print this text."
   exit 2
 }
