@@ -137,7 +137,7 @@ undeploy_stack() {
     IFS=' ' read -a svc_arr <<< "$services"
   else
     for svc in "${SERVICES[@]}"; do
-      svc_arr+=${SERVICE_NAMES[$svc]}
+      svc_arr+=(${SERVICE_NAMES[$svc]})
     done
   fi
   # loop through the service array stop everything for that service
