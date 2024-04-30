@@ -130,22 +130,30 @@ undeploy_stack() {
   # Source env.sh
   source_env "${stack}"
   logger_info "Undeploying stack $stack"
-  for svc in "${SERVICES[@]}"; do
-    service_name=${SERVICE_NAMES[$svc]}
-    logger_trace "Stopping service ${service_name}..."
-    # make the stack unreachable on the network
-    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${service_name} | logger_debug
-    # wait until all pods are deleted
+  svc_arr=()
+  # if no services req get all running services and stop them.
+  if [ -z $REQ_SERVICES ]; then
+    services=$(kubectl_lockss get svc -o jsonpath='{.items[*].metadata.name}')
+    IFS=' ' read -a svc_arr <<< "$services"
+  else
+    for svc in "${SERVICES[@]}"; do
+      svc_arr+=${SERVICE_NAMES[$svc]}
+    done
+  fi
+  # loop through the service array stop everything for that service
+	for svc in "${svc_arr[@]}"
+	do
+    logger_info "Stopping service ${svc}..."
+    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${svc} | logger_debug
   done
-  logger_info "Waiting for pods to shutdown..."
-  for svc in "${SERVICES[@]}"; do
-    service_name=${SERVICE_NAMES[$svc]}
-    podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${service_name}" )
+	for svc in "${svc_arr[@]}"
+	do
+    podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${svc}" )
     if [ ! -z "${podanme}" ]; then
       kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
     fi
   done
-  logger_info "Pod shutdown complete"
+ logger_info "Pod shutdown complete"
 }
 
 # Source system config file
@@ -194,8 +202,12 @@ else
   undeploy_stack ${STACK_NUM}
 fi
 echo "========================================="
-echo "Running the following LOCKSS Services"
-kubectl_lockss get svc -n lockss --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+number_of_services=$(kubectl_lockss get svc 2> /dev/null | wc -l)
+if ((number_of_services > 0)); then
+ echo "Running the following LOCKSS Services"
+ kubectl_lockss get svc --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+else
+  echo "No LOCKSS service are running."
+fi
 echo "========================================="
-
 graceful_exit
