@@ -1,4 +1,4 @@
-lo#!/usr/bin/env bash
+#!/usr/bin/env bash
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -1067,6 +1067,14 @@ init_service_arrays() {
     init_service_arrays_from_commandline
   fi
 }
+
+load_v1_props() {
+  local file="$1"
+
+  eval `grep -v '^#' ${file} | sed -e 's/"/\\"/g;s/\${\([^}]*\)}/${V1_PROPS[\1]}/g;s/^\([^=]*\)=\(.*\)$/V1_PROPS[\1]="\2"/'`
+
+}
+
 
 init_service_arrays_from_commandline() {
   declare -a svcs_arr

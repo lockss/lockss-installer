@@ -57,10 +57,13 @@ _D0=$(dirname "${0}")
 ##
 ## Definitions
 ##
+declare -A V1_PROPS
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
+V1_DEF_FILE="/etc/lockss/config.dat"
+V1_RMT_FILE="/tmp/v1config.dat"
 
 # $1=log filename
 # tee stdout/err to log file
@@ -76,6 +79,10 @@ Log_Std() {
   # Redirect FD 1&2 to pipe
   exec 1>$npipe
   exec 2>&1
+}
+
+debug_msg() {
+  echo $*
 }
 
 configure_databases() {
@@ -190,57 +197,163 @@ configure_migration() {
   echo ""
   echo "Configuring LOCKSS 1.x To LOCKSS 2.x Migration..."
   echo ""
-  # add a variable and write it out.
-  ask_for_input "Are LOCKSS 1.x and LOCKSS 2.x running on the same host?" "$(to_yes_no_or_blank {LOCKSS_SAME_HOST_MIGRATION})" N
+  # use def_v1_file
+  LOCKSS_SAME_HOST_MIGRATION=false
+  if  [ -f ${V1_DEF_FILE} ]; then
+    load_v1_props "${V1_DEF_FILE}"
+    if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+     # we found a v1 config file
+      echo "LOCKSS 1.x installation was detected on this host. "
+      # This question is unclear - this implies they will not be performing a migration period.
+      # If we are only referring to using  the file it to configure we will need to validate that the LCAP port is NOT the same.
+      ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
   if is_yes "${ANS}"; then
+        # migration from same host installation
     LOCKSS_SAME_HOST_MIGRATION=true
-    declare -A props
-    v1file="/etc/lockss/config.dat"
-
-   if  [ ! -f ${v1file} ]; then
-      echo "Unable to find LOCKSS 1.x configuration file: /etc/lockss/config.dat."
-      echo "Confirm LOCKSS 1.x is installed on this machine and contact LOCKSS support."
-      exit 1
-    fi
-    # read /etc/lockss/config.dat
-    eval `grep -v '^#' ${v1file} | sed -e 's/"/\\"/g;s/\${\([^}]*\)}/${props[\1]}/g;s/^\([^=]*\)=\(.*\)$/props[\1]="\2"/'`
-    # Copy LOCKSS_EXTERNAL_IPADDR, LOCKSS_IPADDR, and LOCKSS_V3_PORT from config.dat to same configure-lockss vars
-    LOCKSS_EXTERNAL_IPADDR=${props[LOCKSS_EXTERNAL_IPADDR]}
-    LOCKSS_IPADDR=${props[LOCKSS_IPADDR]}
-    LOCKSS_V3_PORT=${props[LOCKSS_V3_PORT]}
-    #set LOCKSS_MIGRATE_LCAP_PORT from user input
+        LOCKSS_V1_IPADDR="127.0.0.1"
+        V1_FILE=${V1_DEF_FILE}
+       # set LOCKSS_MIGRATION_LCAP_PORT from user input
     PORT_OK=N
     until is_yes ${PORT_OK}; do
-      ask_for_input "Port to use for LCAP traffic during migration" "${LOCKSS_MIGRATE_LCAP_PORT}" "9739"
+          ask_for_input "Enter temporary LOCKSS 2.x LCAP port"  "${LOCKSS_MIGRATION_LCAP_PORT}" "9739"
       if [ "X${ANS}" != "X" ]; then
-        LOCKSS_MIGRATE_LCAP_PORT="${ANS}"
+            LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
         PORT_OK=Y
       fi
     done
   else
-   unset LOCKSS_MIGRATE_LCAP_PORT
-   unset LOCKSS_EXTERNAL_IPADDR
-   LOCKSS_SAME_HOST_MIGRATION=false
-
-   # Set LOCKSS_EXTERNAL_IPADDR and LOCKSS_V3_PORT to V1 LCAP ID
-    EXT_OK=N
-    until is_yes ${EXT_OK}; do
-      ask_for_input "LOCKSS 1.x host IP address or external IP if LOCKSS 1.x is behind NAT?" "${LOCKSS_EXTERNAL_IPADDR}"
-      if valid_ip4_address ${ANS}; then
-        LOCKSS_EXTERNAL_IPADDR=${ANS}
-        EXT_OK=Y
+        # migration but from a different host while a LOCKSS 1.x is running.
+        in_use_port=${V1_PROPS[LOCKSS_V3_PORT]}
+        echo "You are running LOCKSS 1.x installation on this host while attempting to migrate from LOCKSS 1.x on a different host."
+        echo "You cannot have two LOCKSS installation running with the same LCAP identity."
+        echo "To continue you need to  specify a LOCKSS 2.x LCAP port different from ${in_use_port}."
+        PORT_OK=N
+        until is_yes ${PORT_OK}; do
+          ask_for_input "Enter LOCKSS 2.x LCAP port"  "${LOCKSS_V3_PORT}" "9739"
+          if [ "X${ANS}" != "X" ]  && [ ${ANS} != ${in_use_port}]; then
+            LOCKSS_V3_PORT="${ANS}"
+            PORT_OK=Y
+          fi
+        done
       fi
+    fi
+  fi
+  if [ "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
+    # we either fell through or no local installation was found
+    # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
+    # we loop until a valid v1 file OR they say they didn't copy a file.
+      ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
+      if is_yes "${ANS}"; then
+        FILE_OK=N
+        until is_yes ${FILE_OK}; do
+          ask_for_input "Location of copied LOCKSS 1.x config.dat file to use." "${V1_RMT_FILE}" ""
+          if [ "X${ANS}" != X ]; then
+            filename="$(normalize_path ${ANS})"
+            if [ -f ${filename} ]; then
+              load_v1_props "${filename}"
+              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+                FILE_OK=Y
+                V1_FILE=${filename}
+              else
+                echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
+              fi
+            fi
+          fi
+        done
+      fi
+  fi
+  # if we have a local file to use
+  if [ -f "$V1_FILE" ]; then
+    if is_yes $(to_yes_or_no "$LOCKSS_SAME_HOST_MIGRATION") ; then
+      debug_msg "Copying V1 config from same host"
+     # section 1 params for same host migration.
+      LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
+      LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
+      LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
+    else
+     debug_msg "Copying V1 config from different host"
+     # section 2 params for different host migration.
+      LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+      ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
+      vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
+      if [ -n ${ex_ip} ] && [ "${ex_ip}" != "${vi_ip}" ]
+      then
+        debug_msg "different host - NAT detected in V1 config settings"
+        IP_OK=N
+        until is_yes ${IP_OK} ; do
+          echo "[1] LOCKSS 1.x Host IP Address: ${vi_ip}"
+          echo "[2] LOCKSS 1.x Host External IP Address: ${ex_ip}"
+          echo "[3] Alternative LOCKSS 1.x Host"
+          ask_for_input "LOCKSS 1.x host is behind NAT, what address should this host use to reach it?" "1"
+          case ${ANS} in
+          1)
+            LOCKSS_V1_IPADDR=$vi_ip
+            IP_OK=Y
+            ;;
+          2)
+            LOCKSS_V1_IPADDR=$ex_pi
+            IP_OK=Y
+            ;;
+          3)
+            configure_v1_address
+            ;;
+          *)
+            echo "Unknown selection!"
+            ;;
+          esac
     done
+      else
+        debug_msg "different host NAT not detected"
+        LOCKSS_V1_IPADDR=${vi_ip}
+      fi
+      # if for LOCKSS_MIGRATION_LCAP_PORT is not set
+      if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" != "X" ]; then
+        LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+      fi
+      LOCKSS_SAME_HOST_MIGRATION=false
+    fi
+    debug_msg "Configuring common parameters from V1 config file."
+    # section 3 common params
+    LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+    LOCKSS_ACCESS_SUBNET=${V1_PROPS[LOCKSS_ACCESS_SUBNET]}
+    LOCKSS_MAILHUB=${V1_PROPS[LOCKSS_MAILHUB]}
+    LOCKSS_MAILHUB_USER=${V1_PROPS[LOCKSS_MAILHUB_USER]}
+    LOCKSS_MAILHUB_PASSWORD=${V1_PROPS[LOCKSS_MAILHUB_PASSWORD]}
+    LOCKSS_EMAIL=${V1_PROPS[LOCKSS_EMAIL]}
+    LOCKSS_PROPS_URL=${V1_PROPS[LOCKSS_PROPS_URL]}
+    LOCKSS_PROPS_PROXY=${V1_PROPS[LOCKSS_PROPS_PROXY]}
+    LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE=${V1_PROPS[LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE]}
+    LOCKSS_PRESERVATON_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
+    LOCKSS_ADMIN_USER=${V1_PROPS[LOCKSS_ADMIN_USER]}
+  else
+    debug_msg "Configuring V2 without a V1 config file."
+    # We have a -m indicating migration but no migration information.
+    # We need to collect the local system information and in addition
+    LOCKSS_SAME_HOST_MIGRATION=false
+    configure_v1_address
+    # Now get the V1 port
     PORT_OK=N
     until is_yes ${PORT_OK}; do
-      ask_for_input "LOCKSS 1.x host LCAP port" "${LOCKSS_V3_PORT}" "9729"
+      ask_for_input "Enter LOCKSS 1.x LCAP port"  "${LOCKSS_V3_PORT}" "9729"
       if [ "X${ANS}" != "X" ]; then
         LOCKSS_V3_PORT="${ANS}"
         PORT_OK=Y
       fi
     done
   fi
-  LOCKSS_IN_MIGRATION_MODE=true
+}
+
+  configure_v1_address() {
+     IP_OK=N
+     until is_yes ${IP_OK} ; do
+       ask_for_input "LOCKSS 1.x IP address (routable from this host)?" "$LOCKSS_V1_IPADDR"
+       if valid_ip4_address ${ANS}; then
+          LOCKSS_V1_IPADDR=${ANS}
+          IP_OK=Y
+      else
+        echo "Illegal IPv4 address: ${ANS}"
+      fi
+     done
 }
 
 configure_services() {
@@ -423,6 +536,26 @@ build_config_file() {
   OK_TO_STORE_WITHOUT_CONFIRMATION="Y"
 
   until is_yes ${CONFIG_OK}; do
+   if [ -n "$IS_V1_MIGRATION" ]; then
+     configure_migration
+     if [ -f "$V1_FILE" ]; then
+      echo "These values were imported from your LOCKSS 1.0 configuration. You probably don't want to change them."
+     fi
+   else
+     # confirm exit from migration mode - abort if
+     if is_yes "${LOCKSS_IN_MIGRATION_MODE}"; then
+       ask_for_input "Do you want to reconfigure LOCKSS 2.x to no longer be in migration mode?" "" "Y"
+       if is_yes "${ANS}"; then
+         LOCKSS_IN_MIGRATION_MODE=false
+         LOCKSS_SAME_HOST_MIGRATION=false
+         unset LOCKSS_MIGRATE_LCAP_PORT
+         unset LOCKSS_EXTERNAL_IPADDR
+       else
+         err_exit "Rerun scripts/configure-lockss with -m or --migrate"
+       fi
+     fi
+   fi
+
     HOSTNAME_OK=N
     until is_yes ${HOSTNAME_OK}; do
       ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}" "${LOCAL_HOSTNAME}"
@@ -444,20 +577,23 @@ build_config_file() {
         echo "Illegal IPv4 address: ${ANS}"
       fi
     done
-    if [ -n "$IS_V1_MIGRATION" ]; then
-      configure_migration
-    else
-      # confirm exit from migration mode - abort if
-      if is_yes "${LOCKSS_IN_MIGRATION_MODE}"; then
-        ask_for_input "Do you want to reconfigure LOCKSS 2.x to no longer be in migration mode?" "" "Y"
-        if is_yes "${ANS}"; then
-          LOCKSS_IN_MIGRATION_MODE=false
-          LOCKSS_SAME_HOST_MIGRATION=false
-          unset LOCKSS_MIGRATE_LCAP_PORT
-          unset LOCKSS_EXTERNAL_IPADDR
-        else
-          "Rerun scripts/configure-lockss with -m or --migrate"
+
+    if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
+      LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
         fi
+    SUBNET_OK=N
+    until is_yes ${SUBNET_OK}; do
+      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
+      if valid_subnet_list "${ANS}"; then
+        LOCKSS_ACCESS_SUBNET="${ANS}"
+        SUBNET_OK=Y
+      fi
+    done
+
+   # LCAP V3 port
+    ask_for_input "LCAP protocol port" "${LOCKSS_V3_PORT}" 9729
+    if [ "X${ANS}" != "X" ]; then
+      LOCKSS_V3_PORT="${ANS}"
       fi
       NAT=N
       if [ "${LOCKSS_EXTERNAL_IPADDR}X" != X ]; then
@@ -476,53 +612,6 @@ build_config_file() {
       else
         unset LOCKSS_EXTERNAL_IPADDR
       fi
-    fi
-    if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
-      LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-    fi
-    SUBNET_OK=N
-    until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
-      if valid_subnet_list "${ANS}"; then
-        LOCKSS_ACCESS_SUBNET="${ANS}"
-        SUBNET_OK=Y
-      fi
-    done
-
-    CNI0_ADDR=$(ip -4 -o addr show dev cni0 | awk '{split($4,a,"/");print a[1]}')
-    CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-    if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
-      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-    elif [ -n "${CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
-      # The current value isn't what we would choose
-      if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
-        # It matches the previous CNI0 subnet, use new one by default
-        echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
-        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-      elif [ -z "${PREV_CNI0_SUBNET}" ]; then
-        # No record of previous CNI0_SUBNET, can't tell whether it
-        # changed or user previously entered a different subnet
-        echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
-        ask_for_input "Do you want to change it?" "" Y
-        if is_yes "${ANS}"; then
-          LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-        fi
-      fi
-    fi
-    CONTAINER_SUBNET_OK=N
-    until is_yes ${CONTAINER_SUBNET_OK}; do
-      ask_for_input "Container subnet for inter-service access control" "${LOCKSS_CONTAINER_SUBNETS}"
-      if valid_subnet "${ANS}"; then
-        LOCKSS_CONTAINER_SUBNETS="${ANS}"
-        CONTAINER_SUBNET_OK=Y
-      fi
-    done
-
-    # LCAP V3 port
-    ask_for_input "LCAP protocol port" "${LOCKSS_V3_PORT}" 9729
-    if [ "X${ANS}" != "X" ]; then
-      LOCKSS_V3_PORT="${ANS}"
-    fi
 
     # Mail relay
     # First set current value of NEED_USER iff we've asked this question before
@@ -580,6 +669,55 @@ build_config_file() {
     # Preservation group(s)
     ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "demo"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
+    # Admin UI user/pass
+    USER_OK=N
+    until is_yes ${USER_OK}; do
+      ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
+      if [ "X${ANS}" != X ]; then
+        LOCKSS_ADMIN_USER="${ANS}"
+        USER_OK=Y
+      fi
+    done
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
+    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
+    if [ -n "${PASSWD_CLEAR}" ]; then
+      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
+      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
+    fi
+
+
+    if [ -n "$IS_V1_MIGRATION" ] && [ -f "$V1_FILE" ];  then
+      echo "End of imported defaults."
+      echo ""
+    fi
+    CNI0_ADDR=$(ip -4 -o addr show dev cni0 | awk '{split($4,a,"/");print a[1]}')
+    CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+    if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
+      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+    elif [ -n "${CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
+      # The current value isn't what we would choose
+      if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
+        # It matches the previous CNI0 subnet, use new one by default
+        echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
+        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+      elif [ -z "${PREV_CNI0_SUBNET}" ]; then
+        # No record of previous CNI0_SUBNET, can't tell whether it
+        # changed or user previously entered a different subnet
+        echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
+        ask_for_input "Do you want to change it?" "" Y
+        if is_yes "${ANS}"; then
+          LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+        fi
+      fi
+    fi
+    CONTAINER_SUBNET_OK=N
+    until is_yes ${CONTAINER_SUBNET_OK}; do
+      ask_for_input "Container subnet for inter-service access control" "${LOCKSS_CONTAINER_SUBNETS}"
+      if valid_subnet "${ANS}"; then
+        LOCKSS_CONTAINER_SUBNETS="${ANS}"
+        CONTAINER_SUBNET_OK=Y
+      fi
+    done
 
     HAD_DATA_DIR=
     if [ "X${LOCKSS_DATA_DIR}" != X ]; then
@@ -634,22 +772,6 @@ build_config_file() {
     # Script logs not configurable
 #     ask_for_input "Directory for storing install script logs" "${LOCKSS_SCRIPT_LOG_DIR}" "${LOCKSS_DATA_DIR}/lockss-script-logs"
 #     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
-
-    # Admin UI user/pass
-    USER_OK=N
-    until is_yes ${USER_OK}; do
-      ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
-      if [ "X${ANS}" != X ]; then
-        LOCKSS_ADMIN_USER="${ANS}"
-        USER_OK=Y
-      fi
-    done
-    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
-    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
-    if [ -n "${PASSWD_CLEAR}" ]; then
-      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
-      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
-    fi
 
     # Configure databases
     configure_databases

@@ -457,8 +457,8 @@ generate_lockss() {
 		fi
     logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
-    if [ -n "${LOCKSS_MIGRATE_LCAP_PORT}" ]; then
-      export STACK_LCAP_PORT=$((${LOCKSS_MIGRATE_LCAP_PORT} + $num - 1))
+    if [ -n "${LOCKSS_MIGRATION_LCAP_PORT}" ]; then
+      export STACK_LCAP_PORT=$((${LOCKSS_MIGRATION_LCAP_PORT} + $num - 1))
     else
       export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     fi
