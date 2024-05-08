@@ -143,7 +143,7 @@ undeploy_stack() {
   # loop through the service array stop everything for that service
 	for svc in "${svc_arr[@]}"
 	do
-    logger_info "Stopping service ${svc}..."
+    logger_debug "Stopping service ${svc}..."
     kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${svc} | logger_debug
   done
 	for svc in "${svc_arr[@]}"
