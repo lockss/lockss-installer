@@ -144,7 +144,9 @@ undeploy_stack() {
 	for svc in "${svc_arr[@]}"
 	do
     logger_debug "Stopping service ${svc}..."
-    kubectl_lockss delete all -l lockss-stack-id=${stack} -l io.kompose.service=${svc} | logger_debug
+    # this should delete the deploymen, replicaset, pod
+    kubectl_lockss delete deployment -l lockss-stack-id=${stack} -l io.kompose.service=${svc} | logger_debug
+    kubectl_lockss delete service -l lockss-stack-id=${stack} -l io.kompose.service=${svc} | logger_debug
   done
 	for svc in "${svc_arr[@]}"
 	do
