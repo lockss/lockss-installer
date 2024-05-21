@@ -121,7 +121,7 @@ configure_databases() {
   fi
 
   echo "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
-  if is_yes "${ANS}"; the
+  if is_yes "${ANS}"; then
     ENABLE_SOLR=true
 
     #check Solr service
