@@ -33,10 +33,14 @@
 
 repo.spec=custom
 
+{{#USE_SOLR_INDEX}}
 #repo.index.spec=solr
 repo.index.spec=dispatching
 repo.index.solr.solrUrl=http://{{SOLR_HOST}}:{{SOLR_PORT}}/solr
 repo.index.solr.solrCollection={{SOLR_CORE_REPO}}
+{{/USE_SOLR_INDEX}}
+{{#USE_PGSQL_INDEX}}repo.index.spec=pgsql{{/USE_PGSQL_INDEX}}
+{{#USE_DERBY_INDEX}}repo.index.spec=derby{{/USE_DERBY_INDEX}}
 
 #local disk store
 repo.datastore.spec=local

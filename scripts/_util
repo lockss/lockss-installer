@@ -167,13 +167,17 @@ Check_Stopped() {
 }
 
 Check_Configured() {
-  Check_VarDef "LOCKSS_SOLR_USER"
-  Check_VarDef "LOCKSS_SOLR_PASSWD"
-  Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  if ${ENABLE_SOLR}; then
+    Check_VarDef "LOCKSS_SOLR_USER"
+    Check_VarDef "LOCKSS_SOLR_PASSWD"
+    Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  fi
   Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
   Check_VarDef "KUBECTL_CMD"
-  Check_Secret "lockss-solr-pass"
-  Check_Secret "solr-auth"
+  if ${ENABLE_SOLR}; then
+    Check_Secret "lockss-solr-pass"
+    Check_Secret "solr-auth"
+  fi
   Check_Secret "lockss-postgres-pass"
   Check_Secret "lockss-ui-pass"
   Check_Secret "lockss-auth"
@@ -1141,7 +1145,7 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_POSTGRES}; then
     SERVICES+=("postgres")
   fi
-  if ${USE_LOCKSS_SOLR}; then
+  if ${ENABLE_SOLR} && ${USE_LOCKSS_SOLR}; then
     SERVICES+=("solr")
   fi
   if ${USE_LOCKSS_HDFS}; then

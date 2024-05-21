@@ -120,38 +120,73 @@ configure_databases() {
       Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
-  #check Solr service
-  echo "You may use either the embedded Solr service or an external one"
-  echo "provided by you or your institution, in which case you will be asked for"
-  echo "its hostname and other pertinent information."
-  ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" Y
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST='lockss-solr-service'
-    LOCKSS_SOLR_PORT='8983'
-    LOCKSS_SOLR_CORE_REPO="lockss-repo"
+  echo "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
+  if is_yes "${ANS}"; the
+    ENABLE_SOLR=true
+
+    #check Solr service
+    echo "You may use either the embedded Solr service or an external one"
+    echo "provided by you or your institution, in which case you will be asked for"
+    echo "its hostname and other pertinent information."
+    ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" N
+    if is_yes "${ANS}"; then
+      USE_LOCKSS_SOLR=true
+      LOCKSS_SOLR_HOST='lockss-solr-service'
+      LOCKSS_SOLR_PORT='8983'
+      LOCKSS_SOLR_CORE_REPO="lockss-repo"
+    else
+      USE_LOCKSS_SOLR=false
+      ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
+      LOCKSS_SOLR_HOST=${ANS}
+
+      ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
+      LOCKSS_SOLR_PORT=${ANS}
+
+      ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
+      LOCKSS_SOLR_CORE_REPO=${ANS}
+    fi
+    # Account for solr user
+    ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
+    LOCKSS_SOLR_USER=${ANS}
+
+    ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
+    LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
+    if [ -n "${PASSWD_CLEAR}" ]; then
+      LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
+      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
+      Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
+    fi
   else
-    USE_LOCKSS_SOLR=false
-    ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
-    LOCKSS_SOLR_HOST=${ANS}
-
-    ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
-    LOCKSS_SOLR_PORT=${ANS}
-
-    ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
-    LOCKSS_SOLR_CORE_REPO=${ANS}
+    ENABLE_SOLR=false
+    USE_SOLR_INDEX=false
   fi
-  # Account for solr user
-  ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
-  LOCKSS_SOLR_USER=${ANS}
+}
 
-  ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
-  LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
-  if [ -n "${PASSWD_CLEAR}" ]; then
-    LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
-    Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
-    Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
-  fi
+configure_artifact_index() {
+     echo "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
+     if is_yes "${ANS}"; then
+       USE_PGSQL_INDEX=true
+       USE_SOLR_INDEX=false
+     else
+       USE_PGSQL_INDEX=false
+     fi
+
+   if ! ${USE_PGSQL_INDEX} && ${ENABLE_SOLR}; then
+     echo "Use the Solr to index artifacts?" "$(to_yes_no_or_blank ${USE_SOLR_INDEX})" N
+     if is_yes "${ANS}"; then
+       USE_PGSQL_INDEX=false
+       USE_SOLR_INDEX=true
+     else
+       USE_SOLR_INDEX=false
+     fi
+   fi
+
+   if ! ${USE_PGSQL_INDEX} && ! ${USE_SOLR_INDEX}; then
+     echo "Defaulting to Apache Derby for the artifact index"
+     USE_DERBY_INDEX=true
+   else
+     USE_DERBY_INDEX=false
+   fi
 }
 
 configure_crawler_services() {
@@ -330,6 +365,10 @@ USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB}"
+ENABLE_SOLR="${ENABLE_SOLR}"
+USE_DERBY_INDEX="${USE_DERBY_INDEX}"
+USE_PGSQL_INDEX="${USE_PGSQL_INDEX}"
+USE_SOLR_INDEX="${USE_SOLR_INDEX}"
 EOF
   OS_NAME="$(os_release_name)"
   if [ -n "${OS_NAME}" ]; then
@@ -575,6 +614,8 @@ build_config_file() {
 
     # Configure databases
     configure_databases
+    # Configure artifact index for Repository Service
+    configure_artifact_index
     # Configure the individual services
     configure_services
 

@@ -147,12 +147,18 @@ spec:
           value: "true"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
+{{#USE_SOLR_INDEX}}
         - name: LOCKSS_SOLR_HOST
           value: {{SOLR_HOST}}
         - name: LOCKSS_SOLR_PORT
           value: "{{SOLR_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
           value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{SOLR_HOST}}:{{SOLR_PORT}}"
+{{/USE_SOLR_INDEX}}
+{{#USE_PGSQL_INDEX}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}}"
+{{/USE_PGSQL_INDEX}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER
