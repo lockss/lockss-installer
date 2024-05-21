@@ -163,13 +163,17 @@ configure_databases() {
 }
 
 configure_artifact_index() {
-     ask_for_input "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
-     if is_yes "${ANS}"; then
-       USE_PGSQL_INDEX=true
-       USE_SOLR_INDEX=false
-     else
-       USE_PGSQL_INDEX=false
-     fi
+   echo ""
+   echo "Configuring Artifact Index..."
+   echo ""
+
+   ask_for_input "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
+   if is_yes "${ANS}"; then
+     USE_PGSQL_INDEX=true
+     USE_SOLR_INDEX=false
+   else
+     USE_PGSQL_INDEX=false
+   fi
 
    if ! ${USE_PGSQL_INDEX} && ${ENABLE_SOLR}; then
      ask_for_input "Use the Solr to index artifacts?" "$(to_yes_no_or_blank ${USE_SOLR_INDEX})" N
