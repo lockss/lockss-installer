@@ -436,7 +436,7 @@ assemble_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| logger_error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
   add_stack_volumes ${stack}
-  if ${USE_LOCKSS_SOLR}; then
+  if ${ENABLE_SOLR} && ${USE_LOCKSS_SOLR}; then
     check_stack_solr ${stack}
   fi
   add_stack_configs ${stack}
