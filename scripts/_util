@@ -674,31 +674,26 @@ setup_storage_dirs() {
   echo "Checking content storage directory(s)"
   read_config ${CONF_FILE}
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
+  declare -A dirSet;
 
   for dir in "${repoPaths[@]}"; do
-    if ! init_one_dir "${dir}" ${USER} 750; then
-        echo "${dir} cannot be created or written by ${USER}." >&2
-        ERRORS=1
+    dirSet["${dir}"]=1
+  done
+  if [ "${LOCKSS_LOGS_DIR}" ]; then
+    dirSet["${LOCKSS_LOGS_DIR}"]=1
+  fi
+  if [ "${LOCKSS_TMPDIR}" ]; then
+    dirSet["${LOCKSS_TMPDIR}"]=1
+  fi
+  if [ "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
+    dirSet["${LOCKSS_SCRIPT_LOG_DIR}"]=1
+  fi
+  for dir in "${!dirSet[@]}"; do
+    if ! init_one_dir "${dir}" ${USER} 755; then
+      echo "${dir} cannot be created or written by ${USER}." >&2
+      ERRORS=1
     fi
   done
-  if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-      if ! init_one_dir ${LOCKSS_LOGS_DIR} ${USER} 755; then
-        echo "${dir} cannot be created or written by ${USER}." >&2
-        ERRORS=1
-      fi
-  fi
-  if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
-      if ! init_one_dir ${LOCKSS_TMPDIR} ${USER} 750; then
-        echo "${dir} cannot be created or written by ${USER}." >&2
-        ERRORS=1
-      fi
-  fi
-  if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
-      if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} ${USER} 755; then
-        echo "${dir} cannot be created or written by ${USER}." >&2
-        ERRORS=1
-      fi
-  fi
   return $ERRORS
 }
 
@@ -733,6 +728,7 @@ init_one_dir() {
   fi
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
+    chmod ${MODE} "${DIR}"
   else
     ask_for_input "${DIR} is not writable; do you want to make it writable?" Y
     if is_yes "${ANS}"; then

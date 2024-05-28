@@ -549,13 +549,14 @@ build_config_file() {
     # Tempdir dir base
     ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
-    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
-      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
-    fi
-
-    # Script logs not configurable
+#    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
+#      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
+#    fi
+    # Script logs not configurable alwas set it to be relative to the LOCKSS_LOGS_DIR
 #     ask_for_input "Directory for storing install script logs" "${LOCKSS_SCRIPT_LOG_DIR}" "${LOCKSS_DATA_DIR}/lockss-script-logs"
 #     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
+
+    LOCKSS_SCRIPT_LOG_DIR=${LOCKSS_LOGS_DIR}/lockss-script-logs
 
     # Admin UI user/pass
     USER_OK=N
