@@ -133,9 +133,11 @@ undeploy_stack() {
   svc_arr=()
   # if no services req get all running services and stop them.
   if [ -z $REQ_SERVICES ]; then
+    logger_info "Stopping all running services."
     services=$(kubectl_lockss get svc -o jsonpath='{.items[*].metadata.name}')
     IFS=' ' read -a svc_arr <<< "$services"
   else
+    logger_info "Stopping only requested services."
     for svc in "${SERVICES[@]}"; do
       svc_arr+=(${SERVICE_NAMES[$svc]})
     done
@@ -151,7 +153,8 @@ undeploy_stack() {
 	for svc in "${svc_arr[@]}"
 	do
     podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${svc}" )
-    if [ ! -z "${podanme}" ]; then
+    logger_debug "Waiting for pod $podname to exit."
+    if [ -n "${podanme}" ]; then
       kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
     fi
   done
@@ -206,8 +209,8 @@ fi
 echo "========================================="
 number_of_services=$(kubectl_lockss get svc 2> /dev/null | wc -l)
 if ((number_of_services > 0)); then
- echo "Running the following LOCKSS Services"
- kubectl_lockss get svc --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+  echo "The following LOCKSS services are currently running."
+  kubectl_lockss get deployments --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
 else
   echo "No LOCKSS service are running."
 fi
