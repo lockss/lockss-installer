@@ -858,7 +858,7 @@ usage() {
   exit 2
 }
 
-is_replay=
+IS_REPLAY=
 IS_V1_MIGRATION=
 
 # Parse command-line
@@ -868,7 +868,7 @@ while [[ -n "$1" ]]; do
     usage
     ;;
   -r | --replay)
-    is_replay=1
+    IS_REPLAY=1
     ;;
   -m | --migrate)
     IS_V1_MIGRATION=1

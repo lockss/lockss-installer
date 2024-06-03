@@ -512,7 +512,7 @@ read_config() {
 }
 
 is_replay() {
-  [[ -n "${is_replay}" ]] && return 0
+  [[ -n "${IS_REPLAY}" ]] && return 0
   return 1
 }
 
