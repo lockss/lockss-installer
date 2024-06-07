@@ -246,12 +246,12 @@ configure_migration() {
     if is_yes "${ANS}"; then
       FILE_OK=N
       until is_yes ${FILE_OK}; do
-        ask_for_input "Location of copied LOCKSS 1.x config.dat file to use." "${V1_RMT_FILE}" ""
+        ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_RMT_FILE}" ""
         if [ "X${ANS}" != X ]; then
           filename="$(normalize_path ${ANS})"
           if [ -f ${filename} ]; then
             load_v1_props "${filename}"
-            if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+            if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
               FILE_OK=Y
               V1_FILE=${filename}
             else
@@ -264,19 +264,19 @@ configure_migration() {
   fi
   # if we have a local file to use
   if [ -f "$V1_FILE" ]; then
-    if is_yes $(to_yes_or_no "$LOCKSS_SAME_HOST_MIGRATION"); then
-      debug_msg "Copying V1 config from same host"
+    if is_yes $(to_yes_no "$LOCKSS_SAME_HOST_MIGRATION"); then
+      debug_msg "Copying V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
       # section 1 params for same host migration.
       LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
       LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
       LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
     else
-      debug_msg "Copying V1 config from different host"
+      debug_msg "Copying V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
       # section 2 params for different host migration.
       LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
       ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
       vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
-      if [ -n ${ex_ip} ] && [ "${ex_ip}" != "${vi_ip}" ]; then
+      if [[ -n "${ex_ip}" ]] && [[ "${ex_ip}" != "${vi_ip}" ]]; then
         debug_msg "different host - NAT detected in V1 config settings"
         IP_OK=N
         until is_yes ${IP_OK}; do
