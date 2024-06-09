@@ -787,8 +787,19 @@ build_config_file() {
     echo "Configuration:"
     cat ${TMP_CONFIG}
 
+    if [[ -f ${1} ]] && cmp --quiet ${TMP_CONFIG} ${1}; then
+      echo "Configuration unchanged"
+      CONFIG_OK=Y
+      BYPASS_MAIL=Y
+    else
     ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
     if is_yes "${ANS}"; then
+        # Backup previous config if it exists
+        if [[ -f ${1} ]]; then
+          if ! cp ${1} ${1}.bak; then
+            echo "Couldn't back up current config file"
+          fi
+        fi
       if ! cp ${TMP_CONFIG} ${1}; then
         echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
         exit 1
@@ -796,10 +807,10 @@ build_config_file() {
       rm -f ${TMP_CONFIG}
       Store_All_Secrets
       echo "Configuration stored"
-
+      fi
+    fi
       local STORAGE_ERRORS=
       setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
-
       CONFIG_OK=Y
 
       FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
@@ -822,7 +833,6 @@ build_config_file() {
         echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
       fi
       rm -f ${FILT_CONFIG}
-    fi
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
