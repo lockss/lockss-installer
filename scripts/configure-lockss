@@ -921,6 +921,10 @@ while [[ -n "$1" ]]; do
   shift
 done
 
+if [ -n "$IS_V1_MIGRATION" -a -n "$IS_REPLAY" ]; then
+  err_exit "Error: Replay may not be used with migration setup"
+fi
+
 CONFIG_LOGFILE="./lockss-configure.log"
 
 # Redirect stdout and stderr to file
