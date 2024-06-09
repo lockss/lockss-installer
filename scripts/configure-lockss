@@ -265,13 +265,13 @@ configure_migration() {
   # if we have a local file to use
   if [ -f "$V1_FILE" ]; then
     if is_yes $(to_yes_no "$LOCKSS_SAME_HOST_MIGRATION"); then
-      debug_msg "Copying V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
+        debug_msg "Importing V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
       # section 1 params for same host migration.
       LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
       LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
       LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
     else
-      debug_msg "Copying V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
+        debug_msg "Importing V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
       # section 2 params for different host migration.
       LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
       ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
