@@ -36,6 +36,8 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
+# For debugging/testing without k8s installed (and to bypass other
+# checks), set env var BYPASS_ALL_CHECKS before running this script
 if [ -n "${BYPASS_ALL_CHECKS}" ]; then
   BYPASS_CHECK_USER=1
   BYPASS_KUBE_COMMANDS=1
