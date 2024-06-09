@@ -1070,14 +1070,14 @@ init_service_arrays() {
 
 load_v1_props() {
   local file="$1"
-	while IFS= read -r line
-	do
+  while IFS= read -r line
+  do
     if [[ "$line" =~ ^[^#]*= ]]; then
-        key=$(echo "$line" | cut -d '=' -f 1)
-        value=$(echo "$line" | cut -d '=' -f 2-)
-        V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
+      key=$(echo "$line" | cut -d '=' -f 1)
+      value=$(echo "$line" | cut -d '=' -f 2-)
+      V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
     fi
-	done < $file
+  done < $file
 
 #	for key in "${!V1_PROPS[@]}"
 #	do
