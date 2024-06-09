@@ -285,6 +285,8 @@ configure_migration() {
               else
                 echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
               fi
+            else
+              echo "${filename} not found."
             fi
           fi
         done
