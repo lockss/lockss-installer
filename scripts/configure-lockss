@@ -230,7 +230,7 @@ configure_migration() {
         PORT_OK=N
         until is_yes ${PORT_OK}; do
           ask_for_input "Enter LOCKSS 2.x LCAP port" "${LOCKSS_V3_PORT}" "9739"
-          if [ "X${ANS}" != "X" ] && [ ${ANS} != ${in_use_port}]; then
+            if [ "X${ANS}" != "X" ] && [ ${ANS} != ${in_use_port} ]; then
             LOCKSS_V3_PORT="${ANS}"
             PORT_OK=Y
           fi
@@ -290,7 +290,7 @@ configure_migration() {
             IP_OK=Y
             ;;
           2)
-            LOCKSS_V1_IPADDR=$ex_pi
+                LOCKSS_V1_IPADDR=$ex_ip
             IP_OK=Y
             ;;
           3)
@@ -322,7 +322,7 @@ configure_migration() {
     LOCKSS_PROPS_URL=${V1_PROPS[LOCKSS_PROPS_URL]}
     LOCKSS_PROPS_PROXY=${V1_PROPS[LOCKSS_PROPS_PROXY]}
     LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE=${V1_PROPS[LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE]}
-    LOCKSS_PRESERVATON_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
+      LOCKSS_PRESERVATION_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
     LOCKSS_ADMIN_USER=${V1_PROPS[LOCKSS_ADMIN_USER]}
   else
     debug_msg "Configuring V2 without a V1 config file."
