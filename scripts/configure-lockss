@@ -194,153 +194,180 @@ configure_crawler_services() {
 
 configure_migration() {
   echo ""
-  echo "Configuring LOCKSS 1.x To LOCKSS 2.x Migration..."
+  echo "Configuring LOCKSS 1.x to LOCKSS 2.x Migration..."
   echo ""
-  # use def_v1_file
-  LOCKSS_SAME_HOST_MIGRATION=false
-  if [ -f ${V1_DEF_FILE} ]; then
-    debug_msg "found a v1 file"
-    load_v1_props "${V1_DEF_FILE}"
-    if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
-      # we found a v1 config file
-      echo "LOCKSS 1.x installation was detected on this host. "
-      # This question is unclear - this implies they will not be performing a migration period.
-      # If we are only referring to using  the file it to configure we will need to validate that the LCAP port is NOT the same.
-      ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
-      if is_yes "${ANS}"; then
-        # migration from same host installation
-        LOCKSS_SAME_HOST_MIGRATION=true
-        LOCKSS_V1_IPADDR="127.0.0.1"
-        V1_FILE=${V1_DEF_FILE}
-        # set LOCKSS_MIGRATION_LCAP_PORT from user input
-        PORT_OK=N
-        until is_yes ${PORT_OK}; do
-          ask_for_input "Enter temporary LOCKSS 2.x LCAP port" "${LOCKSS_MIGRATION_LCAP_PORT}" "9739"
-          if [ "X${ANS}" != "X" ]; then
-            LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
-            PORT_OK=Y
-          fi
-        done
-      else
-        # migration but from a different host while a LOCKSS 1.x is running.
-        in_use_port=${V1_PROPS[LOCKSS_V3_PORT]}
-        echo "You are running LOCKSS 1.x installation on this host while attempting to migrate from LOCKSS 1.x on a different host."
-        echo "You cannot have two LOCKSS installation running with the same LCAP identity."
-        echo "To continue you need to  specify a LOCKSS 2.x LCAP port different from ${in_use_port}."
-        PORT_OK=N
-        until is_yes ${PORT_OK}; do
-          ask_for_input "Enter LOCKSS 2.x LCAP port" "${LOCKSS_V3_PORT}" "9739"
+  # If already in migration mode, ask whether to re-import V1 file or
+  # just update current config
+  if is_true "${LOCKSS_IN_MIGRATION_MODE}"; then
+    echo "Already configured for migration.  You may re-import a LOCKSS 1.x"
+    echo "config file or update the current LOCKSS 2.x config"
+    IMPORT_OK=N
+    until is_yes ${IMPORT_OK}; do
+      ask_for_input "Re-(I)mport or (U)pdate?" "" U
+      case "${ANS}" in
+        u | U)
+          SKIP_IMPORT=Y
+          IMPORT_OK=Y
+          ;;
+        i | I)
+          SKIP_IMPORT=
+          IMPORT_OK=Y
+          ;;
+        *)
+          echo "Please enter I (re-Import) or U (Update-only)"
+          ;;
+      esac
+    done
+  else
+    IMPORT_OK=Y
+  fi
+  if [[ -z "${SKIP_IMPORT}" ]]; then
+    # use def_v1_file
+#    LOCKSS_SAME_HOST_MIGRATION=false
+    if [ -f ${V1_DEF_FILE} ]; then
+      debug_msg "found a v1 file"
+      load_v1_props "${V1_DEF_FILE}"
+      if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+        # we found a v1 config file
+        echo "LOCKSS 1.x installation was detected on this host. "
+        # This question is unclear - this implies they will not be performing a migration period.
+        # If we are only referring to using  the file it to configure we will need to validate that the LCAP port is NOT the same.
+        ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
+        if is_yes "${ANS}"; then
+          # migration from same host installation
+          LOCKSS_SAME_HOST_MIGRATION=true
+          LOCKSS_V1_IPADDR="127.0.0.1"
+          V1_FILE=${V1_DEF_FILE}
+          # set LOCKSS_MIGRATION_LCAP_PORT from user input
+          PORT_OK=N
+          until is_yes ${PORT_OK}; do
+            ask_for_input "Enter temporary LOCKSS 2.x LCAP port" "${LOCKSS_MIGRATION_LCAP_PORT}" "9739"
+            if [ "X${ANS}" != "X" ]; then
+              LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
+              PORT_OK=Y
+            fi
+          done
+        else
+          # migration but from a different host while a LOCKSS 1.x is running.
+          in_use_port=${V1_PROPS[LOCKSS_V3_PORT]}
+          echo "You are running LOCKSS 1.x installation on this host while attempting to migrate from LOCKSS 1.x on a different host."
+          echo "You cannot have two LOCKSS installation running with the same LCAP identity."
+          echo "To continue you need to  specify a LOCKSS 2.x LCAP port different from ${in_use_port}."
+          PORT_OK=N
+          until is_yes ${PORT_OK}; do
+            ask_for_input "Enter LOCKSS 2.x LCAP port" "${LOCKSS_V3_PORT}" "9739"
             if [ "X${ANS}" != "X" ] && [ ${ANS} != ${in_use_port} ]; then
-            LOCKSS_V3_PORT="${ANS}"
-            PORT_OK=Y
+              LOCKSS_V3_PORT="${ANS}"
+              PORT_OK=Y
+            fi
+          done
+        fi
+      fi
+    fi
+    if [ "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
+      # we either fell through or no local installation was found
+      # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
+      # we loop until a valid v1 file OR they say they didn't copy a file.
+      ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
+      if is_yes "${ANS}"; then
+        FILE_OK=N
+        until is_yes ${FILE_OK}; do
+          ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_RMT_FILE}" ""
+          if [ "X${ANS}" != X ]; then
+            filename="$(normalize_path ${ANS})"
+            if [ -f ${filename} ]; then
+              load_v1_props "${filename}"
+              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
+                FILE_OK=Y
+                V1_FILE=${filename}
+              else
+                echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
+              fi
+            fi
           fi
         done
       fi
     fi
-  fi
-  if [ "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
-    # we either fell through or no local installation was found
-    # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
-    # we loop until a valid v1 file OR they say they didn't copy a file.
-    ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
-    if is_yes "${ANS}"; then
-      FILE_OK=N
-      until is_yes ${FILE_OK}; do
-        ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_RMT_FILE}" ""
-        if [ "X${ANS}" != X ]; then
-          filename="$(normalize_path ${ANS})"
-          if [ -f ${filename} ]; then
-            load_v1_props "${filename}"
-            if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
-              FILE_OK=Y
-              V1_FILE=${filename}
-            else
-              echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
-            fi
-          fi
+    # if we have a local file to use
+    if [ -f "$V1_FILE" ]; then
+      if is_yes $(to_yes_no "$LOCKSS_SAME_HOST_MIGRATION"); then
+        debug_msg "Importing V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
+        # section 1 params for same host migration.
+        LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
+        LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
+        LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
+      else
+        debug_msg "Importing V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
+        # section 2 params for different host migration.
+        LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+        ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
+        vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
+        if [[ -n "${ex_ip}" ]] && [[ "${ex_ip}" != "${vi_ip}" ]]; then
+          debug_msg "different host - NAT detected in V1 config settings"
+          IP_OK=N
+          until is_yes ${IP_OK}; do
+            echo "[1] LOCKSS 1.x Host IP Address: ${vi_ip}"
+            echo "[2] LOCKSS 1.x Host External IP Address: ${ex_ip}"
+            echo "[3] Alternative LOCKSS 1.x Host"
+            ask_for_input "LOCKSS 1.x host is behind NAT, what address should this host use to reach it?" "1"
+            case ${ANS} in
+              1)
+                LOCKSS_V1_IPADDR=$vi_ip
+                IP_OK=Y
+                ;;
+              2)
+                LOCKSS_V1_IPADDR=$ex_ip
+                IP_OK=Y
+                ;;
+              3)
+                configure_v1_address
+                ;;
+              *)
+                echo "Unknown selection!"
+                ;;
+            esac
+          done
+        else
+          debug_msg "different host NAT not detected"
+          LOCKSS_V1_IPADDR=${vi_ip}
+        fi
+        # if for LOCKSS_MIGRATION_LCAP_PORT is not set
+        if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" != "X" ]; then
+          LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+        fi
+        LOCKSS_SAME_HOST_MIGRATION=false
+      fi
+      debug_msg "Configuring common parameters from V1 config file."
+      # section 3 common params
+      LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
+      LOCKSS_ACCESS_SUBNET=${V1_PROPS[LOCKSS_ACCESS_SUBNET]}
+      LOCKSS_MAILHUB=${V1_PROPS[LOCKSS_MAILHUB]}
+      LOCKSS_MAILHUB_USER=${V1_PROPS[LOCKSS_MAILHUB_USER]}
+      LOCKSS_MAILHUB_PASSWORD=${V1_PROPS[LOCKSS_MAILHUB_PASSWORD]}
+      LOCKSS_EMAIL=${V1_PROPS[LOCKSS_EMAIL]}
+      LOCKSS_PROPS_URL=${V1_PROPS[LOCKSS_PROPS_URL]}
+      LOCKSS_PROPS_PROXY=${V1_PROPS[LOCKSS_PROPS_PROXY]}
+      LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE=${V1_PROPS[LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE]}
+      LOCKSS_PRESERVATION_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
+      LOCKSS_ADMIN_USER=${V1_PROPS[LOCKSS_ADMIN_USER]}
+    else
+      debug_msg "Configuring V2 without a V1 config file."
+      # We have a -m indicating migration but no migration information.
+      # We need to collect the local system information and in addition
+      LOCKSS_SAME_HOST_MIGRATION=false
+      configure_v1_address
+      # Now get the V1 port
+      PORT_OK=N
+      until is_yes ${PORT_OK}; do
+        ask_for_input "Enter LOCKSS 1.x LCAP port" "${LOCKSS_V3_PORT}" "9729"
+        if [ "X${ANS}" != "X" ]; then
+          LOCKSS_V3_PORT="${ANS}"
+          PORT_OK=Y
         fi
       done
     fi
+    LOCKSS_IN_MIGRATION_MODE=true
   fi
-  # if we have a local file to use
-  if [ -f "$V1_FILE" ]; then
-    if is_yes $(to_yes_no "$LOCKSS_SAME_HOST_MIGRATION"); then
-        debug_msg "Importing V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
-      # section 1 params for same host migration.
-      LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
-      LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
-      LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
-    else
-        debug_msg "Importing V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
-      # section 2 params for different host migration.
-      LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-      ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
-      vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
-      if [[ -n "${ex_ip}" ]] && [[ "${ex_ip}" != "${vi_ip}" ]]; then
-        debug_msg "different host - NAT detected in V1 config settings"
-        IP_OK=N
-        until is_yes ${IP_OK}; do
-          echo "[1] LOCKSS 1.x Host IP Address: ${vi_ip}"
-          echo "[2] LOCKSS 1.x Host External IP Address: ${ex_ip}"
-          echo "[3] Alternative LOCKSS 1.x Host"
-          ask_for_input "LOCKSS 1.x host is behind NAT, what address should this host use to reach it?" "1"
-          case ${ANS} in
-          1)
-            LOCKSS_V1_IPADDR=$vi_ip
-            IP_OK=Y
-            ;;
-          2)
-                LOCKSS_V1_IPADDR=$ex_ip
-            IP_OK=Y
-            ;;
-          3)
-            configure_v1_address
-            ;;
-          *)
-            echo "Unknown selection!"
-            ;;
-          esac
-        done
-      else
-        debug_msg "different host NAT not detected"
-        LOCKSS_V1_IPADDR=${vi_ip}
-      fi
-      # if for LOCKSS_MIGRATION_LCAP_PORT is not set
-      if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" != "X" ]; then
-        LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-      fi
-      LOCKSS_SAME_HOST_MIGRATION=false
-    fi
-    debug_msg "Configuring common parameters from V1 config file."
-    # section 3 common params
-    LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-    LOCKSS_ACCESS_SUBNET=${V1_PROPS[LOCKSS_ACCESS_SUBNET]}
-    LOCKSS_MAILHUB=${V1_PROPS[LOCKSS_MAILHUB]}
-    LOCKSS_MAILHUB_USER=${V1_PROPS[LOCKSS_MAILHUB_USER]}
-    LOCKSS_MAILHUB_PASSWORD=${V1_PROPS[LOCKSS_MAILHUB_PASSWORD]}
-    LOCKSS_EMAIL=${V1_PROPS[LOCKSS_EMAIL]}
-    LOCKSS_PROPS_URL=${V1_PROPS[LOCKSS_PROPS_URL]}
-    LOCKSS_PROPS_PROXY=${V1_PROPS[LOCKSS_PROPS_PROXY]}
-    LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE=${V1_PROPS[LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE]}
-      LOCKSS_PRESERVATION_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
-    LOCKSS_ADMIN_USER=${V1_PROPS[LOCKSS_ADMIN_USER]}
-  else
-    debug_msg "Configuring V2 without a V1 config file."
-    # We have a -m indicating migration but no migration information.
-    # We need to collect the local system information and in addition
-    LOCKSS_SAME_HOST_MIGRATION=false
-    configure_v1_address
-    # Now get the V1 port
-    PORT_OK=N
-    until is_yes ${PORT_OK}; do
-      ask_for_input "Enter LOCKSS 1.x LCAP port" "${LOCKSS_V3_PORT}" "9729"
-      if [ "X${ANS}" != "X" ]; then
-        LOCKSS_V3_PORT="${ANS}"
-        PORT_OK=Y
-      fi
-    done
-  fi
-  LOCKSS_IN_MIGRATION_MODE=true
 }
 
 configure_v1_address() {
@@ -792,47 +819,47 @@ build_config_file() {
       CONFIG_OK=Y
       BYPASS_MAIL=Y
     else
-    ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
-    if is_yes "${ANS}"; then
+      ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
+      if is_yes "${ANS}"; then
         # Backup previous config if it exists
         if [[ -f ${1} ]]; then
           if ! cp ${1} ${1}.bak; then
             echo "Couldn't back up current config file"
           fi
         fi
-      if ! cp ${TMP_CONFIG} ${1}; then
-        echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
-        exit 1
-      fi
-      rm -f ${TMP_CONFIG}
-      Store_All_Secrets
-      echo "Configuration stored"
+        if ! cp ${TMP_CONFIG} ${1}; then
+          echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
+          exit 1
+        fi
+        rm -f ${TMP_CONFIG}
+        Store_All_Secrets
+        echo "Configuration stored"
       fi
     fi
-      local STORAGE_ERRORS=
-      setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
-      CONFIG_OK=Y
+    local STORAGE_ERRORS=
+    setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
+    CONFIG_OK=Y
 
-      FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-      grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-      mail_sent=""
-      if [ $(command -v mail) ] >/dev/null; then
-        if [ -z "${BYPASS_MAIL}" ]; then
-          if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-            mail_sent=1
-          else
-            echo "The attempt to mail configuration failed.  Please check your mail configuration."
-          fi
+    FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
+    grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+    mail_sent=""
+    if [ $(command -v mail) ] >/dev/null; then
+      if [ -z "${BYPASS_MAIL}" ]; then
+        if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+          mail_sent=1
+        else
+          echo "The attempt to mail configuration failed.  Please check your mail configuration."
         fi
-      else
-        echo "The 'mail' command isn't installed (or isn't on the PATH)."
       fi
-      if [ -z "${mail_sent}" ]; then
-        UNSENT_FILE=/tmp/unsent-lockss-config
-        cp ${FILT_CONFIG} ${UNSENT_FILE}
-        echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-      fi
-      rm -f ${FILT_CONFIG}
+    else
+      echo "The 'mail' command isn't installed (or isn't on the PATH)."
+    fi
+    if [ -z "${mail_sent}" ]; then
+      UNSENT_FILE=/tmp/unsent-lockss-config
+      cp ${FILT_CONFIG} ${UNSENT_FILE}
+      echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+    fi
+    rm -f ${FILT_CONFIG}
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
