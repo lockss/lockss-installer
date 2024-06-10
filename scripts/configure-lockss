@@ -196,7 +196,7 @@ configure_crawler_services() {
 
 configure_migration() {
   echo ""
-  echo "Configuring LOCKSS 1.x to LOCKSS 2.x Migration..."
+  echo "Configuring for migration from LOCKSS 1.x..."
   echo ""
   # If already in migration mode, ask whether to re-import V1 file or
   # just update current config
