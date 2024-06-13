@@ -153,6 +153,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
