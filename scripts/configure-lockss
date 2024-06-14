@@ -64,8 +64,8 @@ declare -A V1_PROPS
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
-V1_DEF_FILE="/etc/lockss/config.dat"
-V1_RMT_FILE="/tmp/v1config.dat"
+V1_NATIVE_CONFIG_FILE="/etc/lockss/config.dat"
+V1_COPIED_CONFIG_FILE="/tmp/v1config.dat"
 
 # $1=log filename
 # tee stdout/err to log file
@@ -84,7 +84,7 @@ Log_Std() {
 }
 
 debug_msg() {
-  echo $*
+  echo "Debug: $@"
 }
 
 configure_databases() {
@@ -224,11 +224,10 @@ configure_migration() {
     IMPORT_OK=Y
   fi
   if [[ -z "${SKIP_IMPORT}" ]]; then
-    # use def_v1_file
-#    LOCKSS_SAME_HOST_MIGRATION=false
-    if [ -f ${V1_DEF_FILE} ]; then
-      debug_msg "found a v1 file"
-      load_v1_props "${V1_DEF_FILE}"
+    # Look for V1 config.dat on this host, or ask if a copied one is available
+    if [ -f ${V1_NATIVE_CONFIG_FILE} ]; then
+      debug_msg "Found ${V1_NATIVE_CONFIG_FILE}"
+      load_v1_props "${V1_NATIVE_CONFIG_FILE}"
       if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
         # we found a v1 config file
         echo "LOCKSS 1.x installation was detected on this host. "
@@ -239,7 +238,7 @@ configure_migration() {
           # migration from same host installation
           LOCKSS_SAME_HOST_MIGRATION=true
           LOCKSS_V1_IPADDR="127.0.0.1"
-          V1_FILE=${V1_DEF_FILE}
+          V1_FILE=${V1_NATIVE_CONFIG_FILE}
           # set LOCKSS_MIGRATION_LCAP_PORT from user input
           PORT_OK=N
           until is_yes ${PORT_OK}; do
@@ -274,7 +273,7 @@ configure_migration() {
       if is_yes "${ANS}"; then
         FILE_OK=N
         until is_yes ${FILE_OK}; do
-          ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_RMT_FILE}" ""
+          ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_COPIED_CONFIG_FILE}" ""
           if [ "X${ANS}" != X ]; then
             filename="$(normalize_path ${ANS})"
             if [ -f ${filename} ]; then
@@ -518,7 +517,6 @@ LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
 LOCKSS_CLASSIC_CRAWLER_ENABLE="${LOCKSS_CLASSIC_CRAWLER_ENABLE}"
 LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
-LOCKSS_MIGRATE_LCAP_PORT="${LOCKSS_MIGRATE_LCAP_PORT}"
 LOCKSS_IN_MIGRATION_MODE="${LOCKSS_IN_MIGRATION_MODE:-false}"
 LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
 LOCKSS_V1_IPADDR="${LOCKSS_V1_IPADDR}"
@@ -580,7 +578,7 @@ build_config_file() {
         if is_yes "${ANS}"; then
           LOCKSS_IN_MIGRATION_MODE=false
           LOCKSS_SAME_HOST_MIGRATION=false
-          unset LOCKSS_MIGRATE_LCAP_PORT
+          unset LOCKSS_MIGRATION_LCAP_PORT
           unset LOCKSS_EXTERNAL_IPADDR
         else
           err_exit "Rerun scripts/configure-lockss with -m or --migrate"
