@@ -239,34 +239,15 @@ configure_migration() {
           LOCKSS_SAME_HOST_MIGRATION=true
           LOCKSS_V1_IPADDR="127.0.0.1"
           V1_FILE=${V1_NATIVE_CONFIG_FILE}
-          # set LOCKSS_MIGRATION_LCAP_PORT from user input
-          PORT_OK=N
-          until is_yes ${PORT_OK}; do
-            ask_for_input "Enter temporary LOCKSS 2.x LCAP port" "${LOCKSS_MIGRATION_LCAP_PORT}" "9739"
-            if [ "X${ANS}" != "X" ]; then
-              LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
-              PORT_OK=Y
-            fi
-          done
         else
-          # migration but from a different host while a LOCKSS 1.x is running.
-          in_use_port=${V1_PROPS[LOCKSS_V3_PORT]}
-          echo "You are running LOCKSS 1.x installation on this host while attempting to migrate from LOCKSS 1.x on a different host."
-          echo "You cannot have two LOCKSS installation running with the same LCAP identity."
-          echo "To continue you need to  specify a LOCKSS 2.x LCAP port different from ${in_use_port}."
-          PORT_OK=N
-          until is_yes ${PORT_OK}; do
-            ask_for_input "Enter LOCKSS 2.x LCAP port" "${LOCKSS_V3_PORT}" "9739"
-            if [ "X${ANS}" != "X" ] && [ ${ANS} != ${in_use_port} ]; then
-              LOCKSS_V3_PORT="${ANS}"
-              PORT_OK=Y
-            fi
-          done
+          echo "Migrating from another host while a LOCKSS 1.x installation is present on"
+          echo " this host is not supported, sorry."
+          exit 1
         fi
       fi
     fi
     if [ "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
-      # we either fell through or no local installation was found
+      # No V1 config file found
       # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
       # we loop until a valid v1 file OR they say they didn't copy a file.
       ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
@@ -335,7 +316,7 @@ configure_migration() {
           LOCKSS_V1_IPADDR=${vi_ip}
         fi
         # if for LOCKSS_MIGRATION_LCAP_PORT is not set
-        if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" != "X" ]; then
+        if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" == "X" ]; then
           LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
         fi
         LOCKSS_SAME_HOST_MIGRATION=false
@@ -625,6 +606,23 @@ build_config_file() {
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_V3_PORT="${ANS}"
     fi
+    if [ "$LOCKSS_SAME_HOST_MIGRATION" = true ]; then
+      DEFAULT_MIGRATION_LCAP_PORT=9739
+      if [ ${DEFAULT_MIGRATION_LCAP_PORT} = ${LOCKSS_V3_PORT} ]; then
+        DEFAULT_MIGRATION_LCAP_PORT=9738
+      fi
+      # set LOCKSS_MIGRATION_LCAP_PORT from user input
+      PORT_OK=N
+      until is_yes ${PORT_OK}; do
+        ask_for_input "Enter temporary LOCKSS 2.x LCAP port" "${LOCKSS_MIGRATION_LCAP_PORT}" "${DEFAULT_MIGRATION_LCAP_PORT}"
+        if [ "X${ANS}" != "X" -a "${ANS}" != ${LOCKSS_V3_PORT} ]; then
+          LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
+          PORT_OK=Y
+        else
+          echo "Temporary LCAP port must not be the same as the LCAP port in use by LOCKSS 1.x"
+        fi
+      done
+    fi
 
     # NAT
     NAT=N
@@ -819,6 +817,7 @@ build_config_file() {
 
     if [[ -f ${1} ]] && cmp --quiet ${TMP_CONFIG} ${1}; then
       echo "Configuration unchanged"
+      rm -f ${TMP_CONFIG}
       CONFIG_OK=Y
       BYPASS_MAIL=Y
     else
