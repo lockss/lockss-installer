@@ -246,7 +246,7 @@ configure_migration() {
         fi
       fi
     fi
-    if [ "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
+    if ! is_true "$LOCKSS_SAME_HOST_MIGRATION" ]; then
       # No V1 config file found
       # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
       # we loop until a valid v1 file OR they say they didn't copy a file.
