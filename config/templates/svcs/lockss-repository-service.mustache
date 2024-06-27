@@ -205,9 +205,11 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
+{{#USE_SOLR_INDEX}}
         - mountPath: /run/secrets/solr-auth
           name: solr-auth
           subPath: solr-auth
+{{/USE_SOLR_INDEX}}
 {{#REPO_NUMS}}
         - mountPath: /content{{.}}
           name: lockss-repo-content{{.}}
@@ -260,12 +262,14 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
+{{#USE_SOLR_INDEX}}
       - name: solr-auth
         secret:
           secretName: solr-auth
           items:
           - key: solr-auth
             path: solr-auth
+{{/USE_SOLR_INDEX}}
 {{#REPO_NUMS}}
       - name: lockss-repo-content{{.}}
         persistentVolumeClaim:
