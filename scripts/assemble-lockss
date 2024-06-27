@@ -236,10 +236,10 @@ add_stack_configs() {
   logger_debug "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
+    if ! kubectl_lockss create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
       logger_error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
+    if ! kubectl_lockss create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
       logger_error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -249,11 +249,11 @@ add_stack_configs() {
     if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
       key=${SERVICE_CONFS[$svc]}
       logger_debug "adding service config ${key}..."
-      if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
-      logger_error_exit "${_0}: error creating config ${key}"
+      if ! kubectl_lockss create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
+        logger_error_exit "${_0}: error creating config ${key}"
       fi
-      if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
-      logger_error_exit "${_0}: error creating config ${key}-opt"
+      if ! kubectl_lockss create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
+        logger_error_exit "${_0}: error creating config ${key}-opt"
       fi
     fi
   done
@@ -265,9 +265,18 @@ add_stack_shared() {
   local stack=$1
   local mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   logger_debug "Clearing old deployments..."
-  kubectl_lockss delete deployments -l lockss-stack-id=${stack} | logger_debug
-  logger_debug "Clearing old  configuration maps..."
-  kubectl_lockss delete configmaps --all | logger_debug
+  for gconf in "${global_confs[@]}"; do
+    key=${gconf}
+    kubectl_lockss delete configmap $key  | logger_debug
+    kubectl_lockss delete configmap $key-opt | logger_debug
+  done
+  for svc in "${SERVICES[@]}"; do
+    if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
+      key=${SERVICE_CONFS[$svc]}
+      kubectl_lockss delete configmap $key  | logger_debug
+      kubectl_lockss delete configmap $key-opt | logger_debug
+    fi
+  done
 #  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
 #  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 }
@@ -620,7 +629,6 @@ fi
 logger_debug "Checking system..."
 Check_Runnable
 Check_Physical_Volumes
-
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
