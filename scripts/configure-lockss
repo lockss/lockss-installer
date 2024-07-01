@@ -231,13 +231,16 @@ configure_migration() {
       if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
         # we found a v1 config file
         echo "LOCKSS 1.x installation was detected on this host. "
-        # This question is unclear - this implies they will not be performing a migration period.
-        # If we are only referring to using  the file it to configure we will need to validate that the LCAP port is NOT the same.
         ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
         if is_yes "${ANS}"; then
           # migration from same host installation
           LOCKSS_SAME_HOST_MIGRATION=true
           LOCKSS_V1_IPADDR="127.0.0.1"
+          if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
+             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
+          else
+             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
+          fi
           V1_FILE=${V1_NATIVE_CONFIG_FILE}
         else
           echo "Migrating from another host while a LOCKSS 1.x installation is present on"
@@ -287,6 +290,7 @@ configure_migration() {
         ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
         vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
         if [[ -n "${ex_ip}" ]] && [[ "${ex_ip}" != "${vi_ip}" ]]; then
+          LOCKSS_V1_IDENTITY_IPADDR="${ex_ip}"
           debug_msg "different host - NAT detected in V1 config settings"
           IP_OK=N
           until is_yes ${IP_OK}; do
@@ -314,6 +318,7 @@ configure_migration() {
         else
           debug_msg "different host NAT not detected"
           LOCKSS_V1_IPADDR=${vi_ip}
+          LOCKSS_V1_IDENTITY_IPADDR=${vi_ip}
         fi
         # if for LOCKSS_MIGRATION_LCAP_PORT is not set
         if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" == "X" ]; then
@@ -501,6 +506,7 @@ LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 LOCKSS_IN_MIGRATION_MODE="${LOCKSS_IN_MIGRATION_MODE:-false}"
 LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
 LOCKSS_V1_IPADDR="${LOCKSS_V1_IPADDR}"
+LOCKSS_V1_IDENTITY_IPADDR="${LOCKSS_V1_IDENTITY_IPADDR}
 LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
