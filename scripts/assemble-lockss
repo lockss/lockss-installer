@@ -458,9 +458,9 @@ generate_lockss() {
     logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
     if [ -n "${LOCKSS_MIGRATION_LCAP_PORT}" ]; then
-      export STACK_LCAP_PORT=$((${LOCKSS_MIGRATION_LCAP_PORT} + $num - 1))
+      export STACK_LCAP_LISTEN_PORT=$((${LOCKSS_MIGRATION_LCAP_PORT} + $num - 1))
     else
-      export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
+      export STACK_LCAP_LISTEN_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     fi
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
