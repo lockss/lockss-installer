@@ -462,6 +462,7 @@ generate_lockss() {
     else
       export STACK_LCAP_LISTEN_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     fi
+    export STACK_LCAP_IDENTITY_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
     local opt_stack_env_file="${stack_env_file}.opt"
