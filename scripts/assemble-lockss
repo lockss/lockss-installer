@@ -267,14 +267,14 @@ add_stack_shared() {
   logger_debug "Clearing old deployments..."
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    kubectl_lockss delete configmap $key  | logger_debug
-    kubectl_lockss delete configmap $key-opt | logger_debug
+    kubectl_lockss delete configmap $key  > /dev/null
+    kubectl_lockss delete configmap $key-opt > /dev/null
   done
   for svc in "${SERVICES[@]}"; do
     if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
       key=${SERVICE_CONFS[$svc]}
-      kubectl_lockss delete configmap $key  | logger_debug
-      kubectl_lockss delete configmap $key-opt | logger_debug
+      kubectl_lockss delete configmap $key > /dev/null
+      kubectl_lockss delete configmap $key-opt > /dev/null
     fi
   done
 #  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
