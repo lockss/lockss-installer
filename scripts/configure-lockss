@@ -235,7 +235,7 @@ configure_migration() {
         if is_yes "${ANS}"; then
           # migration from same host installation
           LOCKSS_SAME_HOST_MIGRATION=true
-          LOCKSS_V1_IPADDR="127.0.0.1"
+          LOCKSS_V1_ROUTABLE_IPADDR="127.0.0.1"
           if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
              LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
           else
@@ -250,7 +250,7 @@ configure_migration() {
       fi
     fi
     if ! is_true "$LOCKSS_SAME_HOST_MIGRATION"; then
-      # No V1 config file found
+      # No local (same-host) V1 config file found
       # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
       # we loop until a valid v1 file OR they say they didn't copy a file.
       ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
@@ -300,15 +300,15 @@ configure_migration() {
             ask_for_input "LOCKSS 1.x host is behind NAT, what address should this host use to reach it?" "1"
             case ${ANS} in
               1)
-                LOCKSS_V1_IPADDR=$vi_ip
+                LOCKSS_V1_ROUTABLE_IPADDR=$vi_ip
                 IP_OK=Y
                 ;;
               2)
-                LOCKSS_V1_IPADDR=$ex_ip
+                LOCKSS_V1_ROUTABLE_IPADDR=$ex_ip
                 IP_OK=Y
                 ;;
               3)
-                configure_v1_address
+                configure_v1_routable_address
                 ;;
               *)
                 echo "Unknown selection!"
@@ -317,7 +317,7 @@ configure_migration() {
           done
         else
           debug_msg "different host NAT not detected"
-          LOCKSS_V1_IPADDR=${vi_ip}
+          LOCKSS_V1_ROUTABLE_IPADDR=${vi_ip}
           LOCKSS_V1_IDENTITY_IPADDR=${vi_ip}
         fi
         # if for LOCKSS_MIGRATION_LCAP_PORT is not set
@@ -344,7 +344,7 @@ configure_migration() {
       # We have a -m indicating migration but no migration information.
       # We need to collect the local system information and in addition
       LOCKSS_SAME_HOST_MIGRATION=false
-      configure_v1_address
+      configure_v1_addresses
       # Now get the V1 port
       PORT_OK=N
       until is_yes ${PORT_OK}; do
@@ -359,12 +359,29 @@ configure_migration() {
   fi
 }
 
-configure_v1_address() {
+configure_v1_addresses() {
+  configure_v1_routable_address
+  ask_for_input "Is the LOCKSS 1.x machine behind NAT?"
+  if is_yes "${ANS}"; then
+    EXT_OK=N
+    until is_yes ${EXT_OK}; do
+      ask_for_input "LOCKSS 1.x external IP address" "${LOCKSS_V1_IDENTITY_IPADDR}"
+      if valid_ip4_address ${ANS}; then
+        LOCKSS_V1_IDENTITY_IPADDR=${ANS}
+        EXT_OK=Y
+      fi
+    done
+  else
+    LOCKSS_V1_IDENTITY_IPADDR=${LOCKSS_V1_ROUTABLE_IPADDR}
+  fi
+}
+
+configure_v1_routable_address() {
   IP_OK=N
   until is_yes ${IP_OK}; do
-    ask_for_input "LOCKSS 1.x IP address (routable from this host)?" "$LOCKSS_V1_IPADDR"
+    ask_for_input "LOCKSS 1.x routable IP address" "$LOCKSS_V1_ROUTABLE_IPADDR"
     if valid_ip4_address ${ANS}; then
-      LOCKSS_V1_IPADDR=${ANS}
+      LOCKSS_V1_ROUTABLE_IPADDR=${ANS}
       IP_OK=Y
     else
       echo "Illegal IPv4 address: ${ANS}"
@@ -505,7 +522,7 @@ LOCKSS_CLASSIC_CRAWLER_ENABLE="${LOCKSS_CLASSIC_CRAWLER_ENABLE}"
 LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
 LOCKSS_IN_MIGRATION_MODE="${LOCKSS_IN_MIGRATION_MODE:-false}"
 LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
-LOCKSS_V1_IPADDR="${LOCKSS_V1_IPADDR}"
+LOCKSS_V1_ROUTABLE_IPADDR="${LOCKSS_V1_ROUTABLE_IPADDR}"
 LOCKSS_V1_IDENTITY_IPADDR="${LOCKSS_V1_IDENTITY_IPADDR}"
 LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
