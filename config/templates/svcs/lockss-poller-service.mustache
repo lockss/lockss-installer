@@ -17,7 +17,7 @@ spec:
   - name: "lcap-port"
     port: {{POL_LCAP_PORT}}
     targetPort: {{POL_DEFAULT_LCAP_PORT}}
-  - name: "migration-lcap-port"
+  - name: "mig-lcap-port"
     port: 9739
     targetPort: 9739
   - name: "servecontent-port"
@@ -172,7 +172,7 @@ spec:
           containerPort: {{LOCKSS_LCAP_LISTEN_PORT}}
           hostPort: {{LOCKSS_LCAP_LISTEN_PORT}}
           protocol: TCP
-        - name: "migration-lcap-port"
+        - name: "mig-lcap-port"
           containerPort: 9739
           hostPort: 9739
           protocol: TCP
