@@ -16,7 +16,7 @@ spec:
     targetPort: {{POL_DEFAULT_UI_PORT}}
   - name: "lcap-port"
     port: {{POL_LCAP_PORT}}
-    targetPort: {{POL_DEFAULT_LCAP_PORT}}
+    targetPort: {{POL_LCAP_PORT}}
   - name: "servecontent-port"
     port: {{SERV_PORT}}
     targetPort: {{SERV_DEFAULT_PORT}}
@@ -164,10 +164,6 @@ spec:
         - name: "pol-ui-port"
           containerPort: {{POL_DEFAULT_UI_PORT}}
           hostPort: {{POL_UI_PORT}}
-          protocol: TCP
-        - name: "lcap-port"
-          containerPort: {{LOCKSS_LCAP_LISTEN_PORT}}
-          hostPort: {{LOCKSS_LCAP_LISTEN_PORT}}
           protocol: TCP
         - name: "srvcontent-port"
           containerPort: {{SERV_DEFAULT_PORT}}
