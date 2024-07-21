@@ -165,6 +165,10 @@ spec:
           containerPort: {{POL_DEFAULT_UI_PORT}}
           hostPort: {{POL_UI_PORT}}
           protocol: TCP
+        - name: "lcap-port"
+          containerPort: {{POL_LCAP_PORT}}
+          hostPort: {{POL_LCAP_PORT}}
+          protocol: TCP
         - name: "srvcontent-port"
           containerPort: {{SERV_DEFAULT_PORT}}
           hostPort: {{SERV_PORT}}
