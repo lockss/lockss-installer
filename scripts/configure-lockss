@@ -235,7 +235,7 @@ configure_migration() {
         if is_yes "${ANS}"; then
           # migration from same host installation
           LOCKSS_SAME_HOST_MIGRATION=true
-          LOCKSS_V1_ROUTABLE_IPADDR="127.0.0.1"
+          LOCKSS_V1_ROUTABLE_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
              LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
           else
