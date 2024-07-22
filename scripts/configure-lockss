@@ -360,19 +360,27 @@ configure_migration() {
 }
 
 configure_v1_addresses() {
-  configure_v1_routable_address
-  ask_for_input "Is the LOCKSS 1.x machine behind NAT?"
+  ask_for_input "Is the LOCKSS 1.x machine behind NAT?" "" N
   if is_yes "${ANS}"; then
-    EXT_OK=N
-    until is_yes ${EXT_OK}; do
+    V1_EXT_OK=N
+    until is_yes ${V1_EXT_OK}; do
       ask_for_input "LOCKSS 1.x external IP address" "${LOCKSS_V1_IDENTITY_IPADDR}"
       if valid_ip4_address ${ANS}; then
         LOCKSS_V1_IDENTITY_IPADDR=${ANS}
-        EXT_OK=Y
+        V1_EXT_OK=Y
       fi
     done
+    configure_v1_routable_address
   else
-    LOCKSS_V1_IDENTITY_IPADDR=${LOCKSS_V1_ROUTABLE_IPADDR}
+    V1_IP_OK=N
+    until is_yes ${V1_IP_OK}; do
+      ask_for_input "LOCKSS 1.x IP address" "${LOCKSS_V1_IDENTITY_IPADDR}"
+      if valid_ip4_address ${ANS}; then
+        LOCKSS_V1_IDENTITY_IPADDR=${ANS}
+        LOCKSS_V1_ROUTABLE_IPADDR=${ANS}
+        V1_IP_OK=Y
+      fi
+    done
   fi
 }
 
@@ -573,9 +581,9 @@ build_config_file() {
     if [ -n "$IS_V1_MIGRATION" ]; then
       configure_migration
       if [ -f "$V1_FILE" ]; then
-        echo
         echo "The following values were imported from your LOCKSS 1.0 configuration."
         echo "  In normal circumstances they should be accepted as is."
+        echo
       fi
     else
       # confirm exit from migration mode - abort if
