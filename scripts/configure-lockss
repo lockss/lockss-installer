@@ -84,7 +84,9 @@ Log_Std() {
 }
 
 debug_msg() {
-  echo "Debug: $@"
+  if [[ -n "${DEBUG}" ]]; then
+    echo "Debug: $@"
+  fi
 }
 
 configure_databases() {
@@ -230,7 +232,7 @@ configure_migration() {
       load_v1_props "${V1_NATIVE_CONFIG_FILE}"
       if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
         # we found a v1 config file
-        echo "LOCKSS 1.x installation was detected on this host. "
+        echo "LOCKSS 1.x installation was detected on this host."
         ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
         if is_yes "${ANS}"; then
           # migration from same host installation
@@ -253,6 +255,7 @@ configure_migration() {
       # No local (same-host) V1 config file found
       # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
       # we loop until a valid v1 file OR they say they didn't copy a file.
+      echo "No LOCKSS 1.x installation was detected on this host."
       ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
       if is_yes "${ANS}"; then
         FILE_OK=N
