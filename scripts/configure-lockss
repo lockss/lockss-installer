@@ -257,7 +257,7 @@ configure_migration() {
       if is_yes "${ANS}"; then
         FILE_OK=N
         until is_yes ${FILE_OK}; do
-          ask_for_input "Location of copied LOCKSS 1.x config.dat file." "${V1_COPIED_CONFIG_FILE}" ""
+          ask_for_input "Location of copied LOCKSS 1.x config.dat file" "${V1_COPIED_CONFIG_FILE}" ""
           if [ "X${ANS}" != X ]; then
             filename="$(normalize_path ${ANS})"
             if [ -f ${filename} ]; then
