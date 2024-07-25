@@ -212,7 +212,7 @@ if ((number_of_services > 0)); then
   echo "These LOCKSS services are now running."
   kubectl_lockss get deployments --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
 else
-  echo "All LOCKSS service stopped."
+  echo "All LOCKSS services are stopped."
 fi
 echo "========================================="
 graceful_exit
