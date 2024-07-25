@@ -39,7 +39,7 @@ PROGNAME=${0##*/}
 VERSION="1.0"
 
 #UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6"
-UPGRADE_TO="2.0.80-beta1"
+UPGRADE_TO="2.0.81-beta1"
 
 ## Relative paths
 ##
