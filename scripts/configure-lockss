@@ -590,7 +590,7 @@ build_config_file() {
       fi
     else
       # confirm exit from migration mode - abort if
-      if is_yes "${LOCKSS_IN_MIGRATION_MODE}"; then
+      if is_true "${LOCKSS_IN_MIGRATION_MODE}"; then
         ask_for_input "Do you want to reconfigure LOCKSS 2.x to no longer be in migration mode?" "" "Y"
         if is_yes "${ANS}"; then
           LOCKSS_IN_MIGRATION_MODE=false
