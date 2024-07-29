@@ -135,6 +135,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap

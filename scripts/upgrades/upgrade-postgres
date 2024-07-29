@@ -214,7 +214,7 @@ dump_old_version()
   start_postgres_service
   # dump the old versions content -c to clear the database on restore
 	  kubectl_lockss exec ${PODNAME} -- pg_dumpall -U ${LOCKSS_POSTGRES_USER} -c --if-exists --file="${DUMP_FILE}" ||
-	  	logger_error_exit "Unable to perform database dump."
+	  logger_error_exit "Unable to perform database dump."
   # shutdown old version
   "${SCRIPTS_DIR}"/stop-lockss  || logger_error_exit "Attempt to stop PostgreSQL failed."
 
@@ -287,6 +287,9 @@ done
 # Sanity checks
 Check_Runnable
 Check_Configured
+if $(am_i_root); then
+  err_exit "This script should not be run as root. Run as the lockss user."
+fi
 
 logger_init
 check_versions

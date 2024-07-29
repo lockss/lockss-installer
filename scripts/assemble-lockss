@@ -180,24 +180,24 @@ Check_Physical_Volumes() {
 # Expand {{#additional_ports svc}} ... {{/additional_ports}} sections.
 # For each service in svcs, if the variable SVC_PORTS_ADDITIONAL is a
 # semicolon-separated list of strings of the form
-# port-mapping-name:container-port:host-port , the contants of the
+# port-mapping-name:host-port:container-port , the contants of the
 # {{#additional_ports xxx}} section will be expanded, with
-# __PORT_NAME__, __CONTAINER_PORT__, and __HOST_PORT__ replaced by
-# port-mapping-name, container-port, and host-port.
+# __PORT_NAME__, __HOST_PORT__, and __CONTAINER_PORT__ replaced by
+# port-mapping-name, host-port, and container-port.
 additional_ports() {
   portsvar="${1}_PORTS_ADDITIONAL"
   IFS=';' read -r -a ports <<< "${!portsvar}"
   local content=$(cat)
   for port in "${ports[@]}"; do
-    IFS=':' read portname container_port host_port <<< "$port"
-    echo "$content" | sed "s/__PORT_NAME__/${portname}/; s/__CONTAINER_PORT__/${container_port}/; s/__HOST_PORT__/${host_port}/; "
+    IFS=':' read portname host_port container_port <<< "$port"
+    echo "$content" | sed "s/__PORT_NAME__/${portname}/; s/__HOST_PORT__/${host_port}/; s/__CONTAINER_PORT__/${container_port}/; "
   done
 }
 
 ensure_writable_dir() {
   local DIR="$1"
   local USER=$(stat -c '%u' ${DIR})
-  if [ $USER -eq ${LOCKSS_UID} ]; then
+  if [ $USER -eq $LOCKSS_UID ]; then
      return 0
   else
     logger_error_exit "${DIR} is not writable by ${LOCKSS_USER}. Run scripts/fix-permissions."
@@ -236,10 +236,10 @@ add_stack_configs() {
   logger_debug "Adding global config files"
   for gconf in "${global_confs[@]}"; do
     key=${gconf}
-    if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
+    if ! kubectl_lockss create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${gconf}" "blank_lockss") | logger_debug; then
       logger_error_exit "${_0}: error creating config $stack-${gconf}"
     fi
-    if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
+    if ! kubectl_lockss create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${gconf}_opt" "blank_lockss_opt") | logger_debug; then
       logger_error_exit "${_0}: error creating config $stack-${gconf}_opt"
     fi
   done
@@ -249,11 +249,11 @@ add_stack_configs() {
     if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
       key=${SERVICE_CONFS[$svc]}
       logger_debug "adding service config ${key}..."
-      if ! kubectl_lockss create configmap ${key} --namespace=${LOCKSS_NAMESPACE} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
-      logger_error_exit "${_0}: error creating config ${key}"
+      if ! kubectl_lockss create configmap ${key} --from-file=${key}=$(Config_Or_Blank $stack_path "${key}" "blank_lockss") | logger_debug; then
+        logger_error_exit "${_0}: error creating config ${key}"
       fi
-      if ! kubectl_lockss create configmap ${key}-opt --namespace=${LOCKSS_NAMESPACE} --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
-      logger_error_exit "${_0}: error creating config ${key}-opt"
+      if ! kubectl_lockss create configmap ${key}-opt --from-file=${key}-opt=$(Config_Or_Blank $stack_path "${key}-opt" "blank_lockss_opt") | logger_debug; then
+        logger_error_exit "${_0}: error creating config ${key}-opt"
       fi
     fi
   done
@@ -265,9 +265,18 @@ add_stack_shared() {
   local stack=$1
   local mk_dir="${DOCKER_CONFIGS_DIR}/$stack/mk"
   logger_debug "Clearing old deployments..."
-  kubectl_lockss delete deployments -l lockss-stack-id=${stack} | logger_debug
-  logger_debug "Clearing old  configuration maps..."
-  kubectl_lockss delete configmaps --all | logger_debug
+  for gconf in "${global_confs[@]}"; do
+    key=${gconf}
+    kubectl_lockss delete configmap $key &> /dev/null
+    kubectl_lockss delete configmap $key-opt &> /dev/null
+  done
+  for svc in "${SERVICES[@]}"; do
+    if [ "${SERVICE_CONFS[$svc]}X" != X ]; then
+      key=${SERVICE_CONFS[$svc]}
+      kubectl_lockss delete configmap $key &> /dev/null
+      kubectl_lockss delete configmap $key-opt &> /dev/null
+    fi
+  done
 #  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
 #  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 }
@@ -457,7 +466,12 @@ generate_lockss() {
 		fi
     logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
-    export STACK_LCAP_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
+    if [ -n "${LOCKSS_MIGRATION_LCAP_PORT}" ]; then
+      export STACK_LCAP_LISTEN_PORT=$((${LOCKSS_MIGRATION_LCAP_PORT} + $num - 1))
+    else
+      export STACK_LCAP_LISTEN_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
+    fi
+    export STACK_LCAP_IDENTITY_PORT=$((${LOCKSS_V3_PORT} + $num - 1))
     export STACK_CONFIG_DIR="${DOCKER_CONFIGS_DIR}/${STACK_NAME}"
     local stack_env_file="${STACK_CONFIG_DIR}/env.sh"
     local opt_stack_env_file="${stack_env_file}.opt"
@@ -618,7 +632,6 @@ fi
 logger_debug "Checking system..."
 Check_Runnable
 Check_Physical_Volumes
-
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
