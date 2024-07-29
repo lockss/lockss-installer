@@ -136,6 +136,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         image: {{CRAWL_IMG}}:{{CRAWL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-crawler-service

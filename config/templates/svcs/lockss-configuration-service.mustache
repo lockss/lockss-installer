@@ -145,6 +145,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         volumeMounts:
         - mountPath: /run/configs/lockss_bootstrap
           name: lockss-bootstrap
@@ -190,7 +192,6 @@ spec:
           protocol: TCP
         - name: "jms-port"
           containerPort: {{JMS_DEFAULT_PORT}}
-          hostPort: {{JMS_PORT}}
           protocol: TCP
 {{#additional_ports CFG}}
         - name: "__PORT_NAME__"

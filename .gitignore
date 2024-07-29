@@ -21,3 +21,5 @@
 /config/*.bak
 config/keys
 lockss-configure.log
+*.log
+/.fastRequest/*

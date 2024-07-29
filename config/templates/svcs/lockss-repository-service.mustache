@@ -145,10 +145,6 @@ spec:
           value: "true"
         - name: LOCKSS_IS_REPO
           value: "true"
-        - name: LOCKSS_JMS_HOST
-          value: "{{JMS_HOST}}"
-        - name: LOCKSS_JMS_PORT
-          value: "{{JMS_PORT}}"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
         - name: LOCKSS_SOLR_HOST
@@ -167,6 +163,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         image: {{REPO_IMG}}:{{REPO_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-repository-service

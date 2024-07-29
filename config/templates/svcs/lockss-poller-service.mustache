@@ -16,7 +16,7 @@ spec:
     targetPort: {{POL_DEFAULT_UI_PORT}}
   - name: "lcap-port"
     port: {{POL_LCAP_PORT}}
-    targetPort: {{POL_DEFAULT_LCAP_PORT}}
+    targetPort: {{POL_LCAP_PORT}}
   - name: "servecontent-port"
     port: {{SERV_PORT}}
     targetPort: {{SERV_DEFAULT_PORT}}
@@ -153,6 +153,8 @@ spec:
           value: {{LOCKSS_GROUP}}
         - name: LOCKSS_GID
           value: '{{LOCKSS_GID}}'
+        - name: SUPPRESS_STD_REDIR
+          value: '{{SUPPRESS_STD_REDIR}}'
         image: {{POL_IMG}}:{{POL_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-poller-service
@@ -166,8 +168,8 @@ spec:
           hostPort: {{POL_UI_PORT}}
           protocol: TCP
         - name: "lcap-port"
-          containerPort: {{LOCKSS_LCAP_PORT}}
-          hostPort: {{LOCKSS_LCAP_PORT}}
+          containerPort: {{POL_LCAP_PORT}}
+          hostPort: {{POL_LCAP_PORT}}
           protocol: TCP
         - name: "srvcontent-port"
           containerPort: {{SERV_DEFAULT_PORT}}

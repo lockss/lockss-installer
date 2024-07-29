@@ -203,6 +203,10 @@ trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT" INT
 # Source system config file
 
+if ! $(am_i_root); then
+  err_exit "This script must be run as root. Rerun the script as root."
+fi
+
 if [ ! -r "$SYSTEM_CONF_FILE" ]; then
   err "$_0: The system configuration file does not exist.  This script requires the ./config/system.cfg file."
   err_exit "$_0: Run scripts/configure-lockss first."

@@ -108,18 +108,26 @@ help_message() {
 _EOF_
   return
 }
+
 init_params() {
   GITHUB_URL="https://github.com/kubernetes/dashboard/releases"
   echo "Finding Kubernetes Dashboard version..."
-  VERSION_KUBE_DASHBOARD=$(curl -w '%{url_effective}' -I -L -s -S ${GITHUB_URL}/latest -o /dev/null | sed -e 's|.*/||')
+  # The latest version requires a helm install.
+  # We go to the last version that can be installed without helm.
+  #VERSION_KUBE_DASHBOARD=$(curl -w '%{url_effective}' -I -L -s -S ${GITHUB_URL}/latest -o /dev/null | sed -e 's|.*/||')
+  VERSION_KUBE_DASHBOARD="v2.7.0"
   RECOMMENDED_DASHBOARD_URL="https://raw.githubusercontent.com/kubernetes/dashboard/${VERSION_KUBE_DASHBOARD}/aio/deploy/recommended.yaml"
+  echo ""
+  echo "Dashboard Version: ${VERSION_KUBE_DASHBOARD}"
+  echo "Dashboard Download: ${RECOMMENDED_DASHBOARD_URL}"
 }
+
 dashboard_install() {
   init_params
   if kubectl_cmd get ns kubernetes-dashboard ; then
       kubectl_cmd delete all --all -n kubernetes-dashboard >/dev/null
   fi
-  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" -f "${K8S_CONF_DIR}/dashboard.admin-user-role.yml" &>/dev/null
+  kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" &>/dev/null
   echo "Waiting for pods to be marked 'Ready'..."
   kubectl_cmd -n kubernetes-dashboard wait --for=condition=Ready --all pods
   echo
@@ -131,6 +139,10 @@ dashboard_install() {
   echo
   echo "To sign-in, select 'Token' and use the bearer token:"
   dashboard_token
+}
+
+dashboard_proxy() {
+  $KUBECTL_CMD proxy &
 }
 
 dashboard_url() {
@@ -148,7 +160,7 @@ dashboard_update() {
 }
 
 dashboard_token() {
-  kubectl_cmd -n kubernetes-dashboard describe secret admin-user-token | grep '^token:' | awk '{print $2}'
+  kubectl_cmd -n kubernetes-dashboard describe secret admin-user | grep '^token:' | awk '{print $2}'
 }
 
 ##
@@ -175,6 +187,8 @@ case $1 in
     help_message; graceful_exit ;;
   -i | --install)
     dashboard_install; graceful_exit ;;
+  -p | --proxy)
+    dashboard_proxy; graceful_exit ;;
   -r | --remove)
     dashboard_remove; graceful_exit ;;
   -u | --update)

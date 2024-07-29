@@ -182,11 +182,15 @@ deploy_stack() {
   logger_debug "Deploying services and deployments for stack $stack"
   for svc in "${SERVICES[@]}"; do
     service_name=${SERVICE_NAMES[$svc]}
-    logger_trace "Deploying service ${service_name}..."
-    if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml" >/dev/null ; then
-      popd &>/dev/null
-      logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml"
-      logger_error_exit "Fix the error then run scripts/restart-lockss."
+    if kubectl_lockss get deployment ${service_name} >/dev/null 2>&1 ; then
+      logger_info "${service_name} is already running."
+    else
+      logger_info "Deploying service ${service_name}..."
+      if ! kubectl_lockss apply -f "${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml" >/dev/null ; then
+        popd &>/dev/null
+        logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml"
+        logger_error_exit "Fix the error then run scripts/restart-lockss."
+      fi
     fi
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"
@@ -270,5 +274,8 @@ elif [ -e "${DOCKER_CONFIGS_DIR}/${STACK_PREFIX}${STACK_NUM}" ]; then
 else
   logger_error_exit "Unable to find generated stack info for ${STACK_NUM}"
 fi
-
+echo "========================================="
+echo "The following LOCKSS services are currently running."
+kubectl_lockss get deployments --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+echo "========================================="
 graceful_exit

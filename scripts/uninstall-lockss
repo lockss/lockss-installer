@@ -53,6 +53,13 @@ _D0=$(dirname "${0}")
 # Source system config file
 source_config
 
+declare -A -r SECRETS_AR=(
+ [ui]="lockss-ui-pass"
+ [postgres]="lockss-postgres-pass"
+ [solr]="lockss-solr-pass"
+  )
+
+
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
@@ -126,19 +133,29 @@ while [[ -n $1 ]]; do
   shift
 done
 
-# Sanity checks
-#Check_Runnable
-
-if [[ $# -eq 0 ]]; then
-  # Make sure we stop any running service by calling remove all stacks
-  "${SCRIPTS_DIR}"/stop-lockss
-  if kubectl_cmd get namespace "lockss" >/dev/null; then
-    kubectl_lockss delete svc,deployments,pods,pvc,secrets,configmaps --all | logger_debug
-  fi
-  kubectl_cmd delete pv -l app=lockss | logger_debug
-  logger_info ""
-  logger_info "Successfully removed all running service and removed all installed data."
-  logger_info "You will need to rerun configure-lockss and start-lockss to run again."
+echo "Running this script will not delete any of your preserved content but will remove the passwords necessary for the system to access that content."
+ask_for_input "Do you want to display your saved passwords now, so you can record them?" "" N
+if is_yes "${ANS}" ; then
+  for key in "${!SECRETS_AR[@]}"
+  do
+    passwd=$(kubectl get secret -n $key -o jsonpath='{.data.$key}' | base64 --decode)
+    echo $key: $passwd
+  done
+fi
+ask_for_input "Okay to uninstall lockss?" "" N
+if is_yes "${ANS}" ; then
+ # Make sure we stop any running service by calling remove all stacks
+ logger_info "Stopping the lockss stack."
+ "${SCRIPTS_DIR}"/stop-lockss || echo "Stop request failed. Continuing with uninstall..."
+ logger_info "Uninstalling LOCKSS..."
+ if kubectl_cmd get namespace "lockss" >/dev/null; then
+   kubectl_lockss delete pods svc,deployments,pvc,secrets,configmaps --all | logger_debug
+ fi
+ kubectl_cmd delete pv -l app=lockss | logger_debug
+ #kubectl_cm delete ns lockss | logger_debug
+ logger_info ""
+ logger_info "Successfully removed all running LOCKSS services and uninstalled LOCKSS."
+ logger_info "To run again, you will need to rerun configure-lockss and start-lockss "
 fi
 
 graceful_exit
