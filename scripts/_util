@@ -109,12 +109,10 @@ source_env() {
 
 # Source system config as env vars
 source_config() {
-  [ ! -f "${CONFIG_DIR}/system.cfg" ] && err_exit "You must run scripts/configure-lockss to configure the system before running any other scripts."
   set -a
   . "${CONFIG_DIR}/system.cfg"
   set +a
 }
-
 
 # perform a kubectl command using whichever flavor of k8s that's installed
 kubectl_cmd() {
@@ -173,11 +171,6 @@ Check_Configured() {
   Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
   Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
   Check_VarDef "KUBECTL_CMD"
-  Check_Secret "lockss-solr-pass"
-  Check_Secret "solr-auth"
-  Check_Secret "lockss-postgres-pass"
-  Check_Secret "lockss-ui-pass"
-  Check_Secret "lockss-auth"
 #TODO: Add container subnet change check
 }
 
@@ -197,21 +190,8 @@ Check_Upgraded() {
   fi
 }
 
-Check_Configured_Version() {
-  local CONFIG_VERSION_FILE="${LOCKSS_DATA_DIR}/CONFIGURED_VERSION"
-  local INSTALLED_VERSION_FILE="${COMPOSE_DIR}/VERSION"
-
-  if [ ! -f "${CONFIG_VERSION_FILE}" ] || ! diff -iwB --new-file "${CONFIG_VERSION_FILE}" "${INSTALLED_VERSION_FILE}" &> /dev/null; then
-      err_exit "Run scripts/configure-lockss -r to update the system configuration."
-  fi
-}
-
 Copy_Lockss_Version() {
   cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}
-}
-
-Copy_Configured_Lockss_Version() {
-  cp -f ${COMPOSE_DIR}/VERSION ${LOCKSS_DATA_DIR}/CONFIGURED_VERSION
 }
 
 Set_Lockss_Version() {
@@ -263,10 +243,9 @@ Check_K8s_Command() {
     fi
   fi
 }
-
 Check_LOCKSS_User() {
-  if ! id "${LOCKSS_USER}" >/dev/null; then
-    err_exit "${_0}: There is no LOCKSS user account $LOCKSS_USER. Please create one to continue."
+  if ! id "lockss" >/dev/null; then
+    err_exit "${_0}: There is no 'lockss' user account. Please create one to continue."
   fi
 }
 
@@ -437,9 +416,9 @@ Get_Timezone() {
     fi
   fi
   if [ -z "${timezone}" ]; then
-    if [ -r /etc/timezone ]; then
+    if -r /etc/timezone; then
       timezone=$(cat /etc/timezone)
-    elif [ -r /etc/localtime ]; then
+    elif -r /etc/localtime; then
       timezone=$(${READLINK} /etc/localtime | sed -e 's/^.*zoneinfo\///')
     fi
   fi
@@ -486,13 +465,8 @@ am_i_root() {
   [ "$(id -u)" -eq 0 ]
 }
 
-# Check if running as the LOCKSS user
-am_i_lockss() {
-  [ "$(id -un)" == "${LOCKSS_USER}" ]
-}
-
 is_lockss_running() {
-  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-'
+  kubectl_lockss get pods 2>/dev/null | grep -q 'lockss-configuration-service'
 }
 
 #
@@ -512,7 +486,7 @@ read_config() {
 }
 
 is_replay() {
-  [[ -n "${IS_REPLAY}" ]] && return 0
+  [[ -n "${is_replay}" ]] && return 0
   return 1
 }
 
@@ -675,26 +649,31 @@ setup_storage_dirs() {
   echo "Checking content storage directory(s)"
   read_config ${CONF_FILE}
   IFS=';' read -r -a repoPaths <<< "${LOCKSS_REPO_HOST_DIRS}"
-  declare -A dirSet;
 
   for dir in "${repoPaths[@]}"; do
-    dirSet["${dir}"]=1
-  done
-  if [ "${LOCKSS_LOGS_DIR}" ]; then
-    dirSet["${LOCKSS_LOGS_DIR}"]=1
-  fi
-  if [ "${LOCKSS_TMPDIR}" ]; then
-    dirSet["${LOCKSS_TMPDIR}"]=1
-  fi
-  if [ "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
-    dirSet["${LOCKSS_SCRIPT_LOG_DIR}"]=1
-  fi
-  for dir in "${!dirSet[@]}"; do
-    if ! init_one_dir "${dir}" ${USER} 755; then
-      echo "${dir} cannot be created or written by ${USER}." >&2
-      ERRORS=1
+    if ! init_one_dir "${dir}" ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
     fi
   done
+  if [ "${LOCKSS_LOGS_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_LOGS_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_TMPDIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_TMPDIR} ${USER} 750; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
+  if [ "${LOCKSS_SCRIPT_LOG_DIR}" != "${LOCKSS_DATA_DIR}" ]; then
+      if ! init_one_dir ${LOCKSS_SCRIPT_LOG_DIR} ${USER} 755; then
+        echo "${dir} cannot be created or written by ${USER}." >&2
+        ERRORS=1
+      fi
+  fi
   return $ERRORS
 }
 
@@ -729,7 +708,6 @@ init_one_dir() {
   fi
   if check_writable "${DIR}" $USER; then
     echo "${DIR} exists and is writable by ${USER}"
-    chmod ${MODE} "${DIR}"
   else
     ask_for_input "${DIR} is not writable; do you want to make it writable?" Y
     if is_yes "${ANS}"; then
@@ -1063,24 +1041,6 @@ init_service_arrays() {
     init_service_arrays_from_commandline
   fi
 }
-
-load_v1_props() {
-  local file="$1"
-  while IFS= read -r line
-  do
-    if [[ "$line" =~ ^[^#]*= ]]; then
-      key=$(echo "$line" | cut -d '=' -f 1)
-      value=$(echo "$line" | cut -d '=' -f 2-)
-      V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
-    fi
-  done < $file
-
-#	for key in "${!V1_PROPS[@]}"
-#	do
-#    echo "$key=${V1_PROPS[$key]}"
-#	done
-}
-
 
 init_service_arrays_from_commandline() {
   declare -a svcs_arr

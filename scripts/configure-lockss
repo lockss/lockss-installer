@@ -36,8 +36,6 @@
 PROGNAME=${0##*/}
 VERSION="1.0"
 
-# For debugging/testing without k8s installed (and to bypass other
-# checks), set env var BYPASS_ALL_CHECKS before running this script
 if [ -n "${BYPASS_ALL_CHECKS}" ]; then
   BYPASS_CHECK_USER=1
   BYPASS_KUBE_COMMANDS=1
@@ -59,13 +57,10 @@ _D0=$(dirname "${0}")
 ##
 ## Definitions
 ##
-declare -A V1_PROPS
 
 # Files
 SYSTEM_CONF_FILE="${CONFIG_DIR}/system.cfg"
 K8S_CONF_FILE="${CONFIG_DIR}/k8s.cfg"
-V1_NATIVE_CONFIG_FILE="/etc/lockss/config.dat"
-V1_COPIED_CONFIG_FILE="/tmp/v1config.dat"
 
 # $1=log filename
 # tee stdout/err to log file
@@ -81,12 +76,6 @@ Log_Std() {
   # Redirect FD 1&2 to pipe
   exec 1>$npipe
   exec 2>&1
-}
-
-debug_msg() {
-  if [[ -n "${DEBUG}" ]]; then
-    echo "Debug: $@"
-  fi
 }
 
 configure_databases() {
@@ -128,7 +117,7 @@ configure_databases() {
   ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
   LOCKSS_DB_PASSWD="${PASSWD_HASH}"
   if [ -n "${PASSWD_CLEAR}" ]; then
-    Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
+      Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
   #check Solr service
@@ -182,7 +171,7 @@ configure_crawler_services() {
       else
         LOCKSS_CLASSIC_CRAWLER_ENABLE=false
       fi
-      ask_for_input "Enable wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
+      ask_for_input "Enable Wget crawler?" "$(to_yes_no_or_blank ${LOCKSS_WGET_CRAWLER_ENABLE})" N
       if is_yes "${ANS}"; then
         LOCKSS_WGET_CRAWLER_ENABLE=true
         CRAWLER_OK=Y
@@ -192,210 +181,6 @@ configure_crawler_services() {
     else
       USE_LOCKSS_CRAWL=false
       CRAWLER_OK=Y
-    fi
-  done
-}
-
-configure_migration() {
-  echo ""
-  echo "Configuring for migration from LOCKSS 1.x..."
-  echo ""
-  # If already in migration mode, ask whether to re-import V1 file or
-  # just update current config
-  if is_true "${LOCKSS_IN_MIGRATION_MODE}"; then
-    echo "Already configured for migration.  You may re-import a LOCKSS 1.x"
-    echo "config file or update the current LOCKSS 2.x config"
-    IMPORT_OK=N
-    until is_yes ${IMPORT_OK}; do
-      ask_for_input "Re-(I)mport or (U)pdate?" "" U
-      case "${ANS}" in
-        u | U)
-          SKIP_IMPORT=Y
-          IMPORT_OK=Y
-          ;;
-        i | I)
-          SKIP_IMPORT=
-          IMPORT_OK=Y
-          ;;
-        *)
-          echo "Please enter I (re-Import) or U (Update-only)"
-          ;;
-      esac
-    done
-  else
-    IMPORT_OK=Y
-  fi
-  if [[ -z "${SKIP_IMPORT}" ]]; then
-    # Look for V1 config.dat on this host, or ask if a copied one is available
-    if [ -f ${V1_NATIVE_CONFIG_FILE} ]; then
-      debug_msg "Found ${V1_NATIVE_CONFIG_FILE}"
-      load_v1_props "${V1_NATIVE_CONFIG_FILE}"
-      if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
-        # we found a v1 config file
-        echo "LOCKSS 1.x installation was detected on this host."
-        ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
-        if is_yes "${ANS}"; then
-          # migration from same host installation
-          LOCKSS_SAME_HOST_MIGRATION=true
-          LOCKSS_V1_ROUTABLE_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
-          if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
-          else
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
-          fi
-          V1_FILE=${V1_NATIVE_CONFIG_FILE}
-        else
-          echo "Migrating from another host while a LOCKSS 1.x installation is present on"
-          echo " this host is not supported, sorry."
-          exit 1
-        fi
-      fi
-    fi
-    if ! is_true "$LOCKSS_SAME_HOST_MIGRATION"; then
-      # No local (same-host) V1 config file found
-      # ask is there a v1 config file (suggest a path in tmp /tmp/v1config.dat
-      # we loop until a valid v1 file OR they say they didn't copy a file.
-      echo "No LOCKSS 1.x installation was detected on this host."
-      ask_for_input "Did you copy a LOCKSS 1.x config.dat file to this host?" Y
-      if is_yes "${ANS}"; then
-        FILE_OK=N
-        until is_yes ${FILE_OK}; do
-          ask_for_input "Location of copied LOCKSS 1.x config.dat file" "${V1_COPIED_CONFIG_FILE}" ""
-          if [ "X${ANS}" != X ]; then
-            filename="$(normalize_path ${ANS})"
-            if [ -f ${filename} ]; then
-              load_v1_props "${filename}"
-              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
-                FILE_OK=Y
-                V1_FILE=${filename}
-              else
-                echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
-              fi
-            else
-              echo "${filename} not found."
-            fi
-          fi
-        done
-      fi
-    fi
-    # if we have a local file to use
-    if [ -f "$V1_FILE" ]; then
-      if is_yes $(to_yes_no "$LOCKSS_SAME_HOST_MIGRATION"); then
-        debug_msg "Importing V1 config from this host (${V1_PROPS[LOCKSS_HOSTNAME]})"
-        # section 1 params for same host migration.
-        LOCKSS_HOSTNAME=${V1_PROPS[LOCKSS_HOSTNAME]}
-        LOCKSS_EXTERNAL_IPADDR=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
-        LOCKSS_IPADDR=${V1_PROPS[LOCKSS_IPADDR]}
-      else
-        debug_msg "Importing V1 config from ${V1_PROPS[LOCKSS_HOSTNAME]}"
-        # section 2 params for different host migration.
-        LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-        ex_ip=${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}
-        vi_ip="${V1_PROPS[LOCKSS_IPADDR]}"
-        if [[ -n "${ex_ip}" ]] && [[ "${ex_ip}" != "${vi_ip}" ]]; then
-          LOCKSS_V1_IDENTITY_IPADDR="${ex_ip}"
-          debug_msg "different host - NAT detected in V1 config settings"
-          IP_OK=N
-          until is_yes ${IP_OK}; do
-            echo "[1] LOCKSS 1.x Host IP Address: ${vi_ip}"
-            echo "[2] LOCKSS 1.x Host External IP Address: ${ex_ip}"
-            echo "[3] Alternative LOCKSS 1.x Host"
-            ask_for_input "LOCKSS 1.x host is behind NAT, what address should this host use to reach it?" "1"
-            case ${ANS} in
-              1)
-                LOCKSS_V1_ROUTABLE_IPADDR=$vi_ip
-                IP_OK=Y
-                ;;
-              2)
-                LOCKSS_V1_ROUTABLE_IPADDR=$ex_ip
-                IP_OK=Y
-                ;;
-              3)
-                configure_v1_routable_address
-                ;;
-              *)
-                echo "Unknown selection!"
-                ;;
-            esac
-          done
-        else
-          debug_msg "different host NAT not detected"
-          LOCKSS_V1_ROUTABLE_IPADDR=${vi_ip}
-          LOCKSS_V1_IDENTITY_IPADDR=${vi_ip}
-        fi
-        # if for LOCKSS_MIGRATION_LCAP_PORT is not set
-        if [ "X${LOCKSS_MIGRATION_LCAP_PORT}" == "X" ]; then
-          LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-        fi
-        LOCKSS_SAME_HOST_MIGRATION=false
-      fi
-      debug_msg "Configuring common parameters from V1 config file."
-      # section 3 common params
-      LOCKSS_V3_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
-      LOCKSS_ACCESS_SUBNET=${V1_PROPS[LOCKSS_ACCESS_SUBNET]}
-      LOCKSS_MAILHUB=${V1_PROPS[LOCKSS_MAILHUB]}
-      LOCKSS_MAILHUB_USER=${V1_PROPS[LOCKSS_MAILHUB_USER]}
-      LOCKSS_MAILHUB_PASSWORD=${V1_PROPS[LOCKSS_MAILHUB_PASSWORD]}
-      LOCKSS_EMAIL=${V1_PROPS[LOCKSS_EMAIL]}
-      LOCKSS_PROPS_URL=${V1_PROPS[LOCKSS_PROPS_URL]}
-      LOCKSS_PROPS_PROXY=${V1_PROPS[LOCKSS_PROPS_PROXY]}
-      LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE=${V1_PROPS[LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE]}
-      LOCKSS_PRESERVATION_GROUP=${V1_PROPS[LOCKSS_TEST_GROUP]}
-      LOCKSS_ADMIN_USER=${V1_PROPS[LOCKSS_ADMIN_USER]}
-    else
-      debug_msg "Configuring V2 without a V1 config file."
-      # We have a -m indicating migration but no migration information.
-      # We need to collect the local system information and in addition
-      LOCKSS_SAME_HOST_MIGRATION=false
-      configure_v1_addresses
-      # Now get the V1 port
-      PORT_OK=N
-      until is_yes ${PORT_OK}; do
-        ask_for_input "LOCKSS 1.x LCAP port" "${LOCKSS_V3_PORT}" "9729"
-        if [ "X${ANS}" != "X" ]; then
-          LOCKSS_V3_PORT="${ANS}"
-          PORT_OK=Y
-        fi
-      done
-    fi
-    LOCKSS_IN_MIGRATION_MODE=true
-  fi
-}
-
-configure_v1_addresses() {
-  ask_for_input "Is the LOCKSS 1.x machine behind NAT?" "" N
-  if is_yes "${ANS}"; then
-    V1_EXT_OK=N
-    until is_yes ${V1_EXT_OK}; do
-      ask_for_input "LOCKSS 1.x external IP address" "${LOCKSS_V1_IDENTITY_IPADDR}"
-      if valid_ip4_address ${ANS}; then
-        LOCKSS_V1_IDENTITY_IPADDR=${ANS}
-        V1_EXT_OK=Y
-      fi
-    done
-    configure_v1_routable_address
-  else
-    V1_IP_OK=N
-    until is_yes ${V1_IP_OK}; do
-      ask_for_input "LOCKSS 1.x IP address" "${LOCKSS_V1_IDENTITY_IPADDR}"
-      if valid_ip4_address ${ANS}; then
-        LOCKSS_V1_IDENTITY_IPADDR=${ANS}
-        LOCKSS_V1_ROUTABLE_IPADDR=${ANS}
-        V1_IP_OK=Y
-      fi
-    done
-  fi
-}
-
-configure_v1_routable_address() {
-  IP_OK=N
-  until is_yes ${IP_OK}; do
-    ask_for_input "LOCKSS 1.x routable IP address" "$LOCKSS_V1_ROUTABLE_IPADDR"
-    if valid_ip4_address ${ANS}; then
-      LOCKSS_V1_ROUTABLE_IPADDR=${ANS}
-      IP_OK=Y
-    else
-      echo "Illegal IPv4 address: ${ANS}"
     fi
   done
 }
@@ -531,11 +316,6 @@ LOCKSS_TIMEZONE="${LOCKSS_TIMEZONE}"
 LOCKSS_CONTAINER_SUBNETS="${LOCKSS_CONTAINER_SUBNETS}"
 LOCKSS_CLASSIC_CRAWLER_ENABLE="${LOCKSS_CLASSIC_CRAWLER_ENABLE}"
 LOCKSS_WGET_CRAWLER_ENABLE="${LOCKSS_WGET_CRAWLER_ENABLE}"
-LOCKSS_IN_MIGRATION_MODE="${LOCKSS_IN_MIGRATION_MODE:-false}"
-LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
-LOCKSS_V1_ROUTABLE_IPADDR="${LOCKSS_V1_ROUTABLE_IPADDR}"
-LOCKSS_V1_IDENTITY_IPADDR="${LOCKSS_V1_IDENTITY_IPADDR}"
-LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
@@ -581,28 +361,6 @@ build_config_file() {
   OK_TO_STORE_WITHOUT_CONFIRMATION="Y"
 
   until is_yes ${CONFIG_OK}; do
-    if [ -n "$IS_V1_MIGRATION" ]; then
-      configure_migration
-      if [ -f "$V1_FILE" ]; then
-        echo "The following values were imported from your LOCKSS 1.0 configuration."
-        echo "  In normal circumstances they should be accepted as is."
-        echo
-      fi
-    else
-      # confirm exit from migration mode - abort if
-      if is_true "${LOCKSS_IN_MIGRATION_MODE}"; then
-        ask_for_input "Do you want to reconfigure LOCKSS 2.x to no longer be in migration mode?" "" "Y"
-        if is_yes "${ANS}"; then
-          LOCKSS_IN_MIGRATION_MODE=false
-          LOCKSS_SAME_HOST_MIGRATION=false
-          unset LOCKSS_MIGRATION_LCAP_PORT
-          unset LOCKSS_EXTERNAL_IPADDR
-        else
-          err_exit "Rerun scripts/configure-lockss with -m or --migrate"
-        fi
-      fi
-    fi
-
     HOSTNAME_OK=N
     until is_yes ${HOSTNAME_OK}; do
       ask_for_input "Fully qualified hostname (FQDN) of this machine" "${LOCKSS_HOSTNAME}" "${LOCAL_HOSTNAME}"
@@ -624,43 +382,6 @@ build_config_file() {
         echo "Illegal IPv4 address: ${ANS}"
       fi
     done
-
-    if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
-      LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-    fi
-    SUBNET_OK=N
-    until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
-      if valid_subnet_list "${ANS}"; then
-        LOCKSS_ACCESS_SUBNET="${ANS}"
-        SUBNET_OK=Y
-      fi
-    done
-
-    # LCAP V3 port
-    ask_for_input "LCAP protocol port" "${LOCKSS_V3_PORT}" 9729
-    if [ "X${ANS}" != "X" ]; then
-      LOCKSS_V3_PORT="${ANS}"
-    fi
-    if [ "$LOCKSS_SAME_HOST_MIGRATION" = true ]; then
-      DEFAULT_MIGRATION_LCAP_PORT=9739
-      if [ ${DEFAULT_MIGRATION_LCAP_PORT} = ${LOCKSS_V3_PORT} ]; then
-        DEFAULT_MIGRATION_LCAP_PORT=9738
-      fi
-      # set LOCKSS_MIGRATION_LCAP_PORT from user input
-      PORT_OK=N
-      until is_yes ${PORT_OK}; do
-        ask_for_input "Enter temporary LOCKSS 2.x LCAP port" "${LOCKSS_MIGRATION_LCAP_PORT}" "${DEFAULT_MIGRATION_LCAP_PORT}"
-        if [ "X${ANS}" != "X" -a "${ANS}" != ${LOCKSS_V3_PORT} ]; then
-          LOCKSS_MIGRATION_LCAP_PORT="${ANS}"
-          PORT_OK=Y
-        else
-          echo "Temporary LCAP port must not be the same as the LCAP port in use by LOCKSS 1.x"
-        fi
-      done
-    fi
-
-    # NAT
     NAT=N
     if [ "${LOCKSS_EXTERNAL_IPADDR}X" != X ]; then
       NAT=Y
@@ -677,6 +398,52 @@ build_config_file() {
       done
     else
       unset LOCKSS_EXTERNAL_IPADDR
+    fi
+    if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
+      LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+    fi
+    SUBNET_OK=N
+    until is_yes ${SUBNET_OK}; do
+      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
+      if valid_subnet_list "${ANS}"; then
+        LOCKSS_ACCESS_SUBNET="${ANS}"
+        SUBNET_OK=Y
+      fi
+    done
+
+    CNI0_ADDR=$(ip -4 -o addr show dev cni0 | awk '{split($4,a,"/");print a[1]}')
+    CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
+    if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
+      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+    elif [ -n "${CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
+      # The current value isn't what we would choose
+      if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
+        # It matches the previous CNI0 subnet, use new one by default
+        echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
+        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+      elif [ -z "${PREV_CNI0_SUBNET}" ]; then
+        # No record of previous CNI0_SUBNET, can't tell whether it
+        # changed or user previously entered a different subnet
+        echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
+        ask_for_input "Do you want to change it?" "" Y
+        if is_yes "${ANS}"; then
+          LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
+        fi
+      fi
+    fi
+    CONTAINER_SUBNET_OK=N
+    until is_yes ${CONTAINER_SUBNET_OK}; do
+      ask_for_input "Container subnet for inter-service access control" "${LOCKSS_CONTAINER_SUBNETS}"
+      if valid_subnet "${ANS}"; then
+        LOCKSS_CONTAINER_SUBNETS="${ANS}"
+        CONTAINER_SUBNET_OK=Y
+      fi
+    done
+
+    # LCAP V3 port
+    ask_for_input "LCAP V3 protocol port" "${LOCKSS_V3_PORT}" 9729
+    if [ "X${ANS}" != "X" ]; then
+      LOCKSS_V3_PORT="${ANS}"
     fi
 
     # Mail relay
@@ -735,56 +502,6 @@ build_config_file() {
     # Preservation group(s)
     ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "demo"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
-    # Admin UI user/pass
-    USER_OK=N
-    until is_yes ${USER_OK}; do
-      ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
-      if [ "X${ANS}" != X ]; then
-        LOCKSS_ADMIN_USER="${ANS}"
-        USER_OK=Y
-      fi
-    done
-
-    if [ -n "$IS_V1_MIGRATION" ] && [ -f "$V1_FILE" ]; then
-      echo "End of imported defaults."
-      echo ""
-    fi
-
-    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
-    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
-    if [ -n "${PASSWD_CLEAR}" ]; then
-      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
-      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
-    fi
-
-    CNI0_ADDR=$(ip -4 -o addr show dev cni0 | awk '{split($4,a,"/");print a[1]}')
-    CNI0_SUBNET=$(echo ${CNI0_ADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
-    if [ -z "${LOCKSS_CONTAINER_SUBNETS}" ]; then
-      LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-    elif [ -n "${CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" != "${CNI0_SUBNET}" ]; then
-      # The current value isn't what we would choose
-      if [ -n "${PREV_CNI0_SUBNET}" -a "${LOCKSS_CONTAINER_SUBNETS}" = "${PREV_CNI0_SUBNET}" ]; then
-        # It matches the previous CNI0 subnet, use new one by default
-        echo "Container subnet has changed from ${PREV_CNI0_SUBNET} to ${CNI0_SUBNET}"
-        LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-      elif [ -z "${PREV_CNI0_SUBNET}" ]; then
-        # No record of previous CNI0_SUBNET, can't tell whether it
-        # changed or user previously entered a different subnet
-        echo "Container subnet was ${LOCKSS_CONTAINER_SUBNETS}, we think it should now be ${CNI0_SUBNET}"
-        ask_for_input "Do you want to change it?" "" Y
-        if is_yes "${ANS}"; then
-          LOCKSS_CONTAINER_SUBNETS="${CNI0_SUBNET}"
-        fi
-      fi
-    fi
-    CONTAINER_SUBNET_OK=N
-    until is_yes ${CONTAINER_SUBNET_OK}; do
-      ask_for_input "Container subnet for inter-service access control" "${LOCKSS_CONTAINER_SUBNETS}"
-      if valid_subnet "${ANS}"; then
-        LOCKSS_CONTAINER_SUBNETS="${ANS}"
-        CONTAINER_SUBNET_OK=Y
-      fi
-    done
 
     HAD_DATA_DIR=
     if [ "X${LOCKSS_DATA_DIR}" != X ]; then
@@ -803,16 +520,16 @@ build_config_file() {
     # Content storage base(s)
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path(s) for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
-        IFS=';' read -r -a newPaths <<<"${tmp_repo_host_dirs}"
-        for ((i = 0; i < ${#newPaths[@]}; i++)); do
+        IFS=';' read -r -a newPaths <<< "${tmp_repo_host_dirs}"
+        for ((i=0; i<${#newPaths[@]}; i++)); do
           newPaths[i]="$(normalize_path ${newPaths[i]})"
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed or reordered content storage directories, you must run scripts/reindex-artifacts"
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
@@ -822,7 +539,7 @@ build_config_file() {
     # Log dir base
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Root path for log storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
@@ -830,16 +547,32 @@ build_config_file() {
     done
 
     # Tempdir dir base
-    ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
+    ask_for_input "Root path for temporary storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
-#    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
-#      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
-#    fi
-    # Script logs not configurable alwas set it to be relative to the LOCKSS_LOGS_DIR
-    #     ask_for_input "Directory for storing install script logs" "${LOCKSS_SCRIPT_LOG_DIR}" "${LOCKSS_DATA_DIR}/lockss-script-logs"
-    #     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
+    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
+      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
+    fi
 
-    LOCKSS_SCRIPT_LOG_DIR=${LOCKSS_LOGS_DIR}/lockss-script-logs
+    # Script logs not configurable
+#     ask_for_input "Directory for storing install script logs" "${LOCKSS_SCRIPT_LOG_DIR}" "${LOCKSS_DATA_DIR}/lockss-script-logs"
+#     LOCKSS_SCRIPT_LOG_DIR="$(normalize_path ${ANS})"
+
+    # Admin UI user/pass
+    USER_OK=N
+    until is_yes ${USER_OK}; do
+      ask_for_input "User name for web UI administration" "${LOCKSS_ADMIN_USER}"
+      if [ "X${ANS}" != X ]; then
+        LOCKSS_ADMIN_USER="${ANS}"
+        USER_OK=Y
+      fi
+    done
+    ask_for_password "Password for web UI administration user ${LOCKSS_ADMIN_USER}" "${LOCKSS_ADMIN_PASSWD}" "" "lockss-ui-pass lockss-auth"
+    LOCKSS_ADMIN_PASSWD="${PASSWD_HASH}"
+    if [ -n "${PASSWD_CLEAR}" ]; then
+      Add_Secret lockss-ui-pass "${PASSWD_CLEAR}"
+      Add_Secret lockss-auth "${LOCKSS_ADMIN_USER}:${PASSWD_CLEAR}"
+    fi
+
     # Configure databases
     configure_databases
     # Configure the individual services
@@ -853,60 +586,49 @@ build_config_file() {
     echo "Configuration:"
     cat ${TMP_CONFIG}
 
-    if [[ -f ${1} ]] && cmp --quiet ${TMP_CONFIG} ${1}; then
-      echo "Configuration unchanged"
+    ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
+    if is_yes "${ANS}"; then
+      if ! cp ${TMP_CONFIG} ${1}; then
+        echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
+        exit 1
+      fi
       rm -f ${TMP_CONFIG}
-      CONFIG_OK=Y
-      BYPASS_MAIL=Y
-    else
-      ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
-      if is_yes "${ANS}"; then
-        # Backup previous config if it exists
-        if [[ -f ${1} ]]; then
-          if ! cp ${1} ${1}.bak; then
-            echo "Couldn't back up current config file"
-          fi
-        fi
-        if ! cp ${TMP_CONFIG} ${1}; then
-          echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
-          exit 1
-        fi
-        rm -f ${TMP_CONFIG}
-        Store_All_Secrets
-        echo "Configuration stored"
-      fi
-    fi
-    local STORAGE_ERRORS=
-    setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
-    CONFIG_OK=Y
+      Store_All_Secrets
+      echo "Configuration stored"
 
-    FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-    grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-    mail_sent=""
-    if [ $(command -v mail) ] >/dev/null; then
-      if [ -z "${BYPASS_MAIL}" ]; then
-        if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-          mail_sent=1
-        else
-          echo "The attempt to mail configuration failed.  Please check your mail configuration."
-        fi
+      local STORAGE_ERRORS=
+      setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
+
+      CONFIG_OK=Y
+
+      FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
+      grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+      mail_sent=""
+      if [ $(command -v mail) >/dev/null ]; then
+          if [ -z "${BYPASS_MAIL}" ]; then
+              if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+                  mail_sent=1
+              else
+                echo "The attempt to mail configuration failed.  Please check your mail configuration."
+              fi
+          fi
+      else
+        echo "The 'mail' command isn't installed (or isn't on the PATH)."
       fi
-    else
-      echo "The 'mail' command isn't installed (or isn't on the PATH)."
+      if [ -z "${mail_sent}" ]; then
+        UNSENT_FILE=/tmp/unsent-lockss-config
+        cp ${FILT_CONFIG} ${UNSENT_FILE}
+        echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+      fi
+      rm -f ${FILT_CONFIG}
     fi
-    if [ -z "${mail_sent}" ]; then
-      UNSENT_FILE=/tmp/unsent-lockss-config
-      cp ${FILT_CONFIG} ${UNSENT_FILE}
-      echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-    fi
-    rm -f ${FILT_CONFIG}
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
-    echo
-    echo "Storage directories have not been set up correctly.  Please either"
-    echo " fix the ownership/permission problems then run scripts/setup-storage, or"
-    echo " rerun scripts/configure-lockss and specify different directories."
-    return 1
+      echo
+      echo "Storage directories have not been set up correctly.  Please either"
+      echo " fix the ownership/permission problems then run scripts/setup-storage, or"
+      echo " rerun scripts/configure-lockss and specify different directories."
+      return 1
   fi
 }
 
@@ -916,7 +638,7 @@ setup_k8s_cmd() {
   until is_yes ${KUBCTL_OK}; do
     ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
     local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) ] >/dev/null; then
+    if [ $(command -v ${first_word}) >/dev/null ]; then
       KUBECTL_CMD="${ANS}"
       KUBCTL_OK=Y
     fi
@@ -924,21 +646,19 @@ setup_k8s_cmd() {
   echo "Kubectl command alias set to $KUBECTL_CMD"
   KUBECTL="${KUBECTL_CMD}"
   K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
-  write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  write_k8s_cfg ${K8S_CONF_FILE}|| err_exit "Attempt to write ${K8S_CONF_FILE} failed."
 }
 
 usage() {
-  echo "Usage: configure-lockss [-r|--replay] [-m|--migrate] [-h|--help]"
+  echo "Usage: configure-lockss [-r|--replay] [-h|--help]"
   echo "  --replay  Prompt only for info not already in the config file. Useful when"
   echo "            running configure-lockss after upgrading to a new version of the"
   echo "            LOCKSS services."
-  echo "  --migrate Set up LOCKSS 2.x for migration from LOCKSS 1.x."
   echo "  --help    Print this text."
   exit 2
 }
 
-IS_REPLAY=
-IS_V1_MIGRATION=
+is_replay=
 
 # Parse command-line
 while [[ -n "$1" ]]; do
@@ -947,10 +667,7 @@ while [[ -n "$1" ]]; do
     usage
     ;;
   -r | --replay)
-    IS_REPLAY=1
-    ;;
-  -m | --migrate)
-    IS_V1_MIGRATION=1
+    is_replay=1
     ;;
   *)
     usage
@@ -958,10 +675,6 @@ while [[ -n "$1" ]]; do
   esac
   shift
 done
-
-if [ -n "$IS_V1_MIGRATION" -a -n "$IS_REPLAY" ]; then
-  err_exit "Error: Replay may not be used with migration setup"
-fi
 
 CONFIG_LOGFILE="./lockss-configure.log"
 
@@ -1027,6 +740,7 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   read_config ${K8S_CONF_FILE}
 fi
 echo "Checking system state..."
+
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
   setup_k8s_cmd
@@ -1044,18 +758,14 @@ fi
 case "${1}" in
 '') CONFIG_COUNT=1 ;;
 [1-9]) CONFIG_COUNT="${1}" ;;
-*)
-  echo "Invalid number of parallel stacks: ${1}"
-  exit 1
-  ;;
+  *) echo "Invalid number of parallel stacks: ${1}" ; exit 1 ;;
 esac
 
 #build config file
 echo "Building config for ${CONFIG_COUNT} stacks on ${OS_TYPE} for user ${CONFIG_USER}..."
-if build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT}; then
-  Copy_Configured_Lockss_Version
-  echo "Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
-  exit 0
+if build_config_file ${SYSTEM_CONF_FILE} ${CONFIG_USER} ${CONFIG_COUNT} ; then
+    echo "Run scripts/start-lockss to launch the LOCKSS stack 'lockss-stack'..."
+    exit 0
 else
   echo
   echo "Some problems were encountered.  They must be fixed before launching the"

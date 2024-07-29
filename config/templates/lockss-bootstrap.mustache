@@ -30,8 +30,8 @@
 # Edit the corresponding file with the "opt" suffix instead.
 
 org.lockss.platform.localIPAddress={{LOCKSS_IPADDR}}
-{{#LOCKSS_EXTERNAL_IPADDR}}org.lockss.platform.v3.identity=TCP:[{{LOCKSS_EXTERNAL_IPADDR}}]:{{LOCKSS_LCAP_IDENTITY_PORT}}{{/LOCKSS_EXTERNAL_IPADDR}}
-{{^LOCKSS_EXTERNAL_IPADDR}}org.lockss.platform.v3.identity=TCP:[{{LOCKSS_IPADDR}}]:{{LOCKSS_LCAP_IDENTITY_PORT}}{{/LOCKSS_EXTERNAL_IPADDR}}
+{{#LOCKSS_EXTERNAL_IPADDR}}org.lockss.platform.v3.identity=TCP:[{{LOCKSS_EXTERNAL_IPADDR}}]:{{LOCKSS_LCAP_PORT}}{{/LOCKSS_EXTERNAL_IPADDR}}
+{{^LOCKSS_EXTERNAL_IPADDR}}org.lockss.platform.v3.identity=TCP:[{{LOCKSS_IPADDR}}]:{{LOCKSS_LCAP_PORT}}{{/LOCKSS_EXTERNAL_IPADDR}}
 org.lockss.platform.sysadminemail={{LOCKSS_EMAIL}}
 org.lockss.platform.accesssubnet=10.255.0.0/16;{{LOCKSS_ACCESS_SUBNET}}
 org.lockss.platform.smtphost={{LOCKSS_MAILHUB}}
