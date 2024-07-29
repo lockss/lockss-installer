@@ -1,22 +1,10 @@
-# Artifact versions develop Wed Jul 24 23:18:23 PDT 2024
+# Artifact versions develop Mon Jul 29 14:17:28 PDT 2024
 
 org.lockss.laaws:laaws-configuration-service	2.10.0-SNAPSHOT
 org.lockss.laaws:laaws-crawler-service	1.2.0-SNAPSHOT
-[ERROR] Failed to execute goal on project laaws-metadata-extraction-service: Could not resolve dependencies for project org.lockss.laaws:laaws-metadata-extraction-service:jar:2.9.0-SNAPSHOT: Could not find artifact org.lockss.laaws:laaws-metadataextractor-common:jar:2.11.0-SNAPSHOT in ossrh-snapshots (https://oss.sonatype.org/service/local/repositories/snapshots/content) -> [Help 1]
-[ERROR] 
-[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-[ERROR] 
-[ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException
+org.lockss.laaws:laaws-metadata-extraction-service	2.9.0-SNAPSHOT
 org.lockss.laaws:laaws-metadataextractor-common	2.11.0-SNAPSHOT
-[ERROR] Failed to execute goal on project laaws-metadata-service: Could not resolve dependencies for project org.lockss.laaws:laaws-metadata-service:jar:2.8.0-SNAPSHOT: Could not find artifact org.lockss.laaws:laaws-metadataextractor-common:jar:2.11.0-SNAPSHOT in ossrh-snapshots (https://oss.sonatype.org/service/local/repositories/snapshots/content) -> [Help 1]
-[ERROR] 
-[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-[ERROR] 
-[ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException
+org.lockss.laaws:laaws-metadata-service	2.8.0-SNAPSHOT
 org.lockss.laaws:laaws-poller	2.8.0-SNAPSHOT
 org.lockss.laaws:laaws-repository-service	2.16.0-SNAPSHOT
 org.lockss.laaws:laaws-repository-tools	2.14.0-SNAPSHOT
