@@ -124,7 +124,7 @@ init_params() {
 
 dashboard_install() {
   init_params
-  if kubectl_cmd get ns kubernetes-dashboard ; then
+  if kubectl_cmd get ns kubernetes-dashboard &>/dev/null ; then
       kubectl_cmd delete all --all -n kubernetes-dashboard >/dev/null
   fi
   kubectl_cmd apply -f "${RECOMMENDED_DASHBOARD_URL}" -f "${K8S_CONF_DIR}/dashboard.admin-user.yml" &>/dev/null
