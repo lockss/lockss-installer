@@ -711,7 +711,7 @@ build_config_file() {
     done
 
     # Props URL
-    ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/demo/lockss.xml"
+    ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/daemon/lockss.xml"
     LOCKSS_PROPS_URL="${ANS}"
     if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
       if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
@@ -733,7 +733,7 @@ build_config_file() {
     LOCKSS_PROPS_PROXY="${ANS}"
 
     # Preservation group(s)
-    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "demo"
+    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "prod"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
     # Admin UI user/pass
     USER_OK=N
