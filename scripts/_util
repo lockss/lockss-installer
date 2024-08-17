@@ -974,26 +974,10 @@ valid_subnet_list() {
 #
 # Usage: normalize_path PATH
 #
-# Remove /./ and dir/.. sequences and replace // with / and write result to
-# stdout.
-#
+# Sanitize a path, resolving/removing .. and . but not expanding
+# symlinks, and not requiring that any part of it exists
 function normalize_path() {
-  # Remove all /./ sequences.
-  local path=${1//\/.\//\/}
-
-  # Replace all // sequences with /
-  path=${path//\/\//\/}
-
-  # Remove dir/.. sequences.
-  while [[ $path =~ ([^/][^/]*/\.\./) ]]; do
-    path=${path/${BASH_REMATCH[0]}/}
-  done
-  # Remove final dir/.. sequence.
-  if [[ $path =~ ([^/][^/]*/\.\.$) ]]; then
-    path=${path/${BASH_REMATCH[0]}/}
-  fi
-  # Remove final /. sequence.
-  echo "${path%%/.}"
+  realpath --canonicalize-missing --no-symlinks "$1"
 }
 
 # Match /etc/resolv.conf nameserver lines
