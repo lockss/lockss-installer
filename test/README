@@ -1,0 +1,3 @@
+Unit tests for shell scripts.
+To install bats for these tests, use laaws-dev-scripts/bin/install-bats
+
