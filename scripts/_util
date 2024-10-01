@@ -115,6 +115,7 @@ source_config() {
   set +a
 }
 
+
 # perform a kubectl command using whichever flavor of k8s that's installed
 kubectl_cmd() {
   if [ -z "${KUBECTL_CMD}" ]; then
@@ -515,7 +516,7 @@ read_config() {
 }
 
 is_replay() {
-  [[ -n "${is_replay}" ]] && return 0
+  [[ -n "${IS_REPLAY}" ]] && return 0
   return 1
 }
 
@@ -977,26 +978,10 @@ valid_subnet_list() {
 #
 # Usage: normalize_path PATH
 #
-# Remove /./ and dir/.. sequences and replace // with / and write result to
-# stdout.
-#
+# Sanitize a path, resolving/removing .. and . but not expanding
+# symlinks, and not requiring that any part of it exists
 function normalize_path() {
-  # Remove all /./ sequences.
-  local path=${1//\/.\//\/}
-
-  # Replace all // sequences with /
-  path=${path//\/\//\/}
-
-  # Remove dir/.. sequences.
-  while [[ $path =~ ([^/][^/]*/\.\./) ]]; do
-    path=${path/${BASH_REMATCH[0]}/}
-  done
-  # Remove final dir/.. sequence.
-  if [[ $path =~ ([^/][^/]*/\.\.$) ]]; then
-    path=${path/${BASH_REMATCH[0]}/}
-  fi
-  # Remove final /. sequence.
-  echo "${path%%/.}"
+  realpath --canonicalize-missing --no-symlinks "$1"
 }
 
 # Match /etc/resolv.conf nameserver lines
@@ -1066,6 +1051,24 @@ init_service_arrays() {
     init_service_arrays_from_commandline
   fi
 }
+
+load_v1_props() {
+  local file="$1"
+  while IFS= read -r line
+  do
+    if [[ "$line" =~ ^[^#]*= ]]; then
+      key=$(echo "$line" | cut -d '=' -f 1)
+      value=$(echo "$line" | cut -d '=' -f 2-)
+      V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
+    fi
+  done < $file
+
+#	for key in "${!V1_PROPS[@]}"
+#	do
+#    echo "$key=${V1_PROPS[$key]}"
+#	done
+}
+
 
 init_service_arrays_from_commandline() {
   declare -a svcs_arr

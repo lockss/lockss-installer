@@ -1,27 +1,14 @@
 # `lockss-installer` Release Notes
 
-## Changes Since LOCKSS Installer version 2.0-alpha3
+## 2.0.81-beta1
 
-### Features
-
-*   Switched MicroK8s Kubernetes to K3s Kubernetes.
-*   Support alternative Kubernetes installs.
-*   Add script to remove MicroK8s install.
-*   Add script to bring up a local Kubernetes dashboard.
-*   Enable SSL LCAP if keystores and password found in `~lockss/config/keys`.
-*   Start command waits until pods are reachable and optionally until services have started, and stop command waits until pods have exited.
-*   Add log file for install scripts.
-*   Add logging support for Pywb, OpenWayback and PostgreSQL.
+Release date: 2024-07-29
 
 ### Fixes
 
+*   Force use of upgrade script after version upgrade.
+*   Force use of `configure-lockss` after running upgrade script.
+*   `start-lockss`, `stop-lockss` and `restart-lockss` scripts accept `-s "<semocolon-separated-list-of-services>"` to start, stop, or restart only those services.
+*   Set `<SVC>_PORTS_ADDITIONAL=<host-port>:<container-port>` in `~/lockss-installer/config/env.mustache.opt` to map additional port to the container (e.g., for profiling).
 *   Speed up stop script.
-*   More robust firewall and DNS checking.
-*   All container logging is now in the host machine's time zone.
-
-### Security
-
-*   Access to Solr is now password protected.
-*   Containers no longer run as `root` internally.
-*   The `lockss` user on the host machine no longer requires `sudo` privileges.
-*   Compatibility with `firewalld` and `ufw` reinstated.
+*   Set env var `SUPRESS_STD_REDIR` before running start-lockss to bypass stderr redirection to stack's `stdout.log` file, which can result in truncation on startup errors.
