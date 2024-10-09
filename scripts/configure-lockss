@@ -490,6 +490,7 @@ os_release_name() {
 # write_config_file file
 write_config_file() {
   cat >"${1}" <<EOF
+LOCKSS_RELEASE="${LOCKSS_RELEASE}"
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
@@ -985,6 +986,7 @@ fi
 umask 002
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
+LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
