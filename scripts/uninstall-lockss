@@ -133,6 +133,9 @@ while [[ -n $1 ]]; do
   shift
 done
 
+Check_Runnable
+Check_Configured
+
 echo "Running this script will not delete any of your preserved content but will remove the passwords necessary for the system to access that content."
 ask_for_input "Do you want to display your saved passwords now, so you can record them?" "" N
 if is_yes "${ANS}" ; then
