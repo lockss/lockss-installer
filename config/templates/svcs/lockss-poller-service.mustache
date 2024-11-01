@@ -37,7 +37,8 @@ spec:
 
   selector:
     io.kompose.service: lockss-poller-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

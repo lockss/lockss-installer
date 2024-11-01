@@ -19,7 +19,8 @@ spec:
 
   selector:
     io.kompose.service: lockss-repository-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

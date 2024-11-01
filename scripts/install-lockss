@@ -61,7 +61,7 @@ K3S_URL='https://get.k3s.io'
 
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.21.5+k3s1'
+DEFAULT_K3S_VERSION='v1.31.2+k3s1'
 
 DEFAULT_RETRIES='5'
 DEFAULT_WAIT='10'
@@ -726,13 +726,12 @@ Install_K3s()
         sh -s - \
         --write-kubeconfig-mode 644 \
         --disable-cloud-controller \
-        --disable traefik \
         ${_resolv_conf_args} \
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
   fi
-
-  # Store k8s.cfg
+  k3s kubectl patch deployment traefik --patch '{"spec":{"template":{"spec":{"hostNetwork":true}}}}' -nkube-system
+ # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
   _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
@@ -743,6 +742,7 @@ K8S_VERSION="${_k8sver}"
 K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
 MyEOF
+
   if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
     echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \
         || Fatal 'Could not append to k8s.cfg'

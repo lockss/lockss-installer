@@ -13,7 +13,8 @@ spec:
     targetPort: {{SOLR_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-solr-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
