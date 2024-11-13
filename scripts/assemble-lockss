@@ -451,19 +451,19 @@ assemble_stack() {
 }
 
 generate_lockss() {
-	logger_debug "Removing old generated configuration files..."
-	rm -rf "${DOCKER_CONFIGS_DIR}"
+  logger_debug "Removing old generated configuration files..."
+  rm -rf "${DOCKER_CONFIGS_DIR}"
   if [[ -f "${OPT_POSTGRES_FILE}" ]]; then
     OPT_POSTGRES="TRUE"
   fi
-	logger_debug "Generating config files for $STACK_COUNT stacks..."
-	for ((num = 1; num <= $STACK_COUNT; num++)); do
-		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
-		if [ ${STACK_COUNT} = 1 ]; then
-			STACK_NAME="${STACK_PREFIX}"
-		else
-			STACK_NAME="${STACK_PREFIX}$num"
-		fi
+  logger_debug "Generating config files for $STACK_COUNT stacks..."
+  for ((num = 1; num <= $STACK_COUNT; num++)); do
+    export STACK_PORT_BASE=$((${PORT_BASE} + $num))
+    if [ ${STACK_COUNT} = 1 ]; then
+      STACK_NAME="${STACK_PREFIX}"
+    else
+      STACK_NAME="${STACK_PREFIX}$num"
+    fi
     logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
     if [ -n "${LOCKSS_MIGRATION_LCAP_PORT}" ]; then
@@ -487,10 +487,10 @@ generate_lockss() {
     if [[ -f "${OPT_ENV_TMPL}" ]]; then
       mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
     fi
-     if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
-       mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
-     fi
-   # Source env.sh
+    if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
+      mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
+    fi
+    # Source env.sh
     source_env "${STACK_NAME}"
 
     logger_debug "Getting node hostname..."
@@ -523,7 +523,7 @@ generate_lockss() {
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
-#    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+    #    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
     for f in ${MK_DIR}/*.mustache; do
       src="${f}"
       dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
@@ -558,7 +558,7 @@ generate_lockss() {
       fi
     done
   done
-	logger_debug "Successfully regenerated stack components."
+  logger_debug "Successfully regenerated stack components."
 }
 
 assemble_lockss() {
