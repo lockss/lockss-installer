@@ -583,6 +583,33 @@ assemble_lockss() {
 
 }
 
+# Warn about any services configured to wait for an attachment from
+# either the profiler or a debugger.  Currently looks only at
+# <SVC>_JVM_OPTS_ADDITIONAL env var, which is where we add those
+# options (typically in env.mustach.opt)
+#
+# Looks for absence of "nowait" in -agentpath.*jprofiler
+# -agentpath:/data/jprofiler13/bin/linux-x64/libjprofilerti.so=port=8842,nowait
+# or absence of "suspend=n" in -agentlib:jdwp
+# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002"
+#
+warn_agent_wait() {
+  for svc in ${LOCKSS_OWNED_SERVICE[@]}; do
+    local env_var="${svc^^}_JVM_OPTS_ADDITIONAL"
+    local env_val="${!env_var}"
+    if [ -n "${env_val}" ]; then
+      for opt in ${env_val}; do
+        if [[ "${opt}" =~ -agentpath.*jprofiler ]] &&  ! [[ "${opt}" =~ nowait ]]; then
+          logger_warn "${svc} JVM will wait for profiler attachment"
+        fi
+        if [[ "${opt}" =~ -agentlib:jdwp ]] &&  ! [[ "${opt}" =~ suspend=n ]]; then
+          logger_warn "${svc} JVM will wait for debugger attachment"
+        fi
+      done
+    fi
+  done
+}
+
 ##
 ## MAIN
 ##
@@ -635,6 +662,7 @@ Check_Physical_Volumes
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
+warn_agent_wait
 assemble_lockss || logger_error_exit "Unable to assemble all lockss components."
 logger_info "LOCKSS is ready to deploy."
 graceful_exit
