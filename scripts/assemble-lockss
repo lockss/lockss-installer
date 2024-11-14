@@ -600,10 +600,10 @@ warn_agent_wait() {
     if [ -n "${env_val}" ]; then
       for opt in ${env_val}; do
         if [[ "${opt}" =~ -agentpath.*jprofiler ]] &&  ! [[ "${opt}" =~ nowait ]]; then
-          logger_warn "${svc} JVM will wait for profiler attachment"
+          logger_warn '!!! WARNING !!!'" ${svc} will not start until profiler is attached. "'!!! WARNING !!!'
         fi
         if [[ "${opt}" =~ -agentlib:jdwp ]] &&  ! [[ "${opt}" =~ suspend=n ]]; then
-          logger_warn "${svc} JVM will wait for debugger attachment"
+          logger_warn '!!! WARNING !!!'" ${svc} will not start until debugger is attached. "'!!! WARNING !!!'
         fi
       done
     fi
