@@ -158,7 +158,9 @@ undeploy_stack() {
       kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
     fi
   done
- logger_info "Pod shutdown complete"
+  # Delete Kubernetes CronJobs
+  kubectl_lockss delete cronjob -l lockss-stack-id=${stack} | logger_debug
+  logger_info "Pod shutdown complete"
 }
 
 # Source system config file
