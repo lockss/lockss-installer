@@ -557,6 +557,14 @@ generate_lockss() {
         cp "${src}" "${dst}"
       fi
     done
+    logger_debug "Generating the Kubernetes CronJob definitions..."
+    mkdir "${STACK_CONFIG_DIR}/cron"
+    for f in "${CRON_CONFIGS_DIR}"/*.mustache; do
+      src="${f}"
+      dst="${STACK_CONFIG_DIR}/cron/$(basename "${f}" .mustache).yaml"
+      logger_debug "Rendering ${src} to ${dst}..."
+      mo "${src}" > "${dst}"
+    done
   done
   logger_debug "Successfully regenerated stack components."
 }
