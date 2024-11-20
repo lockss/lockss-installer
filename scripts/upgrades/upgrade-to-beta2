@@ -198,15 +198,18 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
     2.0-alpha6)
       logger_info "Performing upgrade from alpha6"
       upgrade_postgres
-      ;;
+      ;&
     2.0-alpha7)
       logger_info "Performing upgrade from alpha7"
-      ;;
+      ;&
     2.0-alpha8)
       logger_info "Performing upgrade from alpha8"
-      ;;
+      ;&
     2.0-beta1)
       logger_info "Performing upgrade from beta1"
+      for pvc in $(kubectl get pvc -n lockss  -o jsonpath='{.items[*].metadata.name}'); do
+        kubectl delete pvc -n lockss $pvc;
+      done
       ;;
     2.0-beta2)
       logger_info "Upgrade already applied (beta2)"
