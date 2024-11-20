@@ -16,7 +16,7 @@ data:
         su
     }
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: lockss-logrotate-cronjob
@@ -33,6 +33,8 @@ spec:
           containers:
           - name: lockss-logrotate
             image: {{LOGROTATE_IMG}}:{{LOGROTATE_VERSION}}
+            imagePullPolicy: IfNotPresent
+            restartPolicy: OnFailure
             volumeMounts:
             - name: logrotate-conf
               mountPath: /etc/logrotate.d
@@ -103,4 +105,3 @@ spec:
             persistentVolumeClaim:
               claimName: lockss-soap-logs-pvc
 {{/USE_LOCKSS_SOAP}}
-          restartPolicy: OnFailure
