@@ -30,11 +30,11 @@ spec:
     spec:
       template:
         spec:
+          restartPolicy: OnFailure
           containers:
           - name: lockss-logrotate
             image: {{LOGROTATE_IMG}}:{{LOGROTATE_VERSION}}
             imagePullPolicy: IfNotPresent
-          restartPolicy: OnFailure
             volumeMounts:
             - name: logrotate-conf
               mountPath: /etc/logrotate.d
