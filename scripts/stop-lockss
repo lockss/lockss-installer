@@ -164,7 +164,7 @@ undeploy_stack() {
   IFS=' ' read -a cronjobs_arr <<< "$cronjobs"
 	for cronjob_name in "${cronjobs_arr[@]}"
 	do
-    kubectl_lockss delete cronjob -l lockss-stack-id=${stack} ${cronjob_name} | logger_debug
+    kubectl_lockss delete cronjob "${cronjob_name}" | logger_debug
   done
   logger_info "Pod shutdown complete"
 }

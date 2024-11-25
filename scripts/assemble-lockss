@@ -409,7 +409,7 @@ add_stack_volumes() {
     if [ "postgres" == "$svc" ]; then
       mkdir --mode=777 -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
     else
-      mkdir -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
+      mkdir --mode=755 -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
     fi
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || logger_error_exit "Unable to create tmp dir: ${mtpoint}"
