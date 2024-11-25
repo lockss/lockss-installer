@@ -207,9 +207,16 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
       ;&
     2.0-beta1)
       logger_info "Performing upgrade from beta1"
+      # Remove Kubernetes Persistent Volumes Claims (PVCs)
       for pvc in $(kubectl get pvc -n lockss  -o jsonpath='{.items[*].metadata.name}'); do
-        kubectl delete pvc -n lockss $pvc;
+        kubectl delete pvc -n lockss "$pvc";
       done
+      # Remove Kubernetes Persistent Volumes (PVs)
+      for pv in $(kubectl get pv -n lockss  -o jsonpath='{.items[*].metadata.name}'); do
+        kubectl delete pv -n lockss "$pv";
+      done
+      # Disable group writeable permission on log directories
+      chmod 755 "${LOCKSS_DATA_DIR}"/*-logs
       ;;
     2.0-beta2)
       logger_info "Upgrade already applied (beta2)"
