@@ -44,7 +44,6 @@ LIB_DIR="${SCRIPTS_DIR}/lib"
 UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
-CRON_CONFIGS_DIR="${TEMPLATES_DIR}/cron"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 ##
@@ -145,37 +144,6 @@ set_k3s_bin_dir() {
   fi
 }
 
-generate_k3s_cronjobs() {
-  logger_debug "Generating the Kubernetes CronJob definitions..."
-  mkdir "${STACK_CONFIG_DIR}/cron"
-  for f in "${CRON_CONFIGS_DIR}"/*.mustache; do
-    src="${f}"
-    dst="${STACK_CONFIG_DIR}/cron/$(basename "${f}" .mustache).yaml"
-    logger_debug "Rendering ${src} to ${dst}..."
-    mo "${src}" > "${dst}"
-  done
-}
-
-apply_k3s_cronjobs() {
-  logger_debug "Deploying Kubernetes CronJobs for stack $stack"
-  for f in "${DOCKER_CONFIGS_DIR}/$stack"/cron/*.yaml; do
-    if ! kubectl_lockss apply -f "${f}" >/dev/null ; then
-      popd &>/dev/null
-      logger_error "An error was found in yaml file ${f}"
-      logger_error_exit "Fix the error then run scripts/restart-lockss."
-    fi
-  done
-}
-
-delete_k3s_cronjobs() {
-  kubectl_lockss delete cronjob -l lockss-stack-id=${stack} | logger_debug
-}
-
-sync_k3s_cronjobs() {
-  delete_k3s_cronjobs
-  generate_k3s_cronjobs
-  apply_k3s_cronjobs
-}
 
 #Check_Runnable()
 #{
