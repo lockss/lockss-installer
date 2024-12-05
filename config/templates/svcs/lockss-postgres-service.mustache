@@ -13,8 +13,7 @@ spec:
     targetPort: {{POSTGRES_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-postgres-service
-  externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

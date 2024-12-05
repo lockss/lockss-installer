@@ -22,8 +22,7 @@ spec:
 
   selector:
     io.kompose.service: lockss-metadata-extraction-service
-  externalTrafficPolicy: Local
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
