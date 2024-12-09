@@ -77,7 +77,7 @@ spec:
 {{#USE_LOCKSS_CRAWL}}
           - name: lockss-crawl-logs
             persistentVolumeClaim:
-              claimName: lockss-mdx-logs-pvc
+              claimName: lockss-crawl-logs-pvc
 {{/USE_LOCKSS_CRAWL}}
 {{#USE_LOCKSS_MDX}}
           - name: lockss-mdx-logs
