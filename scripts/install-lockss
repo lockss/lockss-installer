@@ -726,11 +726,11 @@ Install_K3s()
         sh -s - \
         --write-kubeconfig-mode 644 \
         --disable-cloud-controller \
+        --disable traefik \
         ${_resolv_conf_args} \
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
   fi
-  k3s kubectl patch deployment traefik --patch '{"spec":{"template":{"spec":{"hostNetwork":true}}}}' -nkube-system
  # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
