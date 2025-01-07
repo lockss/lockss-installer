@@ -992,7 +992,6 @@ fi
 umask 002
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
-LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
@@ -1034,6 +1033,10 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   echo "Reading Kubernetes config: ${K8S_CONF_FILE}"
   read_config ${K8S_CONF_FILE}
 fi
+
+# Set release version *after* loading existing config file
+LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
+
 echo "Checking system state..."
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then
