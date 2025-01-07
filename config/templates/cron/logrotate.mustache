@@ -45,14 +45,10 @@ spec:
             - name: lockss-crawl-logs
               mountPath: /lockss/logs/lockss-crawl-logs
 {{/USE_LOCKSS_CRAWL}}
-{{#USE_LOCKSS_MDX}}
-            - name: lockss-mdx-logs
-              mountPath: /lockss/logs/lockss-mdx-logs
-{{/USE_LOCKSS_MDX}}
-{{#USE_LOCKSS_MDQ}}
-            - name: lockss-mdq-logs
-              mountPath: /lockss/logs/lockss-mdq-logs
-{{/USE_LOCKSS_MDQ}}
+{{#USE_LOCKSS_MD}}
+            - name: lockss-md-logs
+              mountPath: /lockss/logs/lockss-md-logs
+{{/USE_LOCKSS_MD}}
 {{#USE_LOCKSS_POL}}
             - name: lockss-pol-logs
               mountPath: /lockss/logs/lockss-pol-logs
@@ -79,16 +75,11 @@ spec:
             persistentVolumeClaim:
               claimName: lockss-crawl-logs-pvc
 {{/USE_LOCKSS_CRAWL}}
-{{#USE_LOCKSS_MDX}}
-          - name: lockss-mdx-logs
+{{#USE_LOCKSS_MD}}
+          - name: lockss-md-logs
             persistentVolumeClaim:
-              claimName: lockss-mdx-logs-pvc
-{{/USE_LOCKSS_MDX}}
-{{#USE_LOCKSS_MDQ}}
-          - name: lockss-mdq-logs
-            persistentVolumeClaim:
-              claimName: lockss-mdq-logs-pvc
-{{/USE_LOCKSS_MDQ}}
+              claimName: lockss-md-logs-pvc
+{{/USE_LOCKSS_MD}}
 {{#USE_LOCKSS_POL}}
           - name: lockss-pol-logs
             persistentVolumeClaim:

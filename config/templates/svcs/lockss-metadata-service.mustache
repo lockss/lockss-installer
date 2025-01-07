@@ -8,13 +8,13 @@ metadata:
   name: lockss-metadata-service
 spec:
   ports:
-  - name: "mdq-service-rest-port"
-    port: {{MDQ_REST_PORT}}
-    targetPort: {{MDQ_DEFAULT_REST_PORT}}
-  - name: "mdq-service-ui-port"
-    port: {{MDQ_UI_PORT}}
-    targetPort: {{MDQ_DEFAULT_UI_PORT}}
-{{#additional_ports MDQ}}
+  - name: "md-service-rest-port"
+    port: {{MD_REST_PORT}}
+    targetPort: {{MD_DEFAULT_REST_PORT}}
+  - name: "md-service-ui-port"
+    port: {{MD_UI_PORT}}
+    targetPort: {{MD_DEFAULT_UI_PORT}}
+{{#additional_ports MD}}
   - name: "__PORT_NAME__"
     port: __HOST_PORT__
     targetPort: __CONTAINER_PORT__
@@ -31,7 +31,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-service
-  name: lockss-mdq-data-pvc
+  name: lockss-md-data-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -41,7 +41,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-mdq-data"
+      owner: "lockss-md-data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -50,7 +50,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-service
-  name: lockss-mdq-logs-pvc
+  name: lockss-md-logs-pvc
 spec:
   accessModes:
   - ReadWriteMany
@@ -60,7 +60,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-mdq-logs"
+      owner: "lockss-md-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -69,7 +69,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-metadata-service
-  name: lockss-mdq-tmp-pvc
+  name: lockss-md-tmp-pvc
 spec:
   accessModes:
   - ReadWriteOnce
@@ -79,7 +79,7 @@ spec:
   storageClassName: local-storage
   selector:
     matchLabels:
-      owner: "lockss-mdq-tmp"
+      owner: "lockss-md-tmp"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -110,11 +110,11 @@ spec:
       containers:
       - env:
         - name: JVM_OPTS_SERVICE_ID
-          value: "--mdq--"
+          value: "--md--"
         - name: ARGS_ADDITIONAL
           value: "{{ARGS_ADDITIONAL}}"
         - name: JVM_OPTS_ADDITIONAL
-          value: "{{MDQ_JVM_OPTS_ADDITIONAL}}"
+          value: "{{MD_JVM_OPTS_ADDITIONAL}}"
         - name: LOCKSS_ADMIN_USER
           value: {{LOCKSS_ADMIN_USER}}
         - name: LOCKSS_CONFIG_URL
@@ -142,10 +142,10 @@ spec:
           name: lockss-bootstrap
           subPath: lockss_bootstrap
         - mountPath: /run/configs/lockss_service
-          name: mdq-service
+          name: md-service
           subPath: lockss_service
         - mountPath: /run/configs/lockss_service_opt
-          name: mdq-service-opt
+          name: md-service-opt
           subPath: lockss_service_opt
         - mountPath: /run/secrets/lockss-postgres-pass
           name: lockss-postgres-pass
@@ -157,24 +157,24 @@ spec:
           name: lockss-auth
           subPath: lockss-auth
         - mountPath: /data
-          name: lockss-mdq-data
+          name: lockss-md-data
         - mountPath: /var/log/lockss
-          name: lockss-mdq-logs
+          name: lockss-md-logs
         - mountPath: /tmp/lockss
-          name: lockss-mdq-tmp
-        image: "{{MDQ_IMG}}:{{MDQ_VERSION}}"
+          name: lockss-md-tmp
+        image: "{{MD_IMG}}:{{MD_VERSION}}"
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-metadata-service
         ports:
-        - name: "mdq-rest-port"
-          containerPort: {{MDQ_DEFAULT_REST_PORT}}
-          hostPort: {{MDQ_REST_PORT}}
+        - name: "md-rest-port"
+          containerPort: {{MD_DEFAULT_REST_PORT}}
+          hostPort: {{MD_REST_PORT}}
           protocol: TCP
-        - name: "mdq-ui-port"
-          containerPort: {{MDQ_DEFAULT_UI_PORT}}
-          hostPort: {{MDQ_UI_PORT}}
+        - name: "md-ui-port"
+          containerPort: {{MD_DEFAULT_UI_PORT}}
+          hostPort: {{MD_UI_PORT}}
           protocol: TCP
-{{#additional_ports MDQ}}
+{{#additional_ports MD}}
         - name: "__PORT_NAME__"
           containerPort: __CONTAINER_PORT__
           hostPort: __HOST_PORT__
@@ -195,16 +195,16 @@ spec:
         name: lockss-bootstrap
       - configMap:
           items:
-          - key: mdq-service
+          - key: md-service
             path: lockss_service
-          name: mdq-service
-        name: mdq-service
+          name: md-service
+        name: md-service
       - configMap:
           items:
-          - key: mdq-service-opt
+          - key: md-service-opt
             path: lockss_service_opt
-          name: mdq-service-opt
-        name: mdq-service-opt
+          name: md-service-opt
+        name: md-service-opt
       - name: lockss-postgres-pass
         secret:
           secretName: lockss-postgres-pass
@@ -223,12 +223,12 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
-      - name: lockss-mdq-data
+      - name: lockss-md-data
         persistentVolumeClaim:
-          claimName: lockss-mdq-data-pvc
-      - name: lockss-mdq-logs
+          claimName: lockss-md-data-pvc
+      - name: lockss-md-logs
         persistentVolumeClaim:
-          claimName: lockss-mdq-logs-pvc
-      - name: lockss-mdq-tmp
+          claimName: lockss-md-logs-pvc
+      - name: lockss-md-tmp
         persistentVolumeClaim:
-          claimName: lockss-mdq-tmp-pvc
+          claimName: lockss-md-tmp-pvc

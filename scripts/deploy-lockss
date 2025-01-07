@@ -65,8 +65,7 @@ declare -a SERVICES
 declare -A svc_port_map
 declare -A -r SERVICE_NAMES=(
  [cfg]="lockss-configuration-service"
- [mdq]="lockss-metadata-service"
- [mdx]="lockss-metadata-extraction-service"
+ [md]="lockss-metadata-service"
  [pol]="lockss-poller-service"
  [crawl]="lockss-crawler-service"
  [soap]="lockss-soap-service"

@@ -408,20 +408,12 @@ configure_services() {
 
   configure_crawler_services
 
-  # Metadata query service
-  ask_for_input "Use LOCKSS Metadata Query Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDQ})" Y
+  # Metadata service
+  ask_for_input "Use LOCKSS Metadata Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MD})" Y
   if is_yes "${ANS}"; then
-    USE_LOCKSS_MDQ=true
+    USE_LOCKSS_MD=true
   else
-    USE_LOCKSS_MDQ=false
-  fi
-
-  # Metadata extraction service
-  ask_for_input "Use LOCKSS Metadata Extraction Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDX})" Y
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_MDX=true
-  else
-    USE_LOCKSS_MDX=false
+    USE_LOCKSS_MD=false
   fi
 
   # SOAP service
@@ -540,8 +532,7 @@ LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
-USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ}"
-USE_LOCKSS_MDX="${USE_LOCKSS_MDX}"
+USE_LOCKSS_MD="${USE_LOCKSS_MD}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
 USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL}"
 USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP}"

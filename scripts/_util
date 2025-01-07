@@ -1075,11 +1075,8 @@ init_service_arrays_from_commandline() {
       "cfg"|"config")
         SERVICES+=("cfg")
         ;;
-      "mdq")
-        SERVICES+=("mdq")
-        ;;
-      "mdx")
-        SERVICES+=("mdx")
+      "md")
+        SERVICES+=("md")
         ;;
       "pol"|"poll"|"poller")
         SERVICES+=("pol")
@@ -1120,11 +1117,8 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_CFG}; then
     SERVICES+=("cfg")
   fi
-  if ${USE_LOCKSS_MDQ}; then
-    SERVICES+=("mdq")
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    SERVICES+=("mdx")
+  if ${USE_LOCKSS_MD}; then
+    SERVICES+=("md")
   fi
   if ${USE_LOCKSS_POL}; then
     SERVICES+=("pol")

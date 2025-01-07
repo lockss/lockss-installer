@@ -85,11 +85,10 @@ declare -a global_confs=(
   "lockss-postgresql")
 declare -a SERVICES
 
-declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "mdq" "mdx" "pol" "crawl" "soap" "repo" "solr")
+declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "md" "pol" "crawl" "soap" "repo" "solr")
 declare -A -r SERVICE_CONFS=(
  [cfg]="cfg-service"
- [mdq]="mdq-service"
- [mdx]="mdx-service"
+ [md]="md-service"
  [pol]="pol-service"
  [crawl]="crawl-service"
  [repo]="repo-service"
