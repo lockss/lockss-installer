@@ -602,6 +602,7 @@ assemble_lockss() {
 # -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002"
 #
 warn_agent_wait() {
+  local stack=${STACK_PREFIX}$1
   for svc in ${LOCKSS_OWNED_SERVICE[@]}; do
     local env_var="${svc^^}_JVM_OPTS_ADDITIONAL"
     local env_val="${!env_var}"
@@ -609,6 +610,14 @@ warn_agent_wait() {
       for opt in ${env_val}; do
         if [[ "${opt}" =~ -agentpath.*jprofiler ]] &&  ! [[ "${opt}" =~ nowait ]]; then
           logger_warn '!!! WARNING !!!'" ${svc} will not start until profiler is attached. "'!!! WARNING !!!'
+        fi
+        # Check that agentlib file exists (but only if it's in data
+        # dir so we know the host path)
+        if [[ "${opt}" =~ -agentpath:/data/(.*jprofiler.*\.so)= ]]; then
+          local agentfile=${LOCKSS_DATA_DIR}/$stack-${svc}-data/${BASH_REMATCH[1]}
+          if [[ ! -f ${agentfile} ]]; then
+            logger_warn '!!! WARNING !!!'" ${svc} will not start because profiler lib is missing: ${agentfile}"'!!! WARNING !!!'
+          fi
         fi
         if [[ "${opt}" =~ -agentlib:jdwp ]] &&  ! [[ "${opt}" =~ suspend=n ]]; then
           logger_warn '!!! WARNING !!!'" ${svc} will not start until debugger is attached. "'!!! WARNING !!!'
@@ -670,7 +679,7 @@ Check_Physical_Volumes
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
-warn_agent_wait
+warn_agent_wait ""              # s.b. invoked in NUM_STACKS loop
 assemble_lockss || logger_error_exit "Unable to assemble all lockss components."
 logger_info "LOCKSS is ready to deploy."
 graceful_exit
