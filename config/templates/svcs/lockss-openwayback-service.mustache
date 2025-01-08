@@ -118,7 +118,7 @@ spec:
         - name: WAYBACK_BASEDIR
           value: /data
         - name: CATALINA_OPTS
-          value: '-Dlog4j2.formatMsgNoLookups=true'
+          value: '-Dlog4j2.formatMsgNoLookups=true -Djava.util.logging.ConsoleHandler.level=ALL'
         image: {{OPENWB_IMG}}:{{OPENWB_VERSION}}
         imagePullPolicy: {{PULL_POLICY}}
         name: lockss-openwayback-service
