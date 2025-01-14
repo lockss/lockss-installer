@@ -265,7 +265,7 @@ configure_migration() {
             filename="$(normalize_path ${ANS})"
             if [ -f ${filename} ]; then
               load_v1_props "${filename}"
-              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
+              if [ "${V1_PROPS[LOCKSS_CONFIG_VERSION]}" == "1" ]; then
                 FILE_OK=Y
                 V1_FILE=${filename}
               else
