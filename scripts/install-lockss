@@ -734,7 +734,7 @@ Install_K3s()
  # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
-  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F '+' '{print $1;exit 0}{print;exit 1}')" \
       || Fatal "Could not infer the Kubernetes version"
   cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
