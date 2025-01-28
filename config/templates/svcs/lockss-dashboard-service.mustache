@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-dashboard-service
+  name: lockss-dashboard-service
+spec:
+  ports:
+  - name: "dashboard-port"
+    port: {{DASHBOARD_PORT}}
+    targetPort: {{DASHBOARD_DEFAULT_PORT}}
+  selector:
+    io.kompose.service: lockss-dashboard-service
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+    io.kompose.service: lockss-dashboard-service
+  name: lockss-dashboard-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lockss-dashboard-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: lockss
+        lockss-stack-id: {{STACK}}
+        io.kompose.network/{{STACK}}-network: "true"
+        io.kompose.service: lockss-dashboard-service
+    spec:
+      containers:
+      - env:
+        - name: ARGS_ADDITIONAL
+          value: "{{ARGS_ADDITIONAL}}"
+        - name: TZ
+          value: {{LOCKSS_TIMEZONE}}
+        image: {{DASHBOARD_IMG}}:{{DASHBOARD_VERSION}}
+        imagePullPolicy: {{PULL_POLICY}}
+        name: lockss-dashboard-service
+        ports:
+        - name: "dashboard-port"
+          containerPort: {{DASHBOARD_DEFAULT_PORT}}
+          hostPort: {{DASHBOARD_PORT}}
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /run/secrets/lockss-auth
+          name: lockss-auth
+          subPath: lockss-auth
+        - mountPath: /run/configs/lockss_cluster
+          name: lockss-cluster
+          subPath: lockss_cluster
+        - mountPath: /run/configs/lockss_cluster_opt
+          name: lockss-cluster-opt
+          subPath: lockss_cluster_opt
+      restartPolicy: Always
+      hostAliases:
+      - ip: "{{LOCKSS_IPADDR}}"
+        hostnames:
+        - "{{LOCKSS_HOSTNAME_LOWERCASE}}"
+      volumes:
+      - name: lockss-auth
+        secret:
+          secretName: lockss-auth
+      - configMap:
+          items:
+            - key: lockss-cluster
+              path: lockss_cluster
+          name: lockss-cluster
+        name: lockss-cluster
+      - configMap:
+          items:
+            - key: lockss-cluster-opt
+              path: lockss_cluster_opt
+          name: lockss-cluster-opt
+        name: lockss-cluster-opt

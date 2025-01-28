@@ -1153,4 +1153,7 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_OPENWB}; then
     SERVICES+=("openwb")
   fi
+  if ${USE_LOCKSS_DASHBOARD}; then
+    SERVICES+=("dashboard")
+  fi
 }

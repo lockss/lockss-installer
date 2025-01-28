@@ -466,6 +466,14 @@ configure_services() {
   else
     USE_LOCKSS_OPENWB=false
   fi
+
+  # LOCKSS Dashboard UI
+  ask_for_input "Use LOCKSS Dashboard Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_DASHBOARD})" N
+  if is_yes "${ANS}"; then
+    USE_LOCKSS_DASHBOARD=true
+  else
+    USE_LOCKSS_DASHBOARD=false
+  fi
 }
 
 # find os release name
@@ -551,6 +559,7 @@ USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB}"
+USE_LOCKSS_DASHBOARD="${USE_LOCKSS_DASHBOARD}"
 EOF
   OS_NAME="$(os_release_name)"
   if [ -n "${OS_NAME}" ]; then

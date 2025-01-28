@@ -76,6 +76,7 @@ declare -A -r SERVICE_NAMES=(
  [hdfs]="lockss-hdfs-service"
  [pywb]="lockss-pywb-service"
  [openwb]="lockss-openwayback-service"
+ [dashboard]="lockss-dashboard-service"
 )
 STACK_PREFIX="lockss-stack"
 
