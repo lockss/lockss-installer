@@ -468,7 +468,7 @@ configure_services() {
   fi
 
   # LOCKSS Dashboard UI
-  ask_for_input "Use LOCKSS Dashboard Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_DASHBOARD})" N
+  ask_for_input "Use LOCKSS Dashboard Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_DASHBOARD})" Y
   if is_yes "${ANS}"; then
     USE_LOCKSS_DASHBOARD=true
   else
