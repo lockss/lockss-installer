@@ -214,6 +214,26 @@ Check_Prerequisites()
     echo 'OK: apparmor not enabled'
   fi
   
+  # Debian/Ubuntu with SELinux enabled does not seem to be supported by K3s
+  Echo 'Checking SELinux...'
+  case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
+    '')
+      Warning 'Could not infer ID from /etc/os-release'
+      ;;
+    debian|ubuntu)
+      if ! command -v selinuxenabled > /dev/null ; then
+        echo 'OK: SELinux not present'
+      elif ! selinuxenabled ; then
+        echo 'OK: SELinux not enabled'
+      else
+        Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled'
+      fi
+      ;;
+    *)
+      echo 'OK: not Debian-like'
+      ;;
+  esac
+  
   # Success
   Success 'K3s prerequisites checked'
 }
