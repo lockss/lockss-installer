@@ -225,8 +225,12 @@ Check_Prerequisites()
         echo 'OK: SELinux not present'
       elif ! selinuxenabled ; then
         echo 'OK: SELinux not enabled'
+        # If SELinux was previously on and /usr/local/bin/k3s was labeled, chcon will succeed and the K3s installer will fail
+        if [ -x /usr/local/bin/k3s ] && [ "$(printf '%.1s\n' "$(ls -Z /usr/local/bin/k3s)")" != '?' ] ; then
+          Fatal 'K3s Installer will fail on Debian/Ubuntu with /usr/local/bin/k3s labeled by SELinux; see manual'
+        fi
       else
-        Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled'
+        Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled; see manual'
       fi
       ;;
     *)
