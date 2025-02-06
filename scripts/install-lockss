@@ -443,9 +443,9 @@ Configure_Iptables()
 
   # Skip if not on PATH nor via Alternatives
   local _iptables_cmd=''
-  _iptables_cmd="$(command -v iptables)"
+  _iptables_cmd="$(command -v iptables 2> /dev/null)"
   # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
-  if [ -n "${_iptables_cmd}" ] ; then
+  if [ -z "${_iptables_cmd}" ] ; then
     _iptables_cmd='/etc/alternatives/iptables'
     if [ ! -x "${_iptables_cmd}" ] ; then
       Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
