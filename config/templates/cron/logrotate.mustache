@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lockss-logrotate-config
+data:
+  lockss_stdout_logs.conf: |
+    /lockss/logs/*/stdout.log {
+        daily
+        missingok
+        rotate 10
+        compress
+        delaycompress
+        dateformat -%Y%m%d
+        notifempty
+        copytruncate
+    }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lockss-logrotate-cronjob
+  labels:
+    app: lockss
+    lockss-stack-id: {{STACK}}
+spec:
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: lockss-logrotate
+            image: {{LOGROTATE_IMG}}:{{LOGROTATE_VERSION}}
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+            - name: logrotate-conf
+              mountPath: /etc/logrotate.d
+{{#USE_LOCKSS_CFG}}
+            - name: lockss-cfg-logs
+              mountPath: /lockss/logs/lockss-cfg-logs
+{{/USE_LOCKSS_CFG}}
+{{#USE_LOCKSS_CRAWL}}
+            - name: lockss-crawl-logs
+              mountPath: /lockss/logs/lockss-crawl-logs
+{{/USE_LOCKSS_CRAWL}}
+{{#USE_LOCKSS_MDX}}
+            - name: lockss-mdx-logs
+              mountPath: /lockss/logs/lockss-mdx-logs
+{{/USE_LOCKSS_MDX}}
+{{#USE_LOCKSS_MDQ}}
+            - name: lockss-mdq-logs
+              mountPath: /lockss/logs/lockss-mdq-logs
+{{/USE_LOCKSS_MDQ}}
+{{#USE_LOCKSS_POL}}
+            - name: lockss-pol-logs
+              mountPath: /lockss/logs/lockss-pol-logs
+{{/USE_LOCKSS_POL}}
+{{#USE_LOCKSS_REPO}}
+            - name: lockss-repo-logs
+              mountPath: /lockss/logs/lockss-repo-logs
+{{/USE_LOCKSS_REPO}}
+{{#USE_LOCKSS_SOAP}}
+            - name: lockss-soap-logs
+              mountPath: /lockss/logs/lockss-soap-logs
+{{/USE_LOCKSS_SOAP}}
+          volumes:
+          - name: logrotate-conf
+            configMap:
+              name: lockss-logrotate-config
+{{#USE_LOCKSS_CFG}}
+          - name: lockss-cfg-logs
+            persistentVolumeClaim:
+              claimName: lockss-cfg-logs-pvc
+{{/USE_LOCKSS_CFG}}
+{{#USE_LOCKSS_CRAWL}}
+          - name: lockss-crawl-logs
+            persistentVolumeClaim:
+              claimName: lockss-crawl-logs-pvc
+{{/USE_LOCKSS_CRAWL}}
+{{#USE_LOCKSS_MDX}}
+          - name: lockss-mdx-logs
+            persistentVolumeClaim:
+              claimName: lockss-mdx-logs-pvc
+{{/USE_LOCKSS_MDX}}
+{{#USE_LOCKSS_MDQ}}
+          - name: lockss-mdq-logs
+            persistentVolumeClaim:
+              claimName: lockss-mdq-logs-pvc
+{{/USE_LOCKSS_MDQ}}
+{{#USE_LOCKSS_POL}}
+          - name: lockss-pol-logs
+            persistentVolumeClaim:
+              claimName: lockss-pol-logs-pvc
+{{/USE_LOCKSS_POL}}
+{{#USE_LOCKSS_REPO}}
+          - name: lockss-repo-logs
+            persistentVolumeClaim:
+              claimName: lockss-repo-logs-pvc
+{{/USE_LOCKSS_REPO}}
+{{#USE_LOCKSS_SOAP}}
+          - name: lockss-soap-logs
+            persistentVolumeClaim:
+              claimName: lockss-soap-logs-pvc
+{{/USE_LOCKSS_SOAP}}

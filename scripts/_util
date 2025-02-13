@@ -44,6 +44,7 @@ LIB_DIR="${SCRIPTS_DIR}/lib"
 UPDATES_DIR="${SCRIPTS_DIR}/upgrades"
 DOCKER_CONFIGS_DIR="${CONFIG_DIR}/configs"
 TEMPLATES_DIR="${CONFIG_DIR}/templates"
+CRON_CONFIGS_DIR="${TEMPLATES_DIR}/cron"
 USEROPTS_DIR="${CONFIG_DIR}/useropts"
 
 ##
@@ -984,7 +985,7 @@ function normalize_path() {
 NAMESERVER_REGEX='^[ \t]*nameserver[ \t]+'
 
 # Match /etc/resolv.conf loopback nameserver lines
-LOOPBACK_REGEX="${NAMESERVER_REGEX}(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
+LOOPBACK_REGEX="${NAMESERVER_REGEX}(localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
 
 #
 # Usage: has_loopback_resolver FILE

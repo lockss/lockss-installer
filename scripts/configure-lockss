@@ -490,6 +490,7 @@ os_release_name() {
 # write_config_file file
 write_config_file() {
   cat >"${1}" <<EOF
+LOCKSS_RELEASE="${LOCKSS_RELEASE}"
 LOCKSS_CONFIG_VERSION="${LOCKSS_CONFIG_VERSION}"
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCKSS_HOSTNAME="${LOCKSS_HOSTNAME}"
@@ -583,7 +584,7 @@ build_config_file() {
   until is_yes ${CONFIG_OK}; do
     if [ -n "$IS_V1_MIGRATION" ]; then
       configure_migration
-      if [ -f "$V1_FILE" ]; then
+      if [ -f "$V1_FILE" -a "$LOCKSS_SAME_HOST_MIGRATION" = true ]; then
         echo "The following values were imported from your LOCKSS 1.0 configuration."
         echo "  In normal circumstances they should be accepted as is."
         echo
@@ -624,6 +625,12 @@ build_config_file() {
         echo "Illegal IPv4 address: ${ANS}"
       fi
     done
+
+    if [ -f "$V1_FILE" -a "$LOCKSS_SAME_HOST_MIGRATION" = false ]; then
+      echo "The following values were imported from your LOCKSS 1.0 configuration."
+      echo "  In normal circumstances they should be accepted as is."
+      echo
+    fi
 
     if [ "X${LOCKSS_ACCESS_SUBNET}" = "X" ]; then
       LOCKSS_ACCESS_SUBNET=$(echo ${LOCKSS_IPADDR} | sed 's/\.[0-9][0-9]*$/.0\/24/')
@@ -1026,6 +1033,10 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   echo "Reading Kubernetes config: ${K8S_CONF_FILE}"
   read_config ${K8S_CONF_FILE}
 fi
+
+# Set release version *after* loading existing config file
+LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
+
 echo "Checking system state..."
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then

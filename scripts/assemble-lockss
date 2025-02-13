@@ -409,7 +409,7 @@ add_stack_volumes() {
     if [ "postgres" == "$svc" ]; then
       mkdir --mode=777 -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
     else
-      mkdir -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
+      mkdir --mode=755 -p ${mtpoint} || logger_error_exit "Unable to create logs dir: ${mtpoint}"
     fi
     mtpoint=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
     mkdir --mode=1777 -p ${mtpoint} || logger_error_exit "Unable to create tmp dir: ${mtpoint}"
@@ -451,19 +451,19 @@ assemble_stack() {
 }
 
 generate_lockss() {
-	logger_debug "Removing old generated configuration files..."
-	rm -rf "${DOCKER_CONFIGS_DIR}"
+  logger_debug "Removing old generated configuration files..."
+  rm -rf "${DOCKER_CONFIGS_DIR}"
   if [[ -f "${OPT_POSTGRES_FILE}" ]]; then
     OPT_POSTGRES="TRUE"
   fi
-	logger_debug "Generating config files for $STACK_COUNT stacks..."
-	for ((num = 1; num <= $STACK_COUNT; num++)); do
-		export STACK_PORT_BASE=$((${PORT_BASE} + $num))
-		if [ ${STACK_COUNT} = 1 ]; then
-			STACK_NAME="${STACK_PREFIX}"
-		else
-			STACK_NAME="${STACK_PREFIX}$num"
-		fi
+  logger_debug "Generating config files for $STACK_COUNT stacks..."
+  for ((num = 1; num <= $STACK_COUNT; num++)); do
+    export STACK_PORT_BASE=$((${PORT_BASE} + $num))
+    if [ ${STACK_COUNT} = 1 ]; then
+      STACK_NAME="${STACK_PREFIX}"
+    else
+      STACK_NAME="${STACK_PREFIX}$num"
+    fi
     logger_debug "Generating files for stack $STACK_NAME"
     export STACK_NAME
     if [ -n "${LOCKSS_MIGRATION_LCAP_PORT}" ]; then
@@ -487,10 +487,10 @@ generate_lockss() {
     if [[ -f "${OPT_ENV_TMPL}" ]]; then
       mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
     fi
-     if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
-       mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
-     fi
-   # Source env.sh
+    if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
+      mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
+    fi
+    # Source env.sh
     source_env "${STACK_NAME}"
 
     logger_debug "Getting node hostname..."
@@ -523,7 +523,7 @@ generate_lockss() {
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
-#    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+    #    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
     for f in ${MK_DIR}/*.mustache; do
       src="${f}"
       dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
@@ -557,8 +557,16 @@ generate_lockss() {
         cp "${src}" "${dst}"
       fi
     done
+    logger_debug "Generating the Kubernetes CronJob definitions..."
+    mkdir "${STACK_CONFIG_DIR}/cron"
+    for f in "${CRON_CONFIGS_DIR}"/*.mustache; do
+      src="${f}"
+      dst="${STACK_CONFIG_DIR}/cron/$(basename "${f}" .mustache).yaml"
+      logger_debug "Rendering ${src} to ${dst}..."
+      mo "${src}" > "${dst}"
+    done
   done
-	logger_debug "Successfully regenerated stack components."
+  logger_debug "Successfully regenerated stack components."
 }
 
 assemble_lockss() {
@@ -581,6 +589,42 @@ assemble_lockss() {
         Copy_Lockss_Version
 	logger_debug "Successfully installed components."
 
+}
+
+# Warn about any services configured to wait for an attachment from
+# either the profiler or a debugger.  Currently looks only at
+# <SVC>_JVM_OPTS_ADDITIONAL env var, which is where we add those
+# options (typically in env.mustach.opt)
+#
+# Looks for absence of "nowait" in -agentpath.*jprofiler
+# -agentpath:/data/jprofiler13/bin/linux-x64/libjprofilerti.so=port=8842,nowait
+# or absence of "suspend=n" in -agentlib:jdwp
+# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002"
+#
+warn_agent_wait() {
+  local stack=${STACK_PREFIX}$1
+  for svc in ${LOCKSS_OWNED_SERVICE[@]}; do
+    local env_var="${svc^^}_JVM_OPTS_ADDITIONAL"
+    local env_val="${!env_var}"
+    if [ -n "${env_val}" ]; then
+      for opt in ${env_val}; do
+        if [[ "${opt}" =~ -agentpath.*jprofiler ]] &&  ! [[ "${opt}" =~ nowait ]]; then
+          logger_warn '!!! WARNING !!!'" ${svc} will not start until profiler is attached. "'!!! WARNING !!!'
+        fi
+        # Check that agentlib file exists (but only if it's in data
+        # dir so we know the host path)
+        if [[ "${opt}" =~ -agentpath:/data/(.*jprofiler.*\.so)= ]]; then
+          local agentfile=${LOCKSS_DATA_DIR}/$stack-${svc}-data/${BASH_REMATCH[1]}
+          if [[ ! -f ${agentfile} ]]; then
+            logger_warn '!!! WARNING !!!'" ${svc} will not start because profiler lib is missing: ${agentfile}"'!!! WARNING !!!'
+          fi
+        fi
+        if [[ "${opt}" =~ -agentlib:jdwp ]] &&  ! [[ "${opt}" =~ suspend=n ]]; then
+          logger_warn '!!! WARNING !!!'" ${svc} will not start until debugger is attached. "'!!! WARNING !!!'
+        fi
+      done
+    fi
+  done
 }
 
 ##
@@ -635,6 +679,7 @@ Check_Physical_Volumes
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
+warn_agent_wait ""              # s.b. invoked in NUM_STACKS loop
 assemble_lockss || logger_error_exit "Unable to assemble all lockss components."
 logger_info "LOCKSS is ready to deploy."
 graceful_exit
