@@ -985,7 +985,7 @@ function normalize_path() {
 NAMESERVER_REGEX='^[ \t]*nameserver[ \t]+'
 
 # Match /etc/resolv.conf loopback nameserver lines
-LOOPBACK_REGEX="${NAMESERVER_REGEX}(?:localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
+LOOPBACK_REGEX="${NAMESERVER_REGEX}(localhost|127(\.[0-9]+)*\.[0-9]+|0*(:0*)*:0*1)[ \t]*(#.*)?$"
 
 #
 # Usage: has_loopback_resolver FILE
@@ -1051,6 +1051,13 @@ init_service_arrays() {
 
 load_v1_props() {
   local file="$1"
+  if [[ ! -f "${file}" ]]; then
+    echo "${file} not found"
+    return 1
+  elif [[ ! -r "${file}" ]]; then
+    echo "${file} is not readable (owner/permissions)"
+    return 1
+  fi
   while IFS= read -r line
   do
     if [[ "$line" =~ ^[^#]*= ]]; then
@@ -1059,13 +1066,11 @@ load_v1_props() {
       V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
     fi
   done < $file
-
-#	for key in "${!V1_PROPS[@]}"
-#	do
-#    echo "$key=${V1_PROPS[$key]}"
-#	done
+  if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} != "1" ]; then
+    echo "${file} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
+    return 1;
+  fi
 }
-
 
 init_service_arrays_from_commandline() {
   declare -a svcs_arr
