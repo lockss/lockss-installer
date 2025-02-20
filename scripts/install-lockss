@@ -61,7 +61,7 @@ K3S_URL='https://get.k3s.io'
 
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.21.5+k3s1'
+DEFAULT_K3S_VERSION='v1.31.5+k3s1'
 
 DEFAULT_RETRIES='5'
 DEFAULT_WAIT='10'
@@ -755,11 +755,10 @@ Install_K3s()
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
   fi
-
-  # Store k8s.cfg
+ # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
-  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F '+' '{print $1;exit 0}{print;exit 1}')" \
       || Fatal "Could not infer the Kubernetes version"
   cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
