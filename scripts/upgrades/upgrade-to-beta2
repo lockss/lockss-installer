@@ -216,11 +216,15 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
         kubectl delete pv -n lockss "$pv";
       done
       # Disable group writeable permission on log directories
-      chmod 755 "${LOCKSS_LOG_DIR}"/*-logs
-      # Rename mdq directories to md
-      mv "${LOCKSS_DATA_DIR}/lockss-stack-mdq-data" "${LOCKSS_DATA_DIR}/lockss-stack-md-data"
-      mv "${LOCKSS_LOG_DIR}/lockss-stack-mdq-logs" "${LOCKSS_LOG_DIR}/lockss-stack-md-logs"
-      mv "${LOCKSS_TMP_DIR}/lockss-stack-mdq-tmp" "${LOCKSS_TMP_DIR}/lockss-stack-md-tmp"
+      for _d in "${LOCKSS_LOGS_DIR}"/*-logs ; do
+        if [ -d "${_d}" ] ; then
+          chmod 755 "${_d}"
+        fi
+      done
+      # Create a new set of data, logs, and tmp directories for the MD service
+      mkdir -p "${LOCKSS_DATA_DIR}/lockss-stack-md-data"
+      mkdir -p --mode=755 "${LOCKSS_LOGS_DIR}/lockss-stack-md-logs"
+      mkdir -p --mode=1777 "${LOCKSS_TMPDIR}/lockss-stack-md-tmp"
       ;;
     2.0-beta2)
       logger_info "Upgrade already applied (beta2)"
