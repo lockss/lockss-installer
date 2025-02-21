@@ -221,10 +221,6 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
           chmod 755 "${_d}"
         fi
       done
-      # Create a new set of data, logs, and tmp directories for the MD service
-      mkdir -p "${LOCKSS_DATA_DIR}/lockss-stack-md-data"
-      mkdir -p --mode=755 "${LOCKSS_LOGS_DIR}/lockss-stack-md-logs"
-      mkdir -p --mode=1777 "${LOCKSS_TMPDIR}/lockss-stack-md-tmp"
       ;;
     2.0-beta2)
       logger_info "Upgrade already applied (beta2)"
