@@ -906,20 +906,21 @@ build_config_file() {
 }
 
 setup_k8s_cmd() {
-  Check_K8s_Command
-  KUBCTL_OK=false
-  until is_yes ${KUBCTL_OK}; do
-    ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
-    local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) ] >/dev/null; then
-      KUBECTL_CMD="${ANS}"
-      KUBCTL_OK=Y
-    fi
-  done
-  echo "Kubectl command alias set to $KUBECTL_CMD"
-  KUBECTL="${KUBECTL_CMD}"
-  K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
-  write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  if [[ -z "${KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER}" ]]; then
+    Check_K8s_Command
+    KUBCTL_OK=false
+    until is_yes ${KUBCTL_OK}; do
+      ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
+      local first_word=$(echo "${ANS}" | awk '{print $1}')
+      if [ $(command -v ${first_word}) ] >/dev/null; then
+        KUBECTL_CMD="${ANS}"
+        KUBCTL_OK=Y
+      fi
+    done
+    echo "Kubectl command alias set to $KUBECTL_CMD"
+    K8S_VERSION=$($KUBECTL_CMD version | grep 'Server Version:' | awk '{print $3}')
+    write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  fi
 }
 
 usage() {
