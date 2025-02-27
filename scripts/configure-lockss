@@ -268,8 +268,7 @@ configure_migration() {
     # Look for V1 config.dat on this host, or ask if a copied one is available
     if [ -f ${V1_NATIVE_CONFIG_FILE} ]; then
       debug_msg "Found ${V1_NATIVE_CONFIG_FILE}"
-      load_v1_props "${V1_NATIVE_CONFIG_FILE}"
-      if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+      if load_v1_props "${V1_NATIVE_CONFIG_FILE}"; then
         # we found a v1 config file
         echo "LOCKSS 1.x installation was detected on this host."
         ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
@@ -278,9 +277,9 @@ configure_migration() {
           LOCKSS_SAME_HOST_MIGRATION=true
           LOCKSS_V1_ROUTABLE_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
+            LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
           else
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
+            LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           fi
           V1_FILE=${V1_NATIVE_CONFIG_FILE}
         else
@@ -288,6 +287,11 @@ configure_migration() {
           echo " this host is not supported, sorry."
           exit 1
         fi
+      else
+        echo "There appears to be a LOCKSS 1.x installation on this host but its"
+        echo "  configuration file can't be read or is invalid.  To proceed, please"
+        echo "  either make that file readable, or delete or rename it."
+        exit 1
       fi
     fi
     if ! is_true "$LOCKSS_SAME_HOST_MIGRATION"; then
@@ -302,16 +306,9 @@ configure_migration() {
           ask_for_input "Location of copied LOCKSS 1.x config.dat file" "${V1_COPIED_CONFIG_FILE}" ""
           if [ "X${ANS}" != X ]; then
             filename="$(normalize_path ${ANS})"
-            if [ -f ${filename} ]; then
-              load_v1_props "${filename}"
-              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
-                FILE_OK=Y
-                V1_FILE=${filename}
-              else
-                echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
-              fi
-            else
-              echo "${filename} not found."
+            if load_v1_props "${filename}"; then
+              FILE_OK=Y
+              V1_FILE=${filename}
             fi
           fi
         done
@@ -447,20 +444,12 @@ configure_services() {
 
   configure_crawler_services
 
-  # Metadata query service
-  ask_for_input "Use LOCKSS Metadata Query Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDQ})" Y
+  # Metadata service
+  ask_for_input "Use LOCKSS Metadata Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MD})" Y
   if is_yes "${ANS}"; then
-    USE_LOCKSS_MDQ=true
+    USE_LOCKSS_MD=true
   else
-    USE_LOCKSS_MDQ=false
-  fi
-
-  # Metadata extraction service
-  ask_for_input "Use LOCKSS Metadata Extraction Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDX})" Y
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_MDX=true
-  else
-    USE_LOCKSS_MDX=false
+    USE_LOCKSS_MD=false
   fi
 
   # SOAP service
@@ -579,8 +568,7 @@ LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
-USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ}"
-USE_LOCKSS_MDX="${USE_LOCKSS_MDX}"
+USE_LOCKSS_MD="${USE_LOCKSS_MD}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
 USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL}"
 USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP}"
@@ -963,20 +951,21 @@ build_config_file() {
 }
 
 setup_k8s_cmd() {
-  Check_K8s_Command
-  KUBCTL_OK=false
-  until is_yes ${KUBCTL_OK}; do
-    ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
-    local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) ] >/dev/null; then
-      KUBECTL_CMD="${ANS}"
-      KUBCTL_OK=Y
-    fi
-  done
-  echo "Kubectl command alias set to $KUBECTL_CMD"
-  KUBECTL="${KUBECTL_CMD}"
-  K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
-  write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  if [[ -z "${KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER}" ]]; then
+    Check_K8s_Command
+    KUBCTL_OK=false
+    until is_yes ${KUBCTL_OK}; do
+      ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
+      local first_word=$(echo "${ANS}" | awk '{print $1}')
+      if [ $(command -v ${first_word}) ] >/dev/null; then
+        KUBECTL_CMD="${ANS}"
+        KUBCTL_OK=Y
+      fi
+    done
+    echo "Kubectl command alias set to $KUBECTL_CMD"
+    K8S_VERSION=$($KUBECTL_CMD version | grep 'Server Version:' | awk '{print $3}')
+    write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  fi
 }
 
 usage() {
@@ -1037,7 +1026,6 @@ fi
 umask 002
 LOCKSS_USER="${LOCKSS_USER:-lockss}"
 LOCAL_HOSTNAME=$(hostname -f 2>/dev/null) || LOCAL_HOSTNAME=$(uname -n 2>/dev/null)
-LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
 
 echo "-------------------------------------------------------------"
 echo "$(${SCRIPTS_DIR}/installer-version)"
@@ -1079,6 +1067,10 @@ if [ -r "${K8S_CONF_FILE}" ]; then
   echo "Reading Kubernetes config: ${K8S_CONF_FILE}"
   read_config ${K8S_CONF_FILE}
 fi
+
+# Set release version *after* loading existing config file
+LOCKSS_RELEASE="$(cat "${_D0}/../VERSION")"
+
 echo "Checking system state..."
 # Sanity checks
 if [ -z "${BYPASS_KUBE_COMMANDS}" ]; then

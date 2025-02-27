@@ -13,7 +13,8 @@ spec:
     targetPort: {{PYWB_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-pywb-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -44,7 +45,7 @@ metadata:
   name: lockss-pywb-logs-pvc
 spec:
   accessModes:
-  - ReadWriteOnce
+  - ReadWriteMany
   resources:
     requests:
       storage: 1Mi

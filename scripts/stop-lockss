@@ -55,8 +55,7 @@ declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 declare -a SERVICES
 declare -A -r SERVICE_NAMES=(
  [cfg]="lockss-configuration-service"
- [mdq]="lockss-metadata-service"
- [mdx]="lockss-metadata-extraction-service"
+ [md]="lockss-metadata-service"
  [pol]="lockss-poller-service"
  [crawl]="lockss-crawler-service"
  [soap]="lockss-soap-service"
@@ -158,7 +157,15 @@ undeploy_stack() {
       kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
     fi
   done
- logger_info "Pod shutdown complete"
+  # Delete Kubernetes CronJobs
+  cronjobs_arr=()
+  cronjobs=$(kubectl_lockss get cronjob -o jsonpath='{.items[*].metadata.name}')
+  IFS=' ' read -a cronjobs_arr <<< "$cronjobs"
+	for cronjob_name in "${cronjobs_arr[@]}"
+	do
+    kubectl_lockss delete cronjob "${cronjob_name}" | logger_debug
+  done
+  logger_info "Pod shutdown complete"
 }
 
 # Source system config file

@@ -33,6 +33,7 @@ org.lockss.jobManager.enabled=true
 org.lockss.metadataManager.indexing_enabled=true
 org.lockss.metadataManager.mandatoryFields=publisher;provider
 
+org.lockss.metadataDbManager.waitForExternalSetup=true
 org.lockss.metadataDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
 org.lockss.metadataDbManager.datasource.serverName={{POSTGRES_HOST}}
 org.lockss.metadataDbManager.datasource.portNumber={{POSTGRES_PORT}}
@@ -41,6 +42,7 @@ org.lockss.metadataDbManager.datasource.password={{POSTGRES_PASSWD}}
 org.lockss.metadataDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
 org.lockss.metadataDbManager.datasource.dbcp.enabled=true
 
+org.lockss.jobDbManager.waitForExternalSetup=false
 org.lockss.jobDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
 org.lockss.jobDbManager.datasource.serverName={{POSTGRES_HOST}}
 org.lockss.jobDbManager.datasource.portNumber={{POSTGRES_PORT}}

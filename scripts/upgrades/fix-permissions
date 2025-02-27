@@ -114,13 +114,9 @@ init_service_arrays() {
     svcs+=("cfg")
     lockss_owned+=("cfg")
   fi
-  if ${USE_LOCKSS_MDQ}; then
-    svcs+=("mdq")
-    lockss_owned+=("mdq")
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    svcs+=("mdx")
-    lockss_owned+=("mdx")
+  if ${USE_LOCKSS_MD}; then
+    svcs+=("md")
+    lockss_owned+=("md")
   fi
   if ${USE_LOCKSS_POL}; then
     svcs+=("pol")

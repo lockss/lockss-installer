@@ -65,8 +65,7 @@ declare -a SERVICES
 declare -A svc_port_map
 declare -A -r SERVICE_NAMES=(
  [cfg]="lockss-configuration-service"
- [mdq]="lockss-metadata-service"
- [mdx]="lockss-metadata-extraction-service"
+ [md]="lockss-metadata-service"
  [pol]="lockss-poller-service"
  [crawl]="lockss-crawler-service"
  [soap]="lockss-soap-service"
@@ -191,6 +190,14 @@ deploy_stack() {
         logger_error "An error was found in yaml file ${DOCKER_CONFIGS_DIR}/$stack/svcs/${service_name}.yaml"
         logger_error_exit "Fix the error then run scripts/restart-lockss."
       fi
+    fi
+  done
+  logger_debug "Deploying Kubernetes CronJobs for stack $stack"
+  for f in "${DOCKER_CONFIGS_DIR}/$stack"/cron/*.yaml; do
+    if ! kubectl_lockss apply -f "${f}" >/dev/null ; then
+      popd &>/dev/null
+      logger_error "An error was found in yaml file ${f}"
+      logger_error_exit "Fix the error then run scripts/restart-lockss."
     fi
   done
   wait_for_ready "${LOCKSS_DATA_DIR}/$stack-pol-data/${LOCKSS_WAIT_FILE}"

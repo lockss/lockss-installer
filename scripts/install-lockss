@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
+# Copyright (c) 2000-2025, Board of Trustees of Leland Stanford Jr. University
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -61,7 +61,7 @@ K3S_URL='https://get.k3s.io'
 
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
-DEFAULT_K3S_VERSION='v1.21.5+k3s1'
+DEFAULT_K3S_VERSION='v1.31.5+k3s1'
 
 DEFAULT_RETRIES='5'
 DEFAULT_WAIT='10'
@@ -213,6 +213,30 @@ Check_Prerequisites()
   else
     echo 'OK: apparmor not enabled'
   fi
+  
+  # Debian/Ubuntu with SELinux enabled does not seem to be supported by K3s
+  Echo 'Checking SELinux...'
+  case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
+    '')
+      Warning 'Could not infer ID from /etc/os-release'
+      ;;
+    debian|ubuntu)
+      if ! command -v selinuxenabled > /dev/null ; then
+        echo 'OK: SELinux not present'
+      elif ! selinuxenabled ; then
+        echo 'OK: SELinux not enabled'
+        # If SELinux was previously on and /usr/local/bin/k3s was labeled, chcon will succeed and the K3s installer will fail
+        if [ -x /usr/local/bin/k3s ] && [ "$(printf '%.1s\n' "$(ls -Z /usr/local/bin/k3s)")" != '?' ] ; then
+          Fatal 'K3s Installer will fail on Debian/Ubuntu with /usr/local/bin/k3s labeled by SELinux; see manual'
+        fi
+      else
+        Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled; see manual'
+      fi
+      ;;
+    *)
+      echo 'OK: not Debian-like'
+      ;;
+  esac
   
   # Success
   Success 'K3s prerequisites checked'
@@ -419,9 +443,9 @@ Configure_Iptables()
 
   # Skip if not on PATH nor via Alternatives
   local _iptables_cmd=''
-  _iptables_cmd="$(command -v iptables)"
+  _iptables_cmd="$(command -v iptables 2> /dev/null)"
   # In (e.g.) Debian 10.10, iptables is not on PATH, is in Alternatives, fails k3s check-config
-  if [ -n "${_iptables_cmd}" ] ; then
+  if [ -z "${_iptables_cmd}" ] ; then
     _iptables_cmd='/etc/alternatives/iptables'
     if [ ! -x "${_iptables_cmd}" ] ; then
       Success 'Skipping (iptables is not on the PATH nor run via Alternatives)'
@@ -731,17 +755,17 @@ Install_K3s()
         ${_data_dir_args} \
             || Fatal 'The K3s Installer failed'
   fi
-
-  # Store k8s.cfg
+ # Store k8s.cfg
   local _f="${CONFIG_DIR}/k8s.cfg"
   local _k8sver=''
-  _k8sver="$(echo "${K3S_VERSION}" | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+/{print $1 "." $2 "." $3;exit 0}{print;exit 1}')" \
+  _k8sver="$(echo "${K3S_VERSION}" | awk -F '+' '{print $1;exit 0}{print;exit 1}')" \
       || Fatal "Could not infer the Kubernetes version"
   cat <<MyEOF | $SUDO_LOCKSS tee "${_f}" || Fatal 'Could not write k8s.cfg'
 K8S_FLAVOR="k3s"
 K8S_VERSION="${_k8sver}"
 K3S_VERSION="${K3S_VERSION}"
 KUBECTL_CMD="${K3S_BIN_DIR}/k3s kubectl"
+KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER="true"
 MyEOF
   if [ -n "${RESOLV_CONF_CONFIG}" ] ; then
     echo "RESOLV_CONF_CONFIG=\"${LOCKSS_RESOLV_CONF}\"" | $SUDO_LOCKSS tee --append "${_f}" \

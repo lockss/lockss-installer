@@ -19,7 +19,8 @@ spec:
 
   selector:
     io.kompose.service: lockss-soap-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -31,7 +32,7 @@ metadata:
   name: lockss-soap-logs-pvc
 spec:
   accessModes:
-  - ReadWriteOnce
+  - ReadWriteMany
   volumeMode: Filesystem
   resources:
     requests:

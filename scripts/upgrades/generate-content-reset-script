@@ -53,6 +53,7 @@ COMPOSE_DIR="$(cd "${_D0}/../.." >/dev/null 2>&1 && pwd)"
 CONFIG_DIR="${COMPOSE_DIR}/config"
 
 STACK_PREFIX="lockss-stack"
+
 # Source system config file
 source_config
 
@@ -67,6 +68,9 @@ echo
 
 utilpath=$(abspath "${_D0}/../")
 echo ". \"${utilpath}/_util\" || exit 1"
+echo "COMPOSE_DIR=\"$COMPOSE_DIR\""
+echo "CONFIG_DIR=\"$CONFIG_DIR\""
+echo source_config
 echo "Check_Stopped"
 echo "echo \"This will delete all preserved content in your LOCKSS system.\""
 echo "ask_for_input \"Do you want to proceed?\" N"
