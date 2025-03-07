@@ -912,10 +912,10 @@ build_config_file() {
           exit 1
         fi
         rm -f ${TMP_CONFIG}
-        Store_All_Secrets
         echo "Configuration stored"
       fi
     fi
+    Store_All_Secrets
     local STORAGE_ERRORS=
     setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
     CONFIG_OK=Y
