@@ -415,7 +415,8 @@ add_stack_volumes() {
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
-  # Slow, and only necessary if we rearrange users/permissions
+  kubectl_lockss apply -f ${mk_dir}/lockss-network-policy.yaml | logger_debug
+ # Slow, and only necessary if we rearrange users/permissions
   # ensure_lockss_owner $stack
 }
 

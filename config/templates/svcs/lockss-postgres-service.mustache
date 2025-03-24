@@ -5,6 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-postgres-service
+    service-kind: non-lockss
   name: lockss-postgres-service
 spec:
   ports:
@@ -80,6 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-postgres-service
+    service-kind: non-lockss
   name: lockss-postgres-service
 spec:
   replicas: 1

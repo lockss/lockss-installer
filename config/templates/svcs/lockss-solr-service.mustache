@@ -5,6 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
+    service-kind: non-lockss
   name: lockss-solr-service
 spec:
   ports:
@@ -80,6 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
+    service-kind: non-lockss
   name: lockss-solr-service
 spec:
   replicas: 1
