@@ -155,22 +155,22 @@ Check_Command()
 }
 
 #
-# Check_Prerequisites
+# Check_K3s_Prerequisites
 #
-Check_Prerequisites()
+Check_K3s_Prerequisites()
 {
   # Begin step
   Begin_Phase 'Checking K3s prerequisites'
   
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
-  # Skip if --skip-check-prerequisites
-  if [ "${SKIP_CHECK_PREREQUISITES}" = 'true' ] ; then
-    Success 'Skipping (--skip-check-check-prerequisites)'
+  # Skip if --skip-check-k3s-prerequisites
+  if [ -n "${SKIP_CHECK_K3S_PREREQUISITES}" ] ; then
+    Success 'Skipping (--skip-check-k3s-prerequisites)'
     return
   fi
   
@@ -244,16 +244,16 @@ Check_Prerequisites()
 }
 
 #
-# Check_System_User
+# Check_System_Prerequisites
 #
-Check_System_User()
+Check_System_Prerequisites()
 {
   # Begin step
-  Begin_Phase 'Checking the system user and group'
+  Begin_Phase 'Checking system prerequisites'
   
-  # Skip if --skip-check-system-user
-  if [ "${SKIP_CHECK_SYSTEM_USER}" = 'true' ] ; then
-    Success 'Skipping (--skip-check-system-user)'
+  # Skip if --skip-check-system-prerequisites
+  if [ -n "${SKIP_CHECK_SYSTEM_PREREQUISITES}" ] ; then
+    Success 'Skipping (--skip-check-system-prerequisites)'
     return
   fi
   
@@ -270,7 +270,7 @@ Check_System_User()
   fi
   
   # Success
-  Success 'System user and group present'
+  Success 'System prerequisites checked'
 }
 
 #
@@ -282,13 +282,13 @@ Configure_Coredns()
   Begin_Phase 'Configuring CoreDNS for K3s'
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
   # Skip if --skip-configure-coredns
-  if [ "${SKIP_CONFIGURE_COREDNS}" = 'true' ] ; then
+  if [ -n "${SKIP_CONFIGURE_COREDNS}" ] ; then
     Success 'Skipping (--skip-configure-coredns)'
     return
   fi
@@ -306,12 +306,12 @@ Configure_Coredns()
   fi
   
   declare -a nameservers
-  if [ "${FORCE_DNS_PROMPT}" != 'true' ] && is_yes "${_use_resolv_conf}" ; then
+  if [ -z "${FORCE_DNS_PROMPT}" ] && is_yes "${_use_resolv_conf}" ; then
     Success 'Using system resolv.conf files'
     return
   fi
 
-  if [ "${FORCE_DNS_PROMPT}" = 'true' ] ; then
+  if [ -n "${FORCE_DNS_PROMPT}" ] ; then
     echo "In forced DNS prompt mode (--force-dns-prompt); prompting for DNS servers"
     echo
   else
@@ -331,7 +331,7 @@ Configure_Coredns()
     _default_ip_list="$(extract_non_loopback_resolvers "${ETC_RESOLV_CONF}")"
   fi
 
-  if [ "${ASSUME_YES}" = 'true' ] ; then
+  if [ -n "${ASSUME_YES}" ] ; then
     nameservers=("${_default_ip_list[@]}")
     echo "In automatic 'yes' mode (--assume-yes): $(IFS=';' ; echo "${nameservers[*]}")"
   else
@@ -364,13 +364,13 @@ Configure_Firewalld()
   Begin_Phase "Configuring firewalld for K3s"
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
   # Skip if --skip-configure-firewalld
-  if [ "${SKIP_CONFIGURE_FIREWALLD}" = 'true' ] ; then
+  if [ -n "${SKIP_CONFIGURE_FIREWALLD}" ] ; then
     Success 'Skipping (--skip-configure-firewalld)'
     return
   fi
@@ -395,7 +395,7 @@ Configure_Firewalld()
   echo 'see the manual for details.'
   echo
   local _q="Add 10.42.0.0/16 and 10.43.0.0/16 to firewalld's trusted zone?"
-  if [ "${ASSUME_YES}" = 'true' ] ; then
+  if [ -n "${ASSUME_YES}" ] ; then
     echo "${_q}"
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
@@ -431,13 +431,13 @@ Configure_Iptables()
   Begin_Phase 'Configuring iptables for K3s'
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
   # Skip if --skip-configure-iptables
-  if [ "${SKIP_CONFIGURE_IPTABLES}" = 'true' ] ; then
+  if [ -n "${SKIP_CONFIGURE_IPTABLES}" ] ; then
     Success 'Skipping (--skip-configure-iptables)'
     return
   fi
@@ -498,7 +498,7 @@ Configure_Iptables()
   echo
 
   local _q='Switch iptables to legacy mode via Alternatives?'
-  if [ "${ASSUME_YES}" = 'true' ] ; then
+  if [ -n "${ASSUME_YES}" ] ; then
     echo "${_q}"
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
@@ -516,7 +516,7 @@ Configure_Iptables()
   # Verified that doing it twice doesn't hurt (succeeds with no output).
   echo "Switching iptables to legacy mode via Alternatives..."
   # Changing iptables can deactivate ufw
-  local _ufw_was_active='false'
+  local _ufw_was_active=''
   if Is_Ufw_Active ; then
     echo "Temporarily deactivating ufw..."
     _ufw_was_active='true'
@@ -534,7 +534,7 @@ Configure_Iptables()
       || Warning 'Error applying update-alternatives to ebtables'
   # Reload iptables
   $SUDO iptables --flush || Fatal 'Error flushing iptables'
-  if [ "${_ufw_was_active}" = 'true' ] ; then
+  if [ -n "${_ufw_was_active}" ] ; then
     echo "Reactivating ufw..."
     $SUDO ufw --force enable || Fatal 'Error reactivating ufw'
   fi
@@ -552,13 +552,13 @@ Configure_Ufw()
   Begin_Phase 'Configuring ufw for K3s'
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
   # Skip if --skip-configure-ufw
-  if [ "${SKIP_CONFIGURE_UFW}" = 'true' ] ; then
+  if [ -n "${SKIP_CONFIGURE_UFW}" ] ; then
     Success 'Skipping (--skip-configure-ufw)'
     return
   fi
@@ -583,7 +583,7 @@ Configure_Ufw()
   echo 'details.'
   echo
   local _q='Allow traffic from 10.42.0.0/16 and 10.43.0.0/16 via ufw?'
-  if [ "${ASSUME_YES}" = 'true' ] ; then
+  if [ -n "${ASSUME_YES}" ] ; then
     echo "${_q}"
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
@@ -632,7 +632,7 @@ Install_K3s()
   Begin_Phase 'Installing K3s'
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
@@ -655,7 +655,7 @@ Install_K3s()
       if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
         Warning "Detected K3s version ${_kver} is older than expected version ${K3S_VERSION}"
         local _q="Upgrade K3s from ${_kver} to ${K3S_VERSION}?"
-        if [ "${ASSUME_YES}" = 'true' ] ; then
+        if [ -n "${ASSUME_YES}" ] ; then
           echo "${_q}"
           ANS=Y
           echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
@@ -691,7 +691,7 @@ Install_K3s()
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"
       echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
-    elif [ "${ASSUME_YES}" = 'true' ] ; then
+    elif [ -n "${ASSUME_YES}" ] ; then
       echo "${_q}?"
       echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
     else
@@ -839,13 +839,13 @@ Test_K3s()
   Begin_Phase 'Testing the K3s node'
 
   # Skip if --skip-install-k3s
-  if [ "${SKIP_INSTALL_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_INSTALL_K3S}" ] ; then
     Success 'Skipping (--skip-install-k3s)'
     return
   fi
   
   # Skip if --skip-test-k3s
-  if [ "${SKIP_TEST_K3S}" = 'true' ] ; then
+  if [ -n "${SKIP_TEST_K3S}" ] ; then
     Success 'Skipping (--skip-test-k3s)'
     return
   fi
@@ -975,9 +975,9 @@ Test_K3s()
 }
 
 USAGE_STR=$(cat <<-EOF_USAGE_STR
-      ${_0} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-version=VER] [--retries=NUM] [--skip-check-prerequisites] [--skip-configure-coredns] [--skip-configure-firewalld] [--skip-configure-iptables] [--skip-configure-ufw] [--skip-install-k3s] [--skip-test-k3s] [--wait=SEC]
+      ${_0} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-version=VER] [--retries=NUM] [--skip-check-system-prerequisites] [--skip-check-k3s-prerequisites] [--skip-configure-coredns] [--skip-configure-firewalld] [--skip-configure-iptables] [--skip-configure-ufw] [--skip-install-k3s] [--skip-test-k3s] [--wait=SEC]
 
-      ${_0} {--check-prerequisites|--configure-coredns|--configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|--test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-data-dir=VER] [--retries=NUM] [--wait=SEC]
+      ${_0} {--check-system-prerequisites|--check-k3s-prerequisites|--configure-coredns|--configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|--test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-data-dir=VER] [--retries=NUM] [--wait=SEC]
 
       ${_0} {--help|--usage|--version}
 EOF_USAGE_STR
@@ -988,10 +988,10 @@ EOF_USAGE_STR
 #
 Make_Command_Line_Parser()
 {
-  setup REST alt:TRUE help:Print_Help width:33,12 -- "${VERSION_STR}" '' 'Usage' '' "${USAGE_STR}"
+  setup REST alt:TRUE help:Print_Help width:40,12 -- "${VERSION_STR}" '' 'Usage' '' "${USAGE_STR}"
   msg -- '' 'Executing a single phase' ''
-  flag :'SINGLE_STEP=Check_Prerequisites' --check-prerequisites -P -- 'only check K3s prerequisites and exit'
-  flag :'SINGLE_STEP=Check_System_User' --check-system-user -G -- 'only check the system user and group and exit'
+  flag :'SINGLE_STEP=Check_System_Prerequisites' --check-system-prerequisites -S -- 'only check system prerequisites and exit'
+  flag :'SINGLE_STEP=Check_K3s_Prerequisites' --check-k3s-prerequisites -P -- 'only check K3s prerequisites and exit'
   flag :'SINGLE_STEP=Configure_Coredns' --configure-coredns -C -- 'only configure CoreDNS for K3s and exit'
   flag :'SINGLE_STEP=Configure_Firewalld' --configure-firewalld -F -- 'only configure firewalld for K3s and exit'
   flag :'SINGLE_STEP=Configure_Iptables' --configure-iptables -I -- 'only configure iptables for K3s and exit'
@@ -999,13 +999,13 @@ Make_Command_Line_Parser()
   flag :'SINGLE_STEP=Install_K3s' --install-k3s -K -- 'only install K3s and exit'
   flag :'SINGLE_STEP=Test_K3s' --test-k3s -T -- 'only test the K3s node and exit'
   msg -- '' 'Skipping phases' ''
-  flag SKIP_CHECK_PREREQUISITES --skip-check-prerequisites -- 'skip checking K3s prerequisites'
-  flag SKIP_CHECK_SYSTEM_USER --skip-check-system-user -- 'skip checking the system user and group'
+  flag SKIP_CHECK_SYSTEM_PREREQUISITES --skip-check-system-prerequisites -- 'skip checking system prerequisites'
+  flag SKIP_CHECK_K3S_PREREQUISITES --skip-check-k3s-prerequisites -- 'skip checking K3s prerequisites'
   flag SKIP_CONFIGURE_COREDNS --skip-configure-coredns -- 'skip configuring CoreDNS for K3s'
   flag SKIP_CONFIGURE_FIREWALLD --skip-configure-firewalld -- 'skip configuring firewalld for K3s'
   flag SKIP_CONFIGURE_IPTABLES --skip-configure-iptables -- 'skip configuring iptables for K3s'
   flag SKIP_CONFIGURE_UFW --skip-configure-ufw -- 'skip configuring ufw for K3s'
-  flag SKIP_INSTALL_K3S --skip-install-k3s -- 'skip installing K3s; implies --skip-check-prerequisites, --skip-configure-coredns, --skip-configure-firewalld, --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s'
+  flag SKIP_INSTALL_K3S --skip-install-k3s -- 'skip installing K3s; implies --skip-check-k3s-prerequisites, --skip-configure-coredns, --skip-configure-firewalld, --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s'
   flag SKIP_TEST_K3S --skip-test-k3s -- 'skip testing the K3s node'
   msg -- '' 'Execution options' ''
   flag ASSUME_YES --assume-yes -y -- 'assume that the answer to interactive yes/no questions is Y for "yes", and that the answer to other interactive questions is the proposed value'
@@ -1049,8 +1049,8 @@ fi
 while true ; do
   case "${CURRENT_STEP}" in
     '') Fatal "Empty step number" ;;
-    0) Check_Prerequisites ;;
-    1) Check_System_User ;;
+    0) Check_System_Prerequisites ;;
+    1) Check_K3s_Prerequisites ;;
     2) Configure_Iptables ;;
     3) Configure_Firewalld ;;
     4) Configure_Ufw ;;
@@ -1064,3 +1064,4 @@ while true ; do
 done
 
 Success 'Successful completion of the LOCKSS installation process'
+
