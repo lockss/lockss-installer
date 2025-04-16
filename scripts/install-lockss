@@ -58,8 +58,6 @@ LOCKSS_RESOLV_CONF="${LOCKSS_ETC_DIR}/resolv.conf"
 SYSTEMD_RESOLV_CONF='/run/systemd/resolve/resolv.conf'
 ETC_RESOLV_CONF='/etc/resolv.conf'
 
-K3S_URL='https://get.k3s.io'
-
 DEFAULT_K3S_DATA_DIR='/var/lib/rancher/k3s'
 DEFAULT_K3S_DATA_DIR_ROOT='/var'
 DEFAULT_K3S_VERSION='v1.31.5+k3s1'
@@ -257,7 +255,7 @@ Check_System_Prerequisites()
     return
   fi
   
-  # Check kernel version
+  # Check kernel version; 5.4 or later is required
   local _ker
   _ker="$(uname -r)" || Fatal "Could not determine Linux kernel version"
   echo "Kernel version: ${_ker}"
@@ -645,6 +643,9 @@ Install_K3s()
     return
   fi
 
+  # Compute the K3s URL
+  Set_K3s_Url
+
   # From _util
   set_k3s_bin_dir
 
@@ -812,6 +813,14 @@ Set_Downloader()
   if [ -z "${DOWNLOADER}" ] ; then
     Fatal 'curl or wget must be on the PATH'
   fi
+}
+
+#
+# Set_K3s_Url
+#
+Set_K3s_Url()
+{
+  K3S_URL="https://raw.githubusercontent.com/k3s-io/k3s/refs/tags/$(sed -e 's@+@%2B@' <<<"${K3S_VERSION}")/install.sh"
 }
 
 #
@@ -1020,8 +1029,8 @@ Make_Command_Line_Parser()
   flag FORCE_DNS_PROMPT --force-dns-prompt -- 'force prompting for IP addresses of DNS servers while configuring CoreDNS for K3s'
   param K3S_DATA_DIR --k3s-data-dir var:DIR init:="${DEFAULT_K3S_DATA_DIR}" -- "directory to hold K3s state data; should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited (default: ${DEFAULT_K3S_DATA_DIR})"
   param K3S_VERSION --k3s-version var:VER init:="${DEFAULT_K3S_VERSION}" -- "install version VER of K3s (default: ${DEFAULT_K3S_VERSION})"
-  param RETRIES --retries var:NUM -- "attempt retriable actions NUM times when testing the K3s node (default: ${DEFAULT_RETRIES})"
-  param WAIT --wait var:SEC -- "wait SEC seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT})"
+  param RETRIES --retries var:NUM init:="${DEFAULT_RETRIES}" -- "attempt retriable actions NUM times when testing the K3s node (default: ${DEFAULT_RETRIES})"
+  param WAIT --wait var:SEC init:="${DEFAULT_WAIT}" -- "wait SEC seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT})"
   msg -- '' 'Other options' ''
   disp :Print_Help --help -h -- 'display this help message and exit'
   disp :'echo "${USAGE_STR}"' --usage -- 'display a usage summary and exit'
@@ -1034,6 +1043,7 @@ Make_Command_Line_Parser()
 
 CURRENT_STEP=0
 DOWNLOADER=''
+K3S_URL=''
 SINGLE_STEP=''
 SUDO=''
 SUDO_LOCKSS=''
@@ -1072,4 +1082,3 @@ while true ; do
 done
 
 Success 'Successful completion of the LOCKSS installation process'
-
