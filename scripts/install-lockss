@@ -645,6 +645,7 @@ Install_K3s()
 
   # Compute the K3s URL
   Set_K3s_Url
+  echo "K3S Installer URL: ${K3S_URL}"
 
   # From _util
   set_k3s_bin_dir
