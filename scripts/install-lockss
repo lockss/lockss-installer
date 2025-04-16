@@ -257,6 +257,14 @@ Check_System_Prerequisites()
     return
   fi
   
+  # Check kernel version
+  local _ker
+  _ker="$(uname -r)" || Fatal "Could not determine Linux kernel version"
+  echo "Kernel version: ${_ker}"
+  if ! awk -F. '((int($1))>5)||(((int($1))==5)&&((int($2))>3)){exit 0}{exit 1}' <<<"${_ker}" ; then
+    Fatal "Linux kernel version 5.4 or later is required; see manual"
+  fi
+
   # Fail if $LOCKSS_USER does not exist
   Check_Command 'id'
   if ! id "${LOCKSS_USER}" &> /dev/null ; then
@@ -465,13 +473,13 @@ Configure_Iptables()
   _ver="$(echo "${_line}" | awk '{print $2;exit 0}' | tail -c +2)"
   
   # Skip if older than 1.8.0
-  if echo "${_ver}" | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8)){exit 0}{exit 1}' ; then
+  if awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8)){exit 0}{exit 1}' <<<"${_ver}" ; then
     Success 'Skipping (iptables version is older than 1.8.0)'
     return
   fi
 
   # Skip if newer than 1.8.3
-  if echo "${_ver}" | awk -F. '(int($1)>1)||((int($1)==1)&&(int($2)>8))||((int($1)==1)&&(int($2)==8)&&(int($3)>3)){exit 0}{exit 1}' ; then
+  if awk -F. '(int($1)>1)||((int($1)==1)&&(int($2)>8))||((int($1)==1)&&(int($2)==8)&&(int($3)>3)){exit 0}{exit 1}' <<<"${_ver}" ; then
     Success 'Skipping (iptables version is newer than 1.8.3)'
     return
   fi
