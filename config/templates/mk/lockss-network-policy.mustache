@@ -20,14 +20,16 @@ spec:
         - port: 24681
         - port: 24682
         - port: 8080
+{{#LOCKSS_SUBNETS}}
     - from:
         - ipBlock:
-            cidr: {{LOCKSS_ACCESS_SUBNET}}
+            cidr: "{{.}}"
       ports:
         - port: 24681
         - port: 24682
         - port: 8080
-  egress:
+{{/LOCKSS_SUBNETS}}
+egress:
     - to:
         - namespaceSelector: {}
           podSelector:

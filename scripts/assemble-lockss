@@ -525,6 +525,9 @@ generate_lockss() {
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
     mkdir "${mk_dst}"
+    # initialize the lockss_networkpolicy array
+    IFS=';' read -r -a LOCKSS_SUBNETS <<< "${LOCKSS_ACCESS_SUBNET}"
+    export LOCKSS_SUBNETS
     #    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
     for f in ${MK_DIR}/*.mustache; do
       src="${f}"
