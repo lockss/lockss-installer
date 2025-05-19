@@ -335,7 +335,7 @@ Configure_Coredns()
     echo "In automatic 'yes' mode (--assume-yes): $(IFS=';' ; echo "${nameservers[*]}")"
   else
     until is_yes "${_ip_ok}" ; do
-      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "${_default_ip_list}"
+      ask_for_input "IP address(es) of DNS resolvers, separated by ';'" "" "${_default_ip_list}"
       if valid_ip_address_list "${ANS}" ; then
         _ip_ok='Y'
         # set IP addr array used in resolv.conf.mustache
@@ -399,7 +399,7 @@ Configure_Firewalld()
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
   else
-    ask_for_input "${_q}" Y
+    ask_for_input "${_q}" "" Y
   fi
 
   # Warn and return if user opts out
@@ -502,7 +502,7 @@ Configure_Iptables()
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
   else
-    ask_for_input "${_q}" Y
+    ask_for_input "${_q}" "" Y
   fi
 
   # Warn and return if user opts out
@@ -587,7 +587,7 @@ Configure_Ufw()
     ANS=Y
     echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
   else
-    ask_for_input "${_q}" Y
+    ask_for_input "${_q}" "" Y
   fi
 
   # Warn and return if user opts out
@@ -659,7 +659,7 @@ Install_K3s()
           ANS=Y
           echo "In automatic 'yes' mode (--assume-yes): ${ANS}"
         else
-          ask_for_input "${_q}" Y
+          ask_for_input "${_q}" "" Y
         fi
         if ! is_yes "${ANS}"; then
           kverok=1
@@ -694,7 +694,7 @@ Install_K3s()
       echo "${_q}?"
       echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
     else
-      ask_for_input 'K3s state data directory' "${DEFAULT_K3S_DATA_DIR}"
+      ask_for_input 'K3s state data directory' "" "${DEFAULT_K3S_DATA_DIR}"
       K3S_DATA_DIR="${ANS}"
     fi
     Echo "K3s state data directory: ${K3S_DATA_DIR}"
