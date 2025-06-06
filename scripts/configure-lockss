@@ -483,14 +483,7 @@ configure_services() {
   # OpenWayback
   ask_for_input "Use LOCKSS OpenWayback Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_OPENWB})" N
   if is_yes "${ANS}"; then
-    echo "Currently OpenWayback requires unauthenticated access to the LOCKSS Repository."
-    ask_for_input "Okay to disable authentication for read-only requests to LOCKSS Repository Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_OPENWB})" Y
-    if is_yes "${ANS}"; then
-      USE_LOCKSS_OPENWB=true
-    else
-      echo "Not enabling OpenWayback Service."
-      USE_LOCKSS_OPENWB=false
-    fi
+    USE_LOCKSS_OPENWB=true
   else
     USE_LOCKSS_OPENWB=false
   fi
