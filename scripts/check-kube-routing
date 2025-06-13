@@ -58,7 +58,7 @@ clean_up() {
 
 # Perform pre-exit housekeeping
   logger_info "cleaning up test pod and service..."
-  kubectl_cmd delete pod connection-test-pod -n lockss >/dev/null 2>&1
+  kubectl_cmd delete pod connection-test-pod --grace-period=0 --force -n lockss >/dev/null 2>&1
   kubectl_cmd delete service connection-test-service -n lockss >/dev/null 2>&1
   log_script_exit PROGNAME
 }
