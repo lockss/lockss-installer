@@ -681,7 +681,6 @@ fi
 logger_debug "Checking system..."
 Check_Runnable
 Check_Physical_Volumes
-check-kube-routing
 init_service_arrays
 
 generate_lockss || logger_error_exit "Unable to generate needed components."
