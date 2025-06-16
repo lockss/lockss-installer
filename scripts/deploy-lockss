@@ -262,7 +262,9 @@ logger_debug "Checking system..."
 if $(am_i_root); then
   logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
-Check_Runnable
+
+#Check_Runnable
+"${SCRIPTS_DIR}"/check-kube-routing -q || logger_error_exit "Kubernetes network routing tests failed."
 
 init_service_arrays
 
