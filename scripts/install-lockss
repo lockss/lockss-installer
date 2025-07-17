@@ -847,6 +847,8 @@ Set_Sudo()
     SUDO=''
     SUDO_LOCKSS="runuser --user=${LOCKSS_USER} --"
   else
+    Fatal 'This script must be run as root'
+    ### FIXME now that root is required, the rest of this clause does not execute:
     Check_Command 'sudo'
     SUDO='sudo'
     
