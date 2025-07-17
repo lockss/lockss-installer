@@ -176,14 +176,17 @@ Check_K3s_Prerequisites()
   # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L142-L153
   # See https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
   Echo 'Checking user namespaces...'
-  case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
-    '')
-      Warning 'Could not infer ID from /etc/os-release'
-      ;;
-    centos|rhel)
-      case "$(test -f /etc/os-release && source /etc/os-release && echo "${VERSION_ID}")" in
-        '')
-          Warning 'Could not infer VERSION_ID from /etc/os-release'
+  if [ -n "${SKIP_CHECK_USER_NAMESPACES}" ] ; then
+    echo 'Skipping (--skip-check-user-namespaces)'
+  else
+    case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
+      '')
+        Warning 'Could not infer ID from /etc/os-release'
+        ;;
+      centos|rhel)
+        case "$(test -f /etc/os-release && source /etc/os-release && echo "${VERSION_ID}")" in
+          '')
+            Warning 'Could not infer VERSION_ID from /etc/os-release'
           ;;
         7*)
           if ! grep -q 'user_namespace.enable=1' /proc/cmdline ; then
@@ -194,48 +197,57 @@ Check_K3s_Prerequisites()
         *)
           echo 'OK: RHEL-like but not RHEL7-like'
           ;;
-      esac
-      ;;
-    *)
-      echo 'OK: not RHEL-like'
-      ;;
-  esac
+        esac
+        ;;
+      *)
+        echo 'OK: not RHEL-like'
+        ;;
+    esac
+  fi
 
   # apparmor_parser
   # See https://github.com/k3s-io/k3s/blob/v1.21.5%2Bk3s1/contrib/util/check-config.sh#L321-L336
   Echo 'Checking apparmor_parser...'
-  if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = 'Y' ] ; then
-    if ! command -v apparmor_parser > /dev/null ; then
-      Fatal 'apparmor enabled but apparmor_parser missing; see manual'
-    fi
-    echo 'OK: apparmor enabled and tools installed'
+  if [ -n "${SKIP_CHECK_APPARMOR_PARSER}" ] ; then
+    echo 'Skipping (--skip-check-apparmor-parser)'
   else
-    echo 'OK: apparmor not enabled'
+    if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = 'Y' ] ; then
+      if ! command -v apparmor_parser > /dev/null ; then
+        Fatal 'Apparmor enabled but apparmor_parser not on the PATH; see manual'
+      fi
+      echo 'OK: Apparmor enabled and apparmor_parser installed'
+    else
+      echo 'OK: Apparmor not enabled'
+    fi
   fi
   
   # Debian/Ubuntu with SELinux enabled does not seem to be supported by K3s
   Echo 'Checking SELinux...'
-  case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
-    '')
-      Warning 'Could not infer ID from /etc/os-release'
-      ;;
-    debian|ubuntu)
-      if ! command -v selinuxenabled > /dev/null ; then
-        echo 'OK: SELinux not present'
-      elif ! selinuxenabled ; then
-        echo 'OK: SELinux not enabled'
-        # If SELinux was previously on and /usr/local/bin/k3s was labeled, chcon will succeed and the K3s installer will fail
-        if [ -x /usr/local/bin/k3s ] && [ "$(printf '%.1s\n' "$(ls -Z /usr/local/bin/k3s)")" != '?' ] ; then
-          Fatal 'K3s Installer will fail on Debian/Ubuntu with /usr/local/bin/k3s labeled by SELinux; see manual'
+  if [ -n "${SKIP_CHECK_SELINUX}" ] ; then
+    echo 'Skipping (--skip-check-selinux)'
+  else
+    case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
+      '')
+        Warning 'Could not infer ID from /etc/os-release'
+        ;;
+      debian|ubuntu)
+        if ! command -v selinuxenabled > /dev/null ; then
+          echo 'OK: SELinux not present'
+        elif ! selinuxenabled ; then
+          echo 'OK: SELinux not enabled'
+          # If SELinux was previously on and /usr/local/bin/k3s was labeled, chcon will succeed and the K3s installer will fail
+          if [ -x /usr/local/bin/k3s ] && [ "$(printf '%.1s\n' "$(ls -Z /usr/local/bin/k3s)")" != '?' ] ; then
+            Fatal 'K3s Installer will fail on Debian/Ubuntu with /usr/local/bin/k3s labeled by SELinux; see manual'
+          fi
+        else
+          Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled; see manual'
         fi
-      else
-        Fatal 'K3s Installer will fail on Debian/Ubuntu with SELinux enabled; see manual'
-      fi
-      ;;
-    *)
-      echo 'OK: not Debian-like'
-      ;;
-  esac
+        ;;
+      *)
+        echo 'OK: not Debian-like'
+        ;;
+    esac
+  fi
   
   # Success
   Success 'K3s prerequisites checked'
@@ -992,22 +1004,13 @@ Test_K3s()
   Success 'Tested the K3s node'
 }
 
-USAGE_STR=$(cat <<-EOF_USAGE_STR
-      ${_0} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-version=VER] [--retries=NUM] [--skip-check-system-prerequisites] [--skip-check-k3s-prerequisites] [--skip-configure-coredns] [--skip-configure-firewalld] [--skip-configure-iptables] [--skip-configure-ufw] [--skip-install-k3s] [--skip-test-k3s] [--wait=SEC]
-
-      ${_0} {--check-system-prerequisites|--check-k3s-prerequisites|--configure-coredns|--configure-firewalld|--configure-iptables|--configure-ufw|--install-k3s|--test-k3s} [--assume-yes] [--force-dns-prompt] [--k3s-data-dir=DIR] [--k3s-data-dir=VER] [--retries=NUM] [--wait=SEC]
-
-      ${_0} {--help|--usage|--version}
-EOF_USAGE_STR
-)
-
 #
 # Make_Command_Line_Parser
 #
 Make_Command_Line_Parser()
 {
-  setup REST alt:TRUE help:Print_Help width:40,12 -- "${VERSION_STR}" '' 'Usage' '' "${USAGE_STR}"
-  msg -- '' 'Executing a single phase' ''
+  setup REST alt:TRUE help:Print_Help width:40,12 -- "${VERSION_STR}"
+  msg -- '' 'Executing a single phase'
   flag :'SINGLE_STEP=Check_System_Prerequisites' --check-system-prerequisites -S -- 'only check system prerequisites and exit'
   flag :'SINGLE_STEP=Check_K3s_Prerequisites' --check-k3s-prerequisites -P -- 'only check K3s prerequisites and exit'
   flag :'SINGLE_STEP=Configure_Coredns' --configure-coredns -C -- 'only configure CoreDNS for K3s and exit'
@@ -1016,7 +1019,7 @@ Make_Command_Line_Parser()
   flag :'SINGLE_STEP=Configure_Ufw' --configure-ufw -U -- 'only configure ufw for K3s and exit'
   flag :'SINGLE_STEP=Install_K3s' --install-k3s -K -- 'only install K3s and exit'
   flag :'SINGLE_STEP=Test_K3s' --test-k3s -T -- 'only test the K3s node and exit'
-  msg -- '' 'Skipping phases' ''
+  msg -- '' 'Skipping phases'
   flag SKIP_CHECK_SYSTEM_PREREQUISITES --skip-check-system-prerequisites -- 'skip checking system prerequisites'
   flag SKIP_CHECK_K3S_PREREQUISITES --skip-check-k3s-prerequisites -- 'skip checking K3s prerequisites'
   flag SKIP_CONFIGURE_COREDNS --skip-configure-coredns -- 'skip configuring CoreDNS for K3s'
@@ -1025,16 +1028,22 @@ Make_Command_Line_Parser()
   flag SKIP_CONFIGURE_UFW --skip-configure-ufw -- 'skip configuring ufw for K3s'
   flag SKIP_INSTALL_K3S --skip-install-k3s -- 'skip installing K3s; implies --skip-check-k3s-prerequisites, --skip-configure-coredns, --skip-configure-firewalld, --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s'
   flag SKIP_TEST_K3S --skip-test-k3s -- 'skip testing the K3s node'
-  msg -- '' 'Execution options' ''
+  msg -- '' 'Options for checking K3s prerequisites'
+  flag SKIP_CHECK_USER_NAMESPACES --skip-check-user-namespaces -- 'skip checking user namespaces'
+  flag SKIP_CHECK_APPARMOR_PARSER --skip-check-apparmor-parser -- 'skip checking that apparmor_parser is present if Apparmor is enabled'
+  flag SKIP_CHECK_SELINUX --skip-check-selinux -- 'skip checking SELinux interactions with Debian/Ubuntu'
+  msg -- '' 'Options for configuring CoreDNS for K3s'
+  flag FORCE_DNS_PROMPT --force-dns-prompt -- 'force prompting for IP addresses of DNS servers'
+  msg -- '' 'Options for installing K3s'
+  param K3S_DATA_DIR --k3s-data-dir var:DIR init:="${DEFAULT_K3S_DATA_DIR}" -- "use DIR to hold K3s state data; should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited (default: ${DEFAULT_K3S_DATA_DIR})"
+  param K3S_VERSION --k3s-version var:VER init:="${DEFAULT_K3S_VERSION}" -- "install version VER specifically (default: ${DEFAULT_K3S_VERSION})"
+  msg -- '' 'Options for testing the K3s node'
+  param RETRIES --retries var:NUM init:="${DEFAULT_RETRIES}" -- "attempt retriable actions NUM times (default: ${DEFAULT_RETRIES})"
+  param WAIT --wait var:SEC init:="${DEFAULT_WAIT}" -- "wait SEC seconds between retries (default: ${DEFAULT_WAIT})"
+  msg -- '' 'Execution options'
   flag ASSUME_YES --assume-yes -y -- 'assume that the answer to interactive yes/no questions is Y for "yes", and that the answer to other interactive questions is the proposed value'
-  flag FORCE_DNS_PROMPT --force-dns-prompt -- 'force prompting for IP addresses of DNS servers while configuring CoreDNS for K3s'
-  param K3S_DATA_DIR --k3s-data-dir var:DIR init:="${DEFAULT_K3S_DATA_DIR}" -- "directory to hold K3s state data; should be used if ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited (default: ${DEFAULT_K3S_DATA_DIR})"
-  param K3S_VERSION --k3s-version var:VER init:="${DEFAULT_K3S_VERSION}" -- "install version VER of K3s (default: ${DEFAULT_K3S_VERSION})"
-  param RETRIES --retries var:NUM init:="${DEFAULT_RETRIES}" -- "attempt retriable actions NUM times when testing the K3s node (default: ${DEFAULT_RETRIES})"
-  param WAIT --wait var:SEC init:="${DEFAULT_WAIT}" -- "wait SEC seconds between retries when testing the K3s node (default: ${DEFAULT_WAIT})"
-  msg -- '' 'Other options' ''
+  msg -- '' 'Other options'
   disp :Print_Help --help -h -- 'display this help message and exit'
-  disp :'echo "${USAGE_STR}"' --usage -- 'display a usage summary and exit'
   disp :'echo "${VERSION}"' --version -- 'display the version and exit'
 }
 
