@@ -249,6 +249,19 @@ Check_K3s_Prerequisites()
     esac
   fi
   
+  # RHEL 10 no longer has the ip_tables kernel module out of the box
+  Echo 'Checking ip_tables loadable kernel module...'
+  if [ -n "${SKIP_CHECK_IPTABLES_LKM}" ] ; then
+    echo 'Skipping (--skip-check-iptables-lkm)'
+  else
+    Check_Command lsmod
+    Check_Command grep
+    if ! lsmod | grep -q ip_tables ; then
+      Fatal 'ip_tables loadable kernel module is not present; see manual'
+    fi
+    echo 'OK: ip_tables loadable kernel module present'
+  fi
+
   # Success
   Success 'K3s prerequisites checked'
 }
@@ -1034,6 +1047,7 @@ Make_Command_Line_Parser()
   flag SKIP_CHECK_USER_NAMESPACES --skip-check-user-namespaces -- 'skip checking user namespaces'
   flag SKIP_CHECK_APPARMOR_PARSER --skip-check-apparmor-parser -- 'skip checking that apparmor_parser is present if Apparmor is enabled'
   flag SKIP_CHECK_SELINUX --skip-check-selinux -- 'skip checking SELinux interactions with Debian/Ubuntu'
+  flag SKIP_CHECK_IPTABLES_LKM --skip-check-iptables-lkm -- 'skip checking the ip_tables loadable kernel module'
   msg -- '' 'Options for configuring CoreDNS for K3s'
   flag FORCE_DNS_PROMPT --force-dns-prompt -- 'force prompting for IP addresses of DNS servers'
   msg -- '' 'Options for installing K3s'
