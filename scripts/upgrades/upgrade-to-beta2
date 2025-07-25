@@ -77,6 +77,8 @@ set +a
 
 POSTGRES_VERSION_NEW='14.7-alpine'
 POSTGRES_VERSION_OLD='9.6.12-alpine'
+K3_VERSION_MIN='v1.31.5+k3s1'
+
 clean_up() { # Perform pre-exit housekeeping
 	return
 }
@@ -128,6 +130,22 @@ upgrade_postgres() {
         err_exit "upgrade to postgres failed."
   else
     logger_info "Skipping postgres upgrade.  Only LOCKSS postgres upgrade is supported."
+  fi
+}
+
+check_k3s_version() {
+  set_k3s_bin_dir
+  if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
+    local cur_version="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
+            || Fatal "Error parsing K3s version"
+    if [ "${cur_version}" != "${K3_VERSION_MIN}" ] ; then
+      if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
+        err "$_0: K3s version is too old. Please update your K3s installation to at least ${CUR_K3_VERSION_MIN}."
+        err_exit "$_0: Run scripts/install-lockss to upgrade your k3s installation before running this script."
+      fi
+    fi
+  else
+    err_exit "$_0: Unable to find k3s executable. Make sure has been installed and is on the path.?"
   fi
 }
 
@@ -221,6 +239,8 @@ if Parse_Lockss_Version "${CUR_VERSION}"; then
           chmod 755 "${_d}"
         fi
       done
+      # check for upgrade to k3s
+      check_k3s_version
       ;;
     2.0-beta2)
       logger_info "Upgrade already applied (beta2)"
