@@ -47,7 +47,9 @@ org.lockss.app.serviceBindings=\
 {{#USE_LOCKSS_POL}}poller={{POL_HOST}}:{{POL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{POL_UI_PORT}};{{/USE_LOCKSS_POL}}\
 {{#USE_LOCKSS_CRAWL}}crawler={{CRAWL_HOST}}:{{CRAWL_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{CRAWL_UI_PORT}};{{/USE_LOCKSS_CRAWL}}\
 {{#USE_LOCKSS_MD}}md={{MD_HOST}}:{{MD_REST_PORT}},{{LOCKSS_HOSTNAME}}:{{MD_UI_PORT}};{{/USE_LOCKSS_MD}}\
-{{#USE_LOCKSS_REPO}}repo={{REPO_HOST}}:{{REPO_REST_PORT}}{{/USE_LOCKSS_REPO}}
+{{#USE_LOCKSS_REPO}}repo={{REPO_HOST}}:{{REPO_REST_PORT}};{{/USE_LOCKSS_REPO}}\
+{{#USE_LOCKSS_PYWB}}pywb=:0,{{LOCKSS_HOSTNAME}}:{{PYWB_PORT}};{{/USE_LOCKSS_PYWB}}\
+{{#USE_LOCKSS_OPENWB}}owb=:0,{{LOCKSS_HOSTNAME}}:{{OPENWB_PORT}}{{/USE_LOCKSS_OPENWB}}
 
 # determines which component crawls plugin registries
 org.lockss.daemon.pluginsCrawler=cfg
