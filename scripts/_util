@@ -451,6 +451,24 @@ Get_Timezone() {
   echo ${timezone}
 }
 
+# Usage: check_url URL [PROXY] and handle its return value
+check_url() {
+    local url="$1"
+    local proxy="${2:-}"
+
+    if [[ -z "$proxy" ]]; then
+        local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" || echo '999')
+    else
+        local response_code=$(curl -c /tmp/cookie.txt -b /tmp/cookie.txt -o /dev/null -s -x "$proxy" -w '%{http_code}' --head "$url" || echo '999')
+    fi
+
+    if (( $(echo "$response_code < 400") )); then
+        return 0
+    else
+        return 1
+    fi
+}
+
 ##
 ## function Wait_For_200
 ##
