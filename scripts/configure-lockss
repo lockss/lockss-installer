@@ -765,7 +765,7 @@ build_config_file() {
       ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
       LOCKSS_PROPS_PROXY="${ANS}"
 
-      # Test proxy URL access
+      # Test configuration URL access (via proxy, if configured)
       if check_url "${LOCKSS_PROPS_URL}" "${LOCKSS_PROPS_PROXY}"; then
         PROPS_OK=Y
       else
