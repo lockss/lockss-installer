@@ -16,15 +16,15 @@ spec:
         - ipBlock:
             cidr: 10.255.0.0/16
       ports:
-        - port: 24681
-        - port: 24682
-        - port: 8080
+        - port: {{PYWB_PORT}}
+        - port: {{POSTGRES_PORT}}
+        - port:  {{OPENWB_PORT}}
 {{#LOCKSS_SUBNETS}}
     - from:
         - ipBlock:
             cidr: "{{.}}"
       ports:
-        - port: 24681
-        - port: 24682
-        - port: 8080
+        - port: {{PYWB_PORT}}
+        - port: {{POSTGRES_PORT}}
+        - port: {{OPENWB_PORT}}
 {{/LOCKSS_SUBNETS}}
