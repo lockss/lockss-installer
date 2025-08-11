@@ -769,7 +769,7 @@ build_config_file() {
       if check_url "${LOCKSS_PROPS_URL}" "${LOCKSS_PROPS_PROXY}"; then
         PROPS_OK=Y
       else
-        ask_for_input "WARNING: Could not fetch configuration URL; ignore and continue?" "" Y
+        ask_for_input "WARNING: Could not fetch configuration URL; ignore and continue?" "" N
         if is_yes "${ANS}"; then
           PROPS_OK=Y
         fi
