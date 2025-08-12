@@ -175,7 +175,7 @@ spec:
 EOF
 }
 
-wait_for_test_pod() {
+wait_for_pod() {
   # Wait for deployment to be ready
   logger_debug "Waiting for pod to be ready..."
   kubectl_cmd wait -n lockss --for=condition=Ready pod/connection-test-pod --timeout=60s >/dev/null ||
@@ -204,10 +204,6 @@ run_network_checks() {
     " && return 0 || return 1
 }
 
-extract_connected_ips() {
-  grep -i 'connect to' | grep -Eo "$IPV4_REGEX"
-}
-
 # Function to check IP preservation
 check_ip_preservation() {
     # Test the service with curl
@@ -217,7 +213,8 @@ check_ip_preservation() {
     while IFS= read -r ip; do
       connection_ips+=("$ip")
     done < <( kubectl_cmd logs -n lockss connection-test-pod | tail -n 10 |
-      extract_connected_ips )
+      grep -i "connect to" |
+      grep -Eo '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
 
     if [ "${#connection_ips[@]}" -gt 0 ]; then
          last_ip="${connection_ips[${#connection_ips[@]}-1]}"
@@ -270,8 +267,8 @@ Check_Runnable
 log_not_quiet "Checking Kubernetes networking"
 
 create_test_pod
-wait_for_test_pod
+wait_for_pod
 create_test_service
-check_ip_propagation
+check_ip_preservation
 run_network_checks || error_exit "One or more network checks failed, see log."
 graceful_exit
