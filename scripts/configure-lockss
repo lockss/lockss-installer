@@ -843,7 +843,7 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || echo "If you have removed any data storage directories you must run repo cache updater."
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
