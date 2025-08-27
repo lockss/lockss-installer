@@ -197,7 +197,7 @@ version_compare()
 start_postgres_service()
 {
     #start the postgres service
-  	"${SCRIPTS_DIR}"/start-lockss --upgrading -s "postgres" || logger_error_exit "Attempt to start old PostgreSQL failed."
+  	"${SCRIPTS_DIR}"/start-lockss --suppress-version-check -s "postgres" || logger_error_exit "Attempt to start old PostgreSQL failed."
     #wait for the  deployment to be marked as Available
     kubectl_lockss wait deployment lockss-postgres-service --for condition=Available=True --timeout=180s
   	# get the pod name
