@@ -217,13 +217,13 @@ check_ip_preservation() {
     while IFS= read -r ip; do
       connection_ips+=("$ip")
     done < <( kubectl_cmd logs -n lockss connection-test-pod | tail -n 10 |
-      extract_connected_ips
+      extract_connected_ips )
 
     if [ "${#connection_ips[@]}" -gt 0 ]; then
          last_ip="${connection_ips[${#connection_ips[@]}-1]}"
         if [ "${last_ip}" = "${LOCKSS_IPADDR}" ] ; then
           log_verbose "Source IP preservation OK"
-    else
+        else
           error_exit "Source IP preservation check failed."
         fi
     else
