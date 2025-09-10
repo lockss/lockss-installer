@@ -415,7 +415,13 @@ add_stack_volumes() {
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
-  kubectl_lockss apply -f ${mk_dir}/lockss-network-policy.yaml | logger_debug
+
+  local JAVA_GENERATED_NETWORK_POLICY_FILE="${LOCKSS_DATA_DIR}/$stack-cfg-data/lockss-network-polcy.yaml"
+  if [ -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} ]; then
+    kubectl_lockss apply -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} | logger_debug
+  else
+    kubectl_lockss apply -f ${mk_dir}/lockss-network-policy.yaml | logger_debug
+  fi
  # Slow, and only necessary if we rearrange users/permissions
   # ensure_lockss_owner $stack
 }
