@@ -97,6 +97,7 @@ spec:
         lockss-stack-id: {{STACK}}
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-openwayback-service
+        service-kind: non-lockss
     spec:
       containers:
       - env:
