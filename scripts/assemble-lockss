@@ -280,7 +280,7 @@ add_stack_shared() {
 #  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
 
   logger_debug "Creating service account, role, and rolebinding for Configuration Service"
-  kubectl_cmd apply -f "${mk_dir}/lockss-rw-networkpolicies-roles.yaml" | logger_debug
+  kubectl_cmd apply -f "${mk_dir}/lockss-rw-networkpolicies-role.yaml" | logger_debug
   kubectl_cmd apply -f "${mk_dir}/cfgsvc-serviceaccount.yaml" | logger_debug
   kubectl_cmd apply -f "${mk_dir}/cfgsvc-networkpolicies-rolebinding.yaml" | logger_debug
 }
