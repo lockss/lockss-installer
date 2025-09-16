@@ -53,13 +53,6 @@ _D0=$(dirname "${0}")
 # Source system config file
 source_config
 
-declare -A -r SECRETS_AR=(
- [ui]="lockss-ui-pass"
- [postgres]="lockss-postgres-pass"
- [solr]="lockss-solr-pass"
-  )
-
-
 clean_up() { # Perform pre-exit housekeeping
   log_script_exit  "${PROGNAME}"
 }
@@ -139,11 +132,7 @@ Check_Configured
 echo "Running this script will not delete any of your preserved content but will remove the passwords necessary for the system to access that content."
 ask_for_input "Do you want to display your saved passwords now, so you can record them?" "" N
 if is_yes "${ANS}" ; then
-  for key in "${!SECRETS_AR[@]}"
-  do
-    passwd=$(kubectl get secret -n $key -o jsonpath='{.data.$key}' | base64 --decode)
-    echo $key: $passwd
-  done
+  "${SCRIPTS_DIR}"dusplay-secrets
 fi
 ask_for_input "Okay to uninstall lockss?" "" N
 if is_yes "${ANS}" ; then
