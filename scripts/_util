@@ -459,7 +459,7 @@ check_url() {
     if [[ -z "$proxy" ]]; then
         local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" || echo '999')
     else
-        local response_code=$(curl -c /tmp/cookie.txt -b /tmp/cookie.txt -o /dev/null -s -x "$proxy" -w '%{http_code}' --head "$url" || echo '999')
+        local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" -x "$proxy" || echo '999')
     fi
 
     if (( $(echo "$response_code < 400") )); then
