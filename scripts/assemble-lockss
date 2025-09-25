@@ -423,9 +423,11 @@ add_stack_volumes() {
 
   local JAVA_GENERATED_NETWORK_POLICY_FILE="${LOCKSS_DATA_DIR}/$stack-cfg-data/lockss-network-polcy.yaml"
   if [ -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} ]; then
+    logger_debug "Applying generated LOCKSS network policy"
     kubectl_lockss apply -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} | logger_debug
   else
-    kubectl_lockss apply -f ${mk_dir}/lockss-network-policy.yaml | logger_debug
+    logger_debug "Applying default LOCKSS network policy"
+    kubectl_lockss apply -f ${mk_dir}/default-lockss-network-policy.yaml | logger_debug
   fi
  # Slow, and only necessary if we rearrange users/permissions
   # ensure_lockss_owner $stack
