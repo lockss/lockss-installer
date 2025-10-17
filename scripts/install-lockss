@@ -215,16 +215,16 @@ Check_K3s_Prerequisites()
       if ! command -v apparmor_parser > /dev/null ; then
         Fatal 'Apparmor enabled but apparmor_parser not on the PATH; see manual'
       fi
-      echo 'OK: Apparmor enabled and apparmor_parser installed'
+      echo 'OK: Apparmor enabled and apparmor_parser on the PATH'
     else
       echo 'OK: Apparmor not enabled'
     fi
   fi
   
   # Debian/Ubuntu with SELinux enabled does not seem to be supported by K3s
-  Echo 'Checking SELinux...'
-  if [ -n "${SKIP_CHECK_SELINUX}" ] ; then
-    echo 'Skipping (--skip-check-selinux)'
+  Echo 'Checking SELinux interactions with Debian/Ubuntu...'
+  if [ -n "${SKIP_CHECK_SELINUX_DEBIAN}" ] ; then
+    echo 'Skipping (--skip-check-selinux-debian)'
   else
     case "$(test -f /etc/os-release && source /etc/os-release && echo "${ID}")" in
       '')
@@ -250,16 +250,20 @@ Check_K3s_Prerequisites()
   fi
   
   # RHEL 10 no longer has the ip_tables kernel module out of the box
-  Echo 'Checking ip_tables loadable kernel module...'
+  Echo 'Checking that the ip_tables loadable kernel module is present and loaded...'
   if [ -n "${SKIP_CHECK_IPTABLES_LKM}" ] ; then
     echo 'Skipping (--skip-check-iptables-lkm)'
   else
-    Check_Command lsmod
-    Check_Command grep
-    if ! lsmod | grep -q ip_tables ; then
+    Check_Command modinfo
+    Check_Command modprobe
+    
+    if ! modinfo ip_tables >/dev/null ; then
       Fatal 'ip_tables loadable kernel module is not present; see manual'
     fi
-    echo 'OK: ip_tables loadable kernel module present'
+    if ! modprobe ip_tables ; then
+      Fatal 'Error loading the ip_tables loadable kernel module'
+    fi
+    echo 'OK: ip_tables loadable kernel module present and loaded'
   fi
 
   # Success
@@ -281,11 +285,16 @@ Check_System_Prerequisites()
   fi
   
   # Check kernel version; 5.4 or later is required
-  local _ker
-  _ker="$(uname -r)" || Fatal "Could not determine Linux kernel version"
-  echo "Kernel version: ${_ker}"
-  if ! awk -F. '((int($1))>5)||(((int($1))==5)&&((int($2))>3)){exit 0}{exit 1}' <<<"${_ker}" ; then
-    Fatal "Linux kernel version 5.4 or later is required; see manual"
+  Echo 'Checking that the Linux kernel is version 5.4 or greater...'
+  if [ -n "${SKIP_CHECK_KERNEL_54}" ] ; then
+    echo 'Skipping (--skip-check-kernel-54)'
+  else
+    local _ker
+    _ker="$(uname -r)" || Fatal "Could not determine Linux kernel version"
+    echo "Kernel version: ${_ker}"
+    if awk -F. '((int($1))<5)||(((int($1))==5)&&((int($2))<4)){exit 0}{exit 1}' <<<"${_ker}" ; then
+      Fatal "Linux kernel version 5.4 or later is required; see manual"
+    fi
   fi
 
   # Fail if $LOCKSS_USER does not exist
@@ -866,7 +875,13 @@ Set_Sudo()
     SUDO='sudo'
     
     # Long options introduced only in sudo 1.8.8 (https://www.sudo.ws/legacy.html#1.8.8)
-    # sudo -V returns e.g. Sudo version 1.8.23
+    # Example of sudo -V output:
+    #   $ sudo -V
+    #   Sudo version 1.9.17p1
+    #   Sudoers policy plugin version 1.9.17p1
+    #   Sudoers file grammar version 50
+    #   Sudoers I/O plugin version 1.9.17p1
+    #   Sudoers audit plugin version 1.9.17p1
     if "${SUDO}" -V | grep '^Sudo version' | awk '{print $3}' | awk -F. '(int($1)<1)||((int($1)==1)&&(int($2)<8))||((int($1)==1)&&(int($2)==8)&&(int($3)<8)){exit 0}{exit 1}' ; then
       SUDO_LOCKSS="sudo -u ${LOCKSS_USER}"
     else
@@ -1028,26 +1043,28 @@ Make_Command_Line_Parser()
   msg -- '' 'Executing a single phase'
   flag :'SINGLE_STEP=Check_System_Prerequisites' --check-system-prerequisites -S -- 'only check system prerequisites and exit'
   flag :'SINGLE_STEP=Check_K3s_Prerequisites' --check-k3s-prerequisites -P -- 'only check K3s prerequisites and exit'
-  flag :'SINGLE_STEP=Configure_Coredns' --configure-coredns -C -- 'only configure CoreDNS for K3s and exit'
-  flag :'SINGLE_STEP=Configure_Firewalld' --configure-firewalld -F -- 'only configure firewalld for K3s and exit'
   flag :'SINGLE_STEP=Configure_Iptables' --configure-iptables -I -- 'only configure iptables for K3s and exit'
+  flag :'SINGLE_STEP=Configure_Firewalld' --configure-firewalld -F -- 'only configure firewalld for K3s and exit'
   flag :'SINGLE_STEP=Configure_Ufw' --configure-ufw -U -- 'only configure ufw for K3s and exit'
+  flag :'SINGLE_STEP=Configure_Coredns' --configure-coredns -C -- 'only configure CoreDNS for K3s and exit'
   flag :'SINGLE_STEP=Install_K3s' --install-k3s -K -- 'only install K3s and exit'
   flag :'SINGLE_STEP=Test_K3s' --test-k3s -T -- 'only test the K3s node and exit'
   msg -- '' 'Skipping phases'
   flag SKIP_CHECK_SYSTEM_PREREQUISITES --skip-check-system-prerequisites -- 'skip checking system prerequisites'
   flag SKIP_CHECK_K3S_PREREQUISITES --skip-check-k3s-prerequisites -- 'skip checking K3s prerequisites'
-  flag SKIP_CONFIGURE_COREDNS --skip-configure-coredns -- 'skip configuring CoreDNS for K3s'
-  flag SKIP_CONFIGURE_FIREWALLD --skip-configure-firewalld -- 'skip configuring firewalld for K3s'
   flag SKIP_CONFIGURE_IPTABLES --skip-configure-iptables -- 'skip configuring iptables for K3s'
+  flag SKIP_CONFIGURE_FIREWALLD --skip-configure-firewalld -- 'skip configuring firewalld for K3s'
   flag SKIP_CONFIGURE_UFW --skip-configure-ufw -- 'skip configuring ufw for K3s'
+  flag SKIP_CONFIGURE_COREDNS --skip-configure-coredns -- 'skip configuring CoreDNS for K3s'
   flag SKIP_INSTALL_K3S --skip-install-k3s -- 'skip installing K3s; implies --skip-check-k3s-prerequisites, --skip-configure-coredns, --skip-configure-firewalld, --skip-configure-iptables, --skip-configure-ufw, --skip-test-k3s'
   flag SKIP_TEST_K3S --skip-test-k3s -- 'skip testing the K3s node'
+  msg -- '' 'Options for checking system prerequisites'
+  flag SKIP_CHECK_KERNEL_54 --skip-check-kernel-54 -- 'skip checking that the Linux kernel is version 5.4 or greater'
   msg -- '' 'Options for checking K3s prerequisites'
   flag SKIP_CHECK_USER_NAMESPACES --skip-check-user-namespaces -- 'skip checking user namespaces'
   flag SKIP_CHECK_APPARMOR_PARSER --skip-check-apparmor-parser -- 'skip checking that apparmor_parser is present if Apparmor is enabled'
-  flag SKIP_CHECK_SELINUX --skip-check-selinux -- 'skip checking SELinux interactions with Debian/Ubuntu'
-  flag SKIP_CHECK_IPTABLES_LKM --skip-check-iptables-lkm -- 'skip checking the ip_tables loadable kernel module'
+  flag SKIP_CHECK_SELINUX_DEBIAN --skip-check-selinux-debian -- 'skip checking SELinux interactions with Debian/Ubuntu'
+  flag SKIP_CHECK_IPTABLES_LKM --skip-check-iptables-lkm -- 'skip checking that the ip_tables loadable kernel module is present and loaded'
   msg -- '' 'Options for configuring CoreDNS for K3s'
   flag FORCE_DNS_PROMPT --force-dns-prompt -- 'force prompting for IP addresses of DNS servers'
   msg -- '' 'Options for installing K3s'
