@@ -742,26 +742,39 @@ build_config_file() {
     done
 
     # Props URL
-    ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/daemon/lockss.xml"
-    LOCKSS_PROPS_URL="${ANS}"
-    if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
-      if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
-        LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
-      else
-        LOCKSS_PROPS_AUTHENTICATE_SERVER=N
+    PROPS_OK=N
+    until is_yes ${PROPS_OK}; do
+      ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/daemon/lockss.xml"
+      LOCKSS_PROPS_URL="${ANS}"
+      if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
+        if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
+          LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
+        else
+          LOCKSS_PROPS_AUTHENTICATE_SERVER=N
+        fi
+        ask_for_input "Verify configuration server authenticity?" "${LOCKSS_PROPS_AUTHENTICATE_SERVER}"
+        if is_yes "${ANS}"; then
+          ask_for_input "Server certificate keystore" "${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" "lockss-ca"
+          LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
+        else
+          unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
+        fi
       fi
-      ask_for_input "Verify configuration server authenticity?" "${LOCKSS_PROPS_AUTHENTICATE_SERVER}"
-      if is_yes "${ANS}"; then
-        ask_for_input "Server certificate keystore" "${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" "lockss-ca"
-        LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
-      else
-        unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
-      fi
-    fi
 
-    # Props proxy
-    ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
-    LOCKSS_PROPS_PROXY="${ANS}"
+      # Props proxy
+      ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
+      LOCKSS_PROPS_PROXY="${ANS}"
+
+      # Test configuration URL access (via proxy, if configured)
+      if check_url "${LOCKSS_PROPS_URL}" "${LOCKSS_PROPS_PROXY}"; then
+        PROPS_OK=Y
+      else
+        ask_for_input "WARNING: Could not fetch configuration URL; ignore and continue?" "" N
+        if is_yes "${ANS}"; then
+          PROPS_OK=Y
+        fi
+      fi
+    done
 
     # Preservation group(s)
     ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "prod"
