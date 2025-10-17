@@ -220,8 +220,8 @@ if ((number_of_services > 0)); then
   echo "These LOCKSS services are now running."
   kubectl_lockss get deployments --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
 else
-    kubectl_lockss delete NetworkPolicy lockss-network-policy-admin-access | logger_debug
-    kubectl_lockss delete NetworkPolicy lockss-network-policy-content-access | logger_debug
+    kubectl_lockss delete NetworkPolicy lockss-network-policy-admin-access 2> /dev/null | logger_debug
+    kubectl_lockss delete NetworkPolicy lockss-network-policy-content-access 2> /dev/null | logger_debug
     echo "All LOCKSS services are stopped."
 fi
 echo "========================================="
