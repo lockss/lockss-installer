@@ -15,18 +15,10 @@ spec:
     - from:
         - ipBlock:
             cidr: 10.255.0.0/16
-      ports:
-        - port: {{PYWB_PORT}}
-        - port: {{POSTGRES_PORT}}
-        - port:  {{OPENWB_PORT}}
 {{#LOCKSS_SUBNETS}}
     - from:
         - ipBlock:
             cidr: "{{.}}"
-      ports:
-        - port: {{PYWB_PORT}}
-        - port: {{POSTGRES_PORT}}
-        - port: {{OPENWB_PORT}}
 {{/LOCKSS_SUBNETS}}
 ---
 apiVersion: networking.k8s.io/v1
@@ -46,16 +38,8 @@ spec:
     - from:
         - ipBlock:
             cidr: 10.255.0.0/16
-      ports:
-        - port: {{PYWB_PORT}}
-        - port: {{POSTGRES_PORT}}
-        - port:  {{OPENWB_PORT}}
 {{#LOCKSS_SUBNETS}}
     - from:
         - ipBlock:
             cidr: "{{.}}"
-      ports:
-        - port: {{PYWB_PORT}}
-        - port: {{POSTGRES_PORT}}
-        - port: {{OPENWB_PORT}}
 {{/LOCKSS_SUBNETS}}
