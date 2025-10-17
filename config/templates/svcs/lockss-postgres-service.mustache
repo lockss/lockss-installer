@@ -5,7 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-postgres-service
-    service-kind: non-lockss
+    service-kind: non-lockss-admin-access
   name: lockss-postgres-service
 spec:
   ports:
@@ -81,7 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-postgres-service
-    service-kind: non-lockss
+    service-kind: non-lockss-admin-access
   name: lockss-postgres-service
 spec:
   replicas: 1
@@ -97,7 +97,7 @@ spec:
         lockss-stack-id: {{STACK}}
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-postgres-service
-        service-kind: non-lockss
+        service-kind: non-lockss-admin-access
     spec:
       containers:
       - command: ["docker-entrypoint.sh", "-c", "config_file=/run/configs/lockss-postgresql.conf"]

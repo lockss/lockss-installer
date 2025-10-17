@@ -5,7 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
-    service-kind: non-lockss
+    service-kind: non-lockss-content-access
   name: lockss-openwayback-service
 spec:
   ports:
@@ -81,7 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
-    service-kind: non-lockss
+    service-kind: non-lockss-content-access
   name: lockss-openwayback-service
 spec:
   replicas: 1
@@ -97,7 +97,7 @@ spec:
         lockss-stack-id: {{STACK}}
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-openwayback-service
-        service-kind: non-lockss
+        service-kind: non-lockss-content-access
     spec:
       containers:
       - env:
