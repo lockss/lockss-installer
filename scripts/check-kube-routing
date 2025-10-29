@@ -208,7 +208,7 @@ run_network_checks() {
 check_ip_preservation() {
     # Test the service with curl
     log_verbose "Checking source IP Preservation..."
-    curl -s "http://${LOCKSS_HOSTNAME}:${NC_HOST_PORT}"
+    curl -s "http://${LOCKSS_IPADDR}:${NC_HOST_PORT}"
     # Get pod logs
     while IFS= read -r ip; do
       connection_ips+=("$ip")
