@@ -49,4 +49,11 @@ org.lockss.sqlArtifactIndexDbManager.datasource.user={{POSTGRES_USER}}
 org.lockss.sqlArtifactIndexDbManager.datasource.password={{POSTGRES_PASSWD}}
 org.lockss.sqlArtifactIndexDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
 org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.enabled=true
+
+# Uncomment the following lines to tune the DBCP pool:
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.initialSize=0
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxTotal=100
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxIdle=8
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.minIdle=0
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxWaitMillis=-1
 {{/USE_PGSQL_INDEX}}
