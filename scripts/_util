@@ -712,6 +712,9 @@ setup_storage_dirs() {
   if [ "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
     dirSet["${LOCKSS_SCRIPT_LOG_DIR}"]=1
   fi
+  if [ "${LOCKSS_DATA_DIR}" ]; then
+    dirSet["${LOCKSS_DATA_DIR}"]=1
+  fi
   for dir in "${!dirSet[@]}"; do
     if ! init_one_dir "${dir}" ${USER} 755; then
       echo "${dir} cannot be created or written by ${USER}." >&2
