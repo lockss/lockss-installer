@@ -765,9 +765,11 @@ build_config_file() {
       ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
       LOCKSS_PROPS_PROXY="${ANS}"
 
-      # Presumably don't need to check the props URL if in replay
-      # mode, and can't ask questions anyway
-      if ! is_replay; then
+      # Can't ask questions if in replay mode, and shouldn't need to
+      # check the props URL as it's already been checked
+      if is_replay; then
+        PROPS_OK=Y
+      else
         # Test configuration URL access (via proxy, if configured)
         if check_url "${LOCKSS_PROPS_URL}" "${LOCKSS_PROPS_PROXY}"; then
           PROPS_OK=Y
