@@ -456,7 +456,7 @@ check_url() {
     local url="$1"
     local proxy="${2:-}"
 
-    if [[ -z "$proxy" ]]; then
+    if [[ -z "$proxy" || "$proxy" = NONE ]]; then
         local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" || echo '999')
     else
         local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" -x "$proxy" || echo '999')

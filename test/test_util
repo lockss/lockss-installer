@@ -359,10 +359,12 @@ EOF
 
 @test 'check_url' {
   # No proxy
-  assert_equal $(check_url http://props.lockss.org:8001/demo/lockss.xml) true
-  assert_equal $(check_url http://props.lockss.org:8001/demo/foo.xml) false
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml NONE
+  refute check_url http://props.lockss.org:8001/demo/foo.xml
+  refute check_url http://props.lockss.org:8001/demo/foo.xml NONE
 
   # Using using proxy running at localhost:3128
-  assert_equal $(check_url http://props.lockss.org:8001/demo/lockss.xml localhost:3128) true
-  assert_equal $(check_url http://props.lockss.org:8001/demo/foo.xml localhost:3128) false
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml localhost:3128
+  refute check_url http://props.lockss.org:8001/demo/foo.xml localhost:3128
 }
