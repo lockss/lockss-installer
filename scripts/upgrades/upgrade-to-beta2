@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# upgrade-to-beta1 -
+# upgrade-to-beta2 -
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -30,7 +30,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Usage: upgrade-to-beta1 [-h|--help]
+# Usage: upgrade-to-beta2 [-h|--help]
 #
 # Revision history:
 # ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ usage() {
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Update to beta1 from a previous alpha release.
+  Update to beta2 from a previous alpha or beta release.
 
   $(usage)
 
@@ -137,15 +137,16 @@ check_k3s_version() {
   set_k3s_bin_dir
   if command -v "${K3S_BIN_DIR}/k3s" > /dev/null && "${K3S_BIN_DIR}/k3s" kubectl version &> /dev/null ; then
     local cur_version="$("${K3S_BIN_DIR}/k3s" --version | awk '/^k3s version [^ ]+ \([0-9A-Fa-f]+\)$/{print $3;exit 0}{print;exit 1}')" \
-            || Fatal "Error parsing K3s version"
-    if [ "${cur_version}" != "${K3_VERSION_MIN}" ] ; then
-      if compare_versions_lt "${_kver}" "${K3S_VERSION}"; then
-        err "$_0: K3s version is too old. Please update your K3s installation to at least ${CUR_K3_VERSION_MIN}."
-        err_exit "$_0: Run scripts/install-lockss to upgrade your k3s installation before running this script."
-      fi
+            || error_exit "Error parsing K3s version"
+    # Normalize version strings for comparison (convert +k3s to . for sort -V)
+    local cur_version_normalized="$(Extract_K3s_Version "${cur_version}")"
+    local min_version_normalized="$(Extract_K3s_Version "${K3_VERSION_MIN}")"
+    if compare_versions_lt "${cur_version_normalized}" "${min_version_normalized}"; then
+      err "$_0: K3s version ${cur_version} is too old. Please update your K3s installation to at least ${K3_VERSION_MIN}."
+      err_exit "$_0: Run scripts/install-lockss to upgrade your k3s installation before running this script."
     fi
   else
-    err_exit "$_0: Unable to find k3s executable. Make sure has been installed and is on the path.?"
+    err_exit "$_0: Unable to find k3s executable. Make sure it has been installed and is on the path."
   fi
 }
 
