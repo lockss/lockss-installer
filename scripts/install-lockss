@@ -725,26 +725,27 @@ Install_K3s()
   else
     # Install K3s
     Echo "Installing K3s version ${K3S_VERSION}"
-    local _q='K3s data directory'
-    echo "K3s stores downloaded containers and configuration data in ${DEFAULT_K3S_DATA_DIR} by default."
+    local _q='K3s state data directory'
+    echo "K3s stores state data in ${DEFAULT_K3S_DATA_DIR} by default."
     echo "If ${DEFAULT_K3S_DATA_DIR_ROOT} is space-limited, you should specify a different directory."
-    echo 'Note that some filesystem types backing this directory may not be suitable,'
-    echo 'for example NFS, or legacy XFS with ftype=0; see manual.'
+    echo 'Note that some filesystem types backing this directory may not be'
+    echo 'suitable or may require special handling, for example NFS, or'
+    echo 'legacy XFS with ftype=0; see manual.'
     echo
     if [ "${K3S_DATA_DIR}" != "${DEFAULT_K3S_DATA_DIR}" ] ; then
       echo "${_q}?"
-      echo "Custom K3s data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
+      echo "Custom K3s state data directory (--k3s-data-dir): ${K3S_DATA_DIR}"
     elif [ -n "${ASSUME_YES}" ] ; then
       echo "${_q}?"
       echo "In automatic 'yes' mode (--assume-yes): ${K3S_DATA_DIR}"
     else
-      ask_for_input 'K3s data directory' "" "${DEFAULT_K3S_DATA_DIR}"
+      ask_for_input 'K3s state data directory' "" "${DEFAULT_K3S_DATA_DIR}"
       K3S_DATA_DIR="${ANS}"
     fi
-    Echo "K3s data directory: ${K3S_DATA_DIR}"
+    Echo "K3s state data directory: ${K3S_DATA_DIR}"
   
     # Determine filesystem type
-    Echo "Determining the K3s data directory filesystem type"
+    Echo "Determining the K3s state data directory filesystem type"
     if command -v findmnt > /dev/null ; then
       local _d1="${K3S_DATA_DIR}"
       until [ -d "${_d1}" ] ; do
