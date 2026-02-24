@@ -587,6 +587,7 @@ write_k8s_cfg() {
 K8S_FLAVOR="${K8S_FLAVOR}"
 K8S_VERSION="${K8S_VERSION}"
 KUBECTL_CMD="${KUBECTL_CMD}"
+KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER="${KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER}"
 EOF
   if [ -n "${K3S_VERSION}" ]; then
     echo "K3S_VERSION=\"${K3S_VERSION}\"" >>"${1}"
@@ -975,6 +976,7 @@ setup_k8s_cmd() {
       fi
     done
     echo "Kubectl command alias set to $KUBECTL_CMD"
+    KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER=true
     K8S_VERSION=$($KUBECTL_CMD version | grep 'Server Version:' | awk '{print $3}')
     write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
   fi
