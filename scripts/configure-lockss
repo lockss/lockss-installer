@@ -141,7 +141,7 @@ configure_databases() {
 #    echo "its hostname and other pertinent information."
 #    ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" N
 #    if is_yes "${ANS}"; then
-#      USE_LOCKSS_SOLR=true
+      USE_LOCKSS_SOLR=false
 #      LOCKSS_SOLR_HOST='lockss-solr-service'
 #      LOCKSS_SOLR_PORT='8983'
 #      LOCKSS_SOLR_CORE_REPO="lockss-repo"
