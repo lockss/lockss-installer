@@ -125,12 +125,12 @@ configure_databases() {
 
   fi
 
-#  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
-#  LOCKSS_DB_PASSWD="${PASSWD_HASH}"
-#  if [ -n "${PASSWD_CLEAR}" ]; then
-#    Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
-#  fi
-#
+  ask_for_password "Password for PostgreSQL database" "${LOCKSS_DB_PASSWD}" "" "lockss-postgres-pass"
+  LOCKSS_DB_PASSWD="${PASSWD_HASH}"
+  if [ -n "${PASSWD_CLEAR}" ]; then
+    Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
+  fi
+
 #  ask_for_input "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
 #  if is_yes "${ANS}"; then
 #    ENABLE_SOLR=true
