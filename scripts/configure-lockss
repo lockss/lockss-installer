@@ -131,77 +131,77 @@ configure_databases() {
     Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
-  ask_for_input "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
-  if is_yes "${ANS}"; then
-    ENABLE_SOLR=true
-
-    #check Solr service
-    echo "You may use either the embedded Solr service or an external one"
-    echo "provided by you or your institution, in which case you will be asked for"
-    echo "its hostname and other pertinent information."
-    ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" N
-    if is_yes "${ANS}"; then
-      USE_LOCKSS_SOLR=true
-      LOCKSS_SOLR_HOST='lockss-solr-service'
-      LOCKSS_SOLR_PORT='8983'
-      LOCKSS_SOLR_CORE_REPO="lockss-repo"
-    else
+#  ask_for_input "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
+#  if is_yes "${ANS}"; then
+#    ENABLE_SOLR=true
+#
+#    #check Solr service
+#    echo "You may use either the embedded Solr service or an external one"
+#    echo "provided by you or your institution, in which case you will be asked for"
+#    echo "its hostname and other pertinent information."
+#    ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" N
+#    if is_yes "${ANS}"; then
       USE_LOCKSS_SOLR=false
-      ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
-      LOCKSS_SOLR_HOST=${ANS}
-
-      ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
-      LOCKSS_SOLR_PORT=${ANS}
-
-      ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
-      LOCKSS_SOLR_CORE_REPO=${ANS}
-    fi
-    # Account for solr user
-    ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
-    LOCKSS_SOLR_USER=${ANS}
-
-    ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
-    LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
-    if [ -n "${PASSWD_CLEAR}" ]; then
-      LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
-      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
-      Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
-    fi
-  else
+#      LOCKSS_SOLR_HOST='lockss-solr-service'
+#      LOCKSS_SOLR_PORT='8983'
+#      LOCKSS_SOLR_CORE_REPO="lockss-repo"
+#    else
+#      USE_LOCKSS_SOLR=false
+#      ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
+#      LOCKSS_SOLR_HOST=${ANS}
+#
+#      ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
+#      LOCKSS_SOLR_PORT=${ANS}
+#
+#      ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
+#      LOCKSS_SOLR_CORE_REPO=${ANS}
+#    fi
+#    # Account for solr user
+#    ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
+#    LOCKSS_SOLR_USER=${ANS}
+#
+#    ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
+#    LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
+#    if [ -n "${PASSWD_CLEAR}" ]; then
+#      LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
+#      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
+#      Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
+#    fi
+#  else
     ENABLE_SOLR=false
     USE_SOLR_INDEX=false
-  fi
+#  fi
 }
 
 configure_artifact_index() {
-   echo ""
-   echo "Configuring Artifact Index..."
-   echo ""
-
-   ask_for_input "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
-   if is_yes "${ANS}"; then
+#   echo ""
+#   echo "Configuring Artifact Index..."
+#   echo ""
+#
+#   ask_for_input "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
+#   if is_yes "${ANS}"; then
      USE_PGSQL_INDEX=true
      USE_SOLR_INDEX=false
-   else
-     USE_PGSQL_INDEX=false
-   fi
-
-   if ! ${USE_PGSQL_INDEX} && ${ENABLE_SOLR}; then
-     ask_for_input "Use the Solr to index artifacts?" "$(to_yes_no_or_blank ${USE_SOLR_INDEX})" N
-     if is_yes "${ANS}"; then
-       USE_PGSQL_INDEX=false
-       USE_SOLR_INDEX=true
-     else
-       USE_SOLR_INDEX=false
-     fi
-   fi
-
-   if ! ${USE_PGSQL_INDEX} && ! ${USE_SOLR_INDEX}; then
-     echo "Defaulting to Apache Derby for the artifact index"
-     USE_DERBY_INDEX=true
-   else
-     USE_DERBY_INDEX=false
-   fi
+#   else
+#     USE_PGSQL_INDEX=false
+#   fi
+#
+#   if ! ${USE_PGSQL_INDEX} && ${ENABLE_SOLR}; then
+#     ask_for_input "Use the Solr to index artifacts?" "$(to_yes_no_or_blank ${USE_SOLR_INDEX})" N
+#     if is_yes "${ANS}"; then
+#       USE_PGSQL_INDEX=false
+#       USE_SOLR_INDEX=true
+#     else
+#       USE_SOLR_INDEX=false
+#     fi
+#   fi
+#
+#   if ! ${USE_PGSQL_INDEX} && ! ${USE_SOLR_INDEX}; then
+#     echo "Defaulting to Apache Derby for the artifact index"
+#     USE_DERBY_INDEX=true
+#   else
+#     USE_DERBY_INDEX=false
+#   fi
 }
 
 configure_crawler_services() {
@@ -662,7 +662,7 @@ build_config_file() {
     fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
+      ask_for_input "Initial subnet(s) for admin UI access, separated by ';'" "${LOCKSS_ACCESS_SUBNET}"
       if valid_subnet_list "${ANS}"; then
         LOCKSS_ACCESS_SUBNET="${ANS}"
         SUBNET_OK=Y
@@ -784,7 +784,7 @@ build_config_file() {
     done
 
     # Preservation group(s)
-    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "prod"
+    ask_for_input "Preservation group(s), separated by ';'" "${LOCKSS_PRESERVATION_GROUP}" "prod"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
     # Admin UI user/pass
     USER_OK=N
@@ -837,24 +837,10 @@ build_config_file() {
       fi
     done
 
-    HAD_DATA_DIR=
-    if [ "X${LOCKSS_DATA_DIR}" != X ]; then
-      HAD_DATA_DIR=Y
-    fi
-    # Data storage base
-    DATA_PATHS_OK=N
-    until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
-      if [ "X${ANS}" != X ]; then
-        LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
-        DATA_PATHS_OK=Y
-      fi
-    done
-
-    # Content storage base(s)
+    # Content storage areas
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Paths of the content storage areas (separated by ';')" "${LOCKSS_REPO_HOST_DIRS}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
         IFS=';' read -r -a newPaths <<<"${tmp_repo_host_dirs}"
@@ -863,25 +849,39 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || echo "If you have removed any data storage directories you must run repo cache updater."
+        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || echo "If you have removed or reordered content storage areas, you must run scripts/reindex-artifacts"
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
       fi
     done
 
-    # Log dir base
+    # State data storage area
+    HAD_DATA_DIR=
+    if [ "X${LOCKSS_DATA_DIR}" != X ]; then
+      HAD_DATA_DIR=Y
+    fi
+    DATA_PATHS_OK=N
+    until is_yes ${DATA_PATHS_OK}; do
+      ask_for_input "Path of the state data storage area" "${LOCKSS_DATA_DIR}" "${LOCKSS_REPO_HOST_DIRS[0]}"
+      if [ "X${ANS}" != X ]; then
+        LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
+        DATA_PATHS_OK=Y
+      fi
+    done
+
+    # Log storage area
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Path of the log storage area" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
       fi
     done
 
-    # Tempdir dir base
-    ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
+    # Temporary storage area
+    ask_for_input "Path of the temporary storage area" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
 #    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
 #      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
