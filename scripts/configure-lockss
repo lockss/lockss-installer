@@ -114,13 +114,13 @@ configure_databases() {
     ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}" 5432
     LOCKSS_POSTGRES_PORT=${ANS}
 
-    ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
+    ask_for_input "Schema for PostgreSQL database" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${ANS}
 
-    ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
+    ask_for_input "Database name prefix for PostgreSQL database" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
     LOCKSS_DBNAME_PREFIX=${ANS}
 
-    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
+    ask_for_input "Login name for PostgreSQL database" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
     LOCKSS_POSTGRES_USER=${ANS}
 
   fi
