@@ -840,7 +840,7 @@ build_config_file() {
     # Content storage areas
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Paths of the content storage areas (separated by ';')" "${LOCKSS_REPO_HOST_DIRS}"
+      ask_for_input "Paths of the content storage areas, separated by ';'" "${LOCKSS_REPO_HOST_DIRS}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
         IFS=';' read -r -a newPaths <<<"${tmp_repo_host_dirs}"
