@@ -107,7 +107,7 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help]"
+	echo -e "Usage: $PROGNAME [-h|--help] [--from <version>] [--to <version>]"
 }
 
 help_message() {
@@ -118,7 +118,9 @@ help_message() {
   $(usage)
 
   Options:
-  -h, --help  Display this help message and exit.
+  -h, --help       Display this help message and exit.
+  --from <version> Override the installed version (default: read from current VERSION file).
+  --to <version>   Target version to upgrade to (default: ${UPGRADE_TO}).
 
 _EOF_
   return
@@ -150,6 +152,29 @@ check_k3s_version() {
   fi
 }
 
+version_order() {
+  case "$1" in
+    2.0-alpha5) echo 1 ;;
+    2.0-alpha6) echo 2 ;;
+    2.0-alpha7) echo 3 ;;
+    2.0-alpha8) echo 4 ;;
+    2.0-beta1)  echo 5 ;;
+    2.0-beta2)  echo 6 ;;
+    *) error_exit "Unknown version: $1" ;;
+  esac
+}
+
+reached_version() {
+  local next_version="$1"
+  local next_order
+  next_order=$(version_order "$next_version")
+  Set_Lockss_Version "${next_version}"
+  if [ "$next_order" -ge "$TARGET_ORDER" ]; then
+    logger_info "Upgrade completed"
+    graceful_exit
+  fi
+}
+
 ###
 ## MAIN
 ###
@@ -168,6 +193,22 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -h | --help)
       help_message; graceful_exit ;;
+    --from)
+      if [[ -z "${2:-}" ]]; then
+        usage
+        error_exit "--from requires a version argument"
+      fi
+      ARG_FROM="$2"
+      shift 2
+      ;;
+    --to)
+      if [[ -z "${2:-}" ]]; then
+        usage
+        error_exit "--to requires a version argument"
+      fi
+      ARG_TO="$2"
+      shift 2
+      ;;
     -* | --*)
       usage
       error_exit "Unknown option $1" ;;
@@ -192,69 +233,86 @@ read_config ${SYSTEM_CONF_FILE}
 logger_debug "Loaded LOCKSS system configuration"
 VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
 
-if [ ! -f "${VERSION_FILE}" ]; then
-  error_exit "Could not determine previous LOCKSS version (${VERSION_FILE} is missing)"
+# Resolve target version
+TARGET_VERSION="${ARG_TO:-${UPGRADE_TO}}"
+if Parse_Lockss_Version "${TARGET_VERSION}"; then
+  TARGET_ORDER=$(version_order "${MATCH_VERSION_NORMALIZED}")
+else
+  error_exit "Unexpected target version: ${TARGET_VERSION}"
 fi
 
-CUR_VERSION="`cat ${VERSION_FILE}`"
+# Resolve current (from) version
+if [ -n "${ARG_FROM}" ]; then
+  CUR_VERSION="${ARG_FROM}"
+else
+  if [ ! -f "${VERSION_FILE}" ]; then
+    error_exit "Could not determine previous LOCKSS version (${VERSION_FILE} is missing)"
+  fi
+  CUR_VERSION="$(cat "${VERSION_FILE}")"
+fi
 
 if Parse_Lockss_Version "${CUR_VERSION}"; then
-  case "${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}" in
-    2.0-alpha5)
-      logger_info "Performing upgrade from alpha5"
-
-      # Repository Service changes
-      rename_collections_dir
-      rename_tempwarcs_dir
-      remove_journal_files
-
-      # Reset Solr for reindex
-      reset_solr_index
-      reset_index_state
-      signal_reindex "${STACK_PREFIX}"
-    # fall through.
-      ;&
-    2.0-alpha6)
-      logger_info "Performing upgrade from alpha6"
-      upgrade_postgres
-      ;&
-    2.0-alpha7)
-      logger_info "Performing upgrade from alpha7"
-      ;&
-    2.0-alpha8)
-      logger_info "Performing upgrade from alpha8"
-      ;&
-    2.0-beta1)
-      logger_info "Performing upgrade from beta1"
-      # Remove Kubernetes Persistent Volumes Claims (PVCs)
-      for pvc in $(kubectl get pvc -n lockss  -o jsonpath='{.items[*].metadata.name}'); do
-        kubectl delete pvc -n lockss "$pvc";
-      done
-      # Remove Kubernetes Persistent Volumes (PVs)
-      for pv in $(kubectl get pv -n lockss  -o jsonpath='{.items[*].metadata.name}'); do
-        kubectl delete pv -n lockss "$pv";
-      done
-      # Disable group writeable permission on log directories
-      for _d in "${LOCKSS_LOGS_DIR}"/*-logs ; do
-        if [ -d "${_d}" ] ; then
-          chmod 755 "${_d}"
-        fi
-      done
-      # check for upgrade to k3s
-      check_k3s_version
-      ;;
-    2.0-beta2)
-      logger_info "Upgrade already applied (beta2)"
-      ;;
-    *)
-      error_exit "Do not know how to upgrade from ${CUR_VERSION}"
-      ;;
-  esac
+  FROM_VERSION_NORMALIZED="${MATCH_VERSION_NORMALIZED}"
+  FROM_ORDER=$(version_order "${FROM_VERSION_NORMALIZED}")
 else
   error_exit "Unexpected version: ${CUR_VERSION}"
 fi
 
-logger_debug "Updating LOCKSS version file"
-Set_Lockss_Version "${UPGRADE_TO}"
+# Nothing to do if already at or past target
+if [ "$FROM_ORDER" -ge "$TARGET_ORDER" ]; then
+  logger_info "Nothing to upgrade (${CUR_VERSION} >= ${TARGET_VERSION})"
+  graceful_exit
+fi
 
-logger_info "Upgrade completed"
+case "${FROM_VERSION_NORMALIZED}" in
+  2.0-alpha5)
+    logger_info "Performing upgrade from alpha5"
+
+    # Repository Service changes
+    rename_collections_dir
+    rename_tempwarcs_dir
+    remove_journal_files
+
+    # Reset Solr for reindex
+    reset_solr_index
+    reset_index_state
+    signal_reindex "${STACK_PREFIX}"
+
+    reached_version "2.0-alpha6"
+    ;&
+  2.0-alpha6)
+    logger_info "Performing upgrade from alpha6"
+    upgrade_postgres
+
+    reached_version "2.0-alpha7"
+    ;&
+  2.0-alpha7)
+    logger_info "Performing upgrade from alpha7"
+
+    reached_version "2.0-alpha8"
+    ;&
+  2.0-alpha8)
+    logger_info "Performing upgrade from alpha8"
+
+    reached_version "2.0-beta1"
+    ;&
+  2.0-beta1)
+    logger_info "Performing upgrade from beta1"
+
+    # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
+    kubectl delete pvc -n lockss --all
+    kubectl delete pv -n lockss --all
+    # Disable group writeable permission on log directories
+    for _d in "${LOCKSS_LOGS_DIR}"/*-logs ; do
+      if [ -d "${_d}" ] ; then
+        chmod 755 "${_d}"
+      fi
+    done
+    # check for upgrade to k3s
+    check_k3s_version
+    reached_version "2.0-beta2"
+    ;;
+  *)
+    error_exit "Do not know how to upgrade from ${CUR_VERSION}"
+    ;;
+esac

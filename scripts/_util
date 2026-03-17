@@ -220,6 +220,7 @@ Copy_Configured_Lockss_Version() {
 }
 
 Set_Lockss_Version() {
+  logger_debug "Updating LOCKSS version file to $1"
   echo "$1" > "${LOCKSS_DATA_DIR}/VERSION"
 }
 
@@ -248,6 +249,7 @@ Parse_Lockss_Version() {
     MATCH_MINOR=${BASH_REMATCH[2]}
     MATCH_BUILD_NUM=${BASH_REMATCH[4]}
     MATCH_SUFFIX=${BASH_REMATCH[6]}
+    MATCH_VERSION_NORMALIZED="${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}"
     return 0
   fi
 
