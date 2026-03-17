@@ -1102,37 +1102,37 @@ init_service_arrays_from_commandline() {
   IFS=';' read -r -a svcs_arr <<< "$REQ_SERVICES"
   for svc in "${svcs_arr[@]}"; do
     case ${svc} in
-      "cfg"|"config")
+      "configuration"|"config"|"cfg")
         SERVICES+=("cfg")
         ;;
-      "md")
+      "metadata"|"md")
         SERVICES+=("md")
         ;;
-      "pol"|"poll"|"poller")
+      "poller"|"poll"|"pol")
         SERVICES+=("pol")
         ;;
-      "crawl"|"crawler")
+      "crawler"|"crawl")
         SERVICES+=("crawl")
         ;;
       "soap")
         SERVICES+=("soap")
         ;;
-      "repo")
+      "repository"|"repo")
         SERVICES+=("repo")
         ;;
-      "postgres")
+      "postgresql"|"postgres"|"pgsql")
         SERVICES+=("postgres")
         ;;
-      "solr")
-        SERVICES+=("solr")
-        ;;
-      "hdfs")
-        SERVICES+=("hdfs")
-        ;;
+#      "solr")
+#        SERVICES+=("solr")
+#        ;;
+#      "hdfs")
+#        SERVICES+=("hdfs")
+#        ;;
       "pywb")
         SERVICES+=("pywb")
         ;;
-      "openwb"|"openwayback")
+      "openwayback"|"openwb"|"owb")
         SERVICES+=("openwb")
         ;;
       *)
