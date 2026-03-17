@@ -849,7 +849,8 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || echo "If you have removed or reordered content storage areas, you must run scripts/reindex-artifacts"
+        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || \
+            echo "Content storage areas have changed. Artifact reindexing may be needed; see manual."
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
@@ -956,9 +957,9 @@ build_config_file() {
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
-    echo "Storage directories have not been set up correctly.  Please either"
-    echo " fix the ownership/permission problems then run scripts/setup-storage, or"
-    echo " rerun scripts/configure-lockss and specify different directories."
+    echo "Storage directories have not been set up correctly. Either fix the"
+    echo "ownership/permission problems then run scripts/configure-lockss -r,"
+    echo "or re-run scripts/configure-lockss and specify different directories."
     return 1
   fi
 }
