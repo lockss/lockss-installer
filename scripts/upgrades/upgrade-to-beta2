@@ -298,7 +298,8 @@ case "${FROM_VERSION_NORMALIZED}" in
     ;&
   2.0-beta1)
     logger_info "Performing upgrade from beta1"
-
+    # Update old port numbers in content_servers_config.txt
+    update_content_servers_ports
     # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
     kubectl delete pvc -n lockss --all
     kubectl delete pv -n lockss --all

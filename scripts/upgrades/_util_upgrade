@@ -98,6 +98,27 @@ reset_solr_index() {
   fi
 }
 
+# Updates port numbers in content_servers_config.txt to beta2 defaults,
+# replacing any existing custom port settings with standard values:
+#   org.lockss.proxy.port         -> 24630 (content proxy)
+#   org.lockss.proxy.audit.port   -> 24631 (audit proxy)
+#   org.lockss.icp.port           -> 24632 (ICP server)
+#   org.lockss.contentui.port     -> 24640 (ServeContent)
+update_content_servers_ports() {
+  local _file="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-cfg-data/config/content_servers_config.txt"
+  if [ -f "$_file" ]; then
+    logger_info "Updating port numbers in ${_file}"
+    sed \
+      -e 's/^\(org\.lockss\.proxy\.port=\).*/\124630/' \
+      -e 's/^\(org\.lockss\.proxy\.audit\.port=\).*/\124631/' \
+      -e 's/^\(org\.lockss\.icp\.port=\).*/\124632/' \
+      -e 's/^\(org\.lockss\.contentui\.port=\).*/\124640/' \
+      -i "$_file"
+  else
+    logger_debug ""
+  fi
+}
+
 reset_svc_data_dir() {
   local svc=$1
   local SUDO=$2
