@@ -115,7 +115,7 @@ update_content_servers_ports() {
       -e 's/^\(org\.lockss\.contentui\.port=\).*/\124640/' \
       -i "$_file"
   else
-    logger_debug ""
+    logger_debug "$FUNCNAME: ${_file} does not exist; skipping..."
   fi
 }
 
