@@ -472,7 +472,6 @@ configure_services() {
   #    fi
 
   # Pywb
-  echo "You can use Pywb and/or Openwayback for content replay..."
   ask_for_input "Use LOCKSS Pywb Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_PYWB})" N
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
