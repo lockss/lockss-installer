@@ -61,6 +61,10 @@ spec:
             - name: lockss-soap-logs
               mountPath: /lockss/logs/lockss-soap-logs
 {{/USE_LOCKSS_SOAP}}
+{{#USE_LOCKSS_OPENWB}}
+            - name: lockss-openwb-logs
+              mountPath: /lockss/logs/lockss-openwb-logs
+{{/USE_LOCKSS_OPENWB}}
           volumes:
           - name: logrotate-conf
             configMap:
@@ -95,3 +99,8 @@ spec:
             persistentVolumeClaim:
               claimName: lockss-soap-logs-pvc
 {{/USE_LOCKSS_SOAP}}
+{{#USE_LOCKSS_OPENWB}}
+          - name: lockss-openwb-logs
+            persistentVolumeClaim:
+              claimName: lockss-openwb-logs-pvc
+{{/USE_LOCKSS_OPENWB}}
