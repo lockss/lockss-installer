@@ -47,9 +47,6 @@ _D0=$(dirname "${0}")
 
 . "${_D0}/_util"
 
-# Source system config file
-source_config
-
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 declare -a SERVICES
@@ -99,30 +96,30 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help]"
+  cat <<- _EOF_
+Usage:
+  
+  $PROGNAME [-s|--services SVCS]
+
+  $PROGNAME [-h|--help]
+_EOF_
 }
 
 help_message() {
   cat <<-_EOF_
-  $PROGNAME ver. $VERSION
-  Stop LOCKSS stack and containers.
+$PROGNAME version $VERSION
+Stop the LOCKSS stack.
 
-  $(usage)
+$(usage)
 
-  Options:
-  -h, --help  Display this help message and exit.
-  -s, --services  A semicolon seperated list of services to stop
+Options:
+
+  -h, --help           Display this help message and exit.
+  -s, --services SVCS  Stop only service in SVCS (semicolon-separated).
 
 _EOF_
   return
 }
-
-##
-## MAIN
-##
-# Trap signals
-trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT" INT
 
 undeploy_stack() {
   local stack=${STACK_PREFIX}$1
@@ -169,7 +166,22 @@ undeploy_stack() {
   logger_info "Pod shutdown complete"
 }
 
+##
+## MAIN
+##
+
+# Special case without logging
+if [ $# -eq 1 ] && [ "$1" = '-h' -o "$1" = '--help' ]; then
+  help_message
+  exit 0
+fi
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+
 # Source system config file
+source_config
 logger_init
 
 log_script_entry "${PROGNAME}"
@@ -180,10 +192,6 @@ STACK_NUM=0
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-  -h | --help)
-    help_message
-    graceful_exit
-    ;;
   [1-9])
     STACK_NUM=$1
     ;;

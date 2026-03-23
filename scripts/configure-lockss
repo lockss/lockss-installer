@@ -114,13 +114,13 @@ configure_databases() {
     ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}" 5432
     LOCKSS_POSTGRES_PORT=${ANS}
 
-    ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
+    ask_for_input "Schema for PostgreSQL database" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${ANS}
 
-    ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
+    ask_for_input "Database name prefix for PostgreSQL database" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
     LOCKSS_DBNAME_PREFIX=${ANS}
 
-    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
+    ask_for_input "Login name for PostgreSQL database" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
     LOCKSS_POSTGRES_USER=${ANS}
 
   fi
@@ -472,7 +472,6 @@ configure_services() {
   #    fi
 
   # Pywb
-  echo "You can use Pywb and/or Openwayback for content replay..."
   ask_for_input "Use LOCKSS Pywb Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_PYWB})" N
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
@@ -840,7 +839,7 @@ build_config_file() {
     # Content storage areas
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Paths of the content storage areas (separated by ';')" "${LOCKSS_REPO_HOST_DIRS}"
+      ask_for_input "Paths of the content storage areas, separated by ';'" "${LOCKSS_REPO_HOST_DIRS}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
         IFS=';' read -r -a newPaths <<<"${tmp_repo_host_dirs}"
@@ -849,7 +848,8 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || echo "If you have removed or reordered content storage areas, you must run scripts/reindex-artifacts"
+        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || \
+            echo "Content storage areas have changed. Artifact reindexing may be needed; see manual."
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
@@ -956,9 +956,9 @@ build_config_file() {
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
-    echo "Storage directories have not been set up correctly.  Please either"
-    echo " fix the ownership/permission problems then run scripts/setup-storage, or"
-    echo " rerun scripts/configure-lockss and specify different directories."
+    echo "Storage directories have not been set up correctly. Either fix the"
+    echo "ownership/permission problems then run scripts/configure-lockss -r,"
+    echo "or re-run scripts/configure-lockss and specify different directories."
     return 1
   fi
 }
