@@ -96,6 +96,10 @@ msg() {
 # source_env <stack-name>
 source_env() {
   local stack="$1"
+  local env_file="${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  if [ ! -f "${env_file}" ]; then
+    err_exit "source_env: ${env_file} not found. Contact support."
+  fi
   set -a
   . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
   if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt" ]]; then
