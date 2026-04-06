@@ -152,6 +152,20 @@ check_k3s_version() {
   fi
 }
 
+check_old_openwayback_directories() {
+  local old_dirs=(
+    "${LOCKSS_DATA_DIR}/lockss-stack-openwayback-data"
+    "${LOCKSS_LOGS_DIR}/lockss-stack-openwayback-logs"
+    "${LOCKSS_TMPDIR}/lockss-stack-openwayback-tmp"
+  )
+  # delete all old dirs if they exist.
+  for dir in "${old_dirs[@]}"; do
+    if [ -d "$dir" ]; then
+      rm -rf "$dir"
+    fi
+  done
+}
+
 version_order() {
   case "$1" in
     2.0-alpha5) echo 1 ;;
@@ -311,7 +325,12 @@ case "${FROM_VERSION_NORMALIZED}" in
     done
     # check for upgrade to k3s
     check_k3s_version
+    # Remove old Openwayback directories
+    check_old_openwayback_directories
     reached_version "${UPGRADE_TO}"
+    ;;
+  2.0-beta2)
+    logger_info "Upgrade already applied (beta2)"
     ;;
   *)
     error_exit "Do not know how to upgrade from ${CUR_VERSION}"
