@@ -311,7 +311,7 @@ case "${FROM_VERSION_NORMALIZED}" in
     done
     # check for upgrade to k3s
     check_k3s_version
-    reached_version "2.0-beta2"
+    reached_version "${UPGRADE_TO}"
     ;;
   *)
     error_exit "Do not know how to upgrade from ${CUR_VERSION}"
