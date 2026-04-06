@@ -46,7 +46,7 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
+. "${_D0}/_util" || { echo "${0##*/}: failed to load _util" >&2; exit 1; }
 
 UPDATE_ARG=""
 WAIT_ARG=""
@@ -148,7 +148,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -a | --args)
       export ARGS_ADDITIONAL="$2"
-      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
+      logger_info "Adding additional runtime args $ARGS_ADDITIONAL"
       shift; shift
      ;;
     -s | --services)

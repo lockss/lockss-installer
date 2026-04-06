@@ -49,7 +49,7 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
+. "${_D0}/_util" || { echo "${_0}: internal error - failed to load _util" >&2; exit 1; }
 
 ##
 ## Definitions
@@ -161,9 +161,15 @@ wait_for_ready() {
   kubectl_lockss wait --for=condition=Ready --all pods --timeout=180s >/dev/null
   if [ "${CHECK_WAIT_FILE}" = "TRUE" ]; then
     logger_info "Waiting for LOCKSS services to start..."
-    while [ ! -f $wait_for_file ]
-    do
+    local wait_seconds=0
+    local wait_limit=300
+    while [ ! -f "$wait_for_file" ]; do
+      if [ ${wait_seconds} -ge ${wait_limit} ]; then
+        logger_info "LOCKSS services have not started, Ctrl-C to stop waiting."
+        wait_seconds=0
+      fi
       sleep 2
+      wait_seconds=$((wait_seconds + 2))
     done
     logger_info "LOCKSS services are ready; AUs may still be loading."
   else
@@ -215,7 +221,10 @@ logger_init
 log_script_entry "${PROGNAME}"
 umask 002
 
+# set nullglob so STACK_DIRS is a null array instead of string
+shopt -s nullglob
 STACK_DIRS=(${DOCKER_CONFIGS_DIR}/*/)
+shopt -u nullglob
 NUM_STACKS=${#STACK_DIRS[@]}
 STACK_NUM=0
 ARGS_ADDITIONAL=""

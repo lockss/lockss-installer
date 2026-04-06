@@ -45,7 +45,7 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
+. "${_D0}/_util" || { echo "${0##*/}: failed to load _util" >&2; exit 1; }
 
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
@@ -98,7 +98,7 @@ signal_exit() { # Handle trapped signals
 usage() {
   cat <<- _EOF_
 Usage:
-  
+
   $PROGNAME [-s|--services SVCS]
 
   $PROGNAME [-h|--help]
@@ -128,7 +128,7 @@ undeploy_stack() {
   logger_info "Undeploying stack $stack"
   svc_arr=()
   # if no services req get all running services and stop them.
-  if [ -z $REQ_SERVICES ]; then
+  if [ -z "$REQ_SERVICES" ]; then
     logger_info "Stopping all running services."
     services=$(kubectl_lockss get svc -o jsonpath='{.items[*].metadata.name}')
     IFS=' ' read -a svc_arr <<< "$services"
@@ -150,8 +150,8 @@ undeploy_stack() {
 	do
     podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${svc}" )
     logger_debug "Waiting for pod $podname to exit."
-    if [ -n "${podanme}" ]; then
-      kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
+    if [ -n "${podname}" ]; then
+      kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s 2>&1 | logger_debug
     fi
   done
 
