@@ -268,7 +268,7 @@ done
 # Sanity checks
 logger_debug "Checking system..."
 
-if $(am_i_root); then
+if am_i_root; then
   logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 
