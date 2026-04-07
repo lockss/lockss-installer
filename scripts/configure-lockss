@@ -933,7 +933,7 @@ build_config_file() {
         FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
         grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
         mail_sent=""
-        if [ $(command -v mail) ] >/dev/null; then
+        if [ command -v mail ] >/dev/null; then
           if [ -z "${BYPASS_MAIL}" ]; then
             if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
               mail_sent=1
@@ -1031,7 +1031,7 @@ Log_Std "${CONFIG_LOGFILE}"
 ###
 CONFIG_USER=$(whoami)
 
-if $(am_i_root); then
+if am_i_root; then
   err_exit "This script should not be run as root. Run as the lockss user."
 fi
 
