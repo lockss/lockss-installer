@@ -912,7 +912,7 @@ build_config_file() {
       CONFIG_OK=Y
       BYPASS_MAIL=Y
     else
-      ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
+      ask_for_input "OK to proceed?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
       if is_yes "${ANS}"; then
         # Backup previous config if it exists
         if [[ -f ${1} ]]; then
@@ -921,38 +921,40 @@ build_config_file() {
           fi
         fi
         if ! cp ${TMP_CONFIG} ${1}; then
-          echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
-          exit 1
+          err_exit "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
         fi
         rm -f ${TMP_CONFIG}
         echo "Configuration stored"
-      fi
-    fi
-    Store_All_Secrets
-    local STORAGE_ERRORS=
-    setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
-    CONFIG_OK=Y
 
-    FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-    grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-    mail_sent=""
-    if [ $(command -v mail) ] >/dev/null; then
-      if [ -z "${BYPASS_MAIL}" ]; then
-        if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-          mail_sent=1
+        Store_All_Secrets
+        local STORAGE_ERRORS=
+        setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
+        CONFIG_OK=Y
+        FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
+        grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+        mail_sent=""
+        if [ $(command -v mail) ] >/dev/null; then
+          if [ -z "${BYPASS_MAIL}" ]; then
+            if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+              mail_sent=1
+            else
+              echo "The attempt to mail configuration failed.  Please check your mail configuration."
+            fi
+          fi
         else
-          echo "The attempt to mail configuration failed.  Please check your mail configuration."
+          echo "The 'mail' command isn't installed (or isn't on the PATH)."
         fi
+        if [ -z "${mail_sent}" ]; then
+          UNSENT_FILE=/tmp/unsent-lockss-config
+          cp ${FILT_CONFIG} ${UNSENT_FILE}
+          echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+        fi
+        rm -f ${FILT_CONFIG}
+      else
+        echo "Starting over, using your previous answers as defaults"
       fi
-    else
-      echo "The 'mail' command isn't installed (or isn't on the PATH)."
     fi
-    if [ -z "${mail_sent}" ]; then
-      UNSENT_FILE=/tmp/unsent-lockss-config
-      cp ${FILT_CONFIG} ${UNSENT_FILE}
-      echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-    fi
-    rm -f ${FILT_CONFIG}
+
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
