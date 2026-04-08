@@ -168,13 +168,14 @@ check_old_openwayback_directories() {
 
 version_order() {
   case "$1" in
-    2.0-alpha5) echo 1 ;;
-    2.0-alpha6) echo 2 ;;
-    2.0-alpha7) echo 3 ;;
-    2.0-alpha8) echo 4 ;;
-    2.0-beta1)  echo 5 ;;
-    2.0-beta2)  echo 6 ;;
-    *) error_exit "Unknown version: $1" ;;
+    2.0.*-alpha5) echo 1 ;;
+    2.0.*-alpha6) echo 2 ;;
+    2.0.*-alpha7) echo 3 ;;
+    2.0.*-alpha8) echo 4 ;;
+    2.0.*-beta1)  echo 5 ;;
+    2.0.90-beta2)  echo 6 ;;
+    2.0.91-beta2)  echo 7 ;;
+    *) echo -1 ;;
   esac
 }
 
@@ -250,9 +251,12 @@ VERSION_FILE="${LOCKSS_DATA_DIR}/VERSION"
 # Resolve target version
 TARGET_VERSION="${ARG_TO:-${UPGRADE_TO}}"
 if Parse_Lockss_Version "${TARGET_VERSION}"; then
-  TARGET_ORDER=$(version_order "${MATCH_VERSION_NORMALIZED}")
+  TARGET_ORDER=$(version_order "${TARGET_VERSION}")
+  if [[ "${TARGET_ORDER}" -lt "0" ]]; then
+    error_exit "Unknown target version: ${TARGET_VERSION}"
+  fi
 else
-  error_exit "Unexpected target version: ${TARGET_VERSION}"
+  error_exit "Malformed target version: ${TARGET_VERSION}"
 fi
 
 # Resolve current (from) version
@@ -266,10 +270,12 @@ else
 fi
 
 if Parse_Lockss_Version "${CUR_VERSION}"; then
-  FROM_VERSION_NORMALIZED="${MATCH_VERSION_NORMALIZED}"
-  FROM_ORDER=$(version_order "${FROM_VERSION_NORMALIZED}")
+  FROM_ORDER=$(version_order "${CUR_VERSION}")
+  if [[ "${FROM_ORDER}" -lt "0" ]]; then
+    error_exit "Unknown current version: ${CUR_VERSION}"
+  fi
 else
-  error_exit "Unexpected version: ${CUR_VERSION}"
+  error_exit "Malformed current version: ${CUR_VERSION}"
 fi
 
 # Nothing to do if already at or past target
@@ -278,9 +284,9 @@ if [ "$FROM_ORDER" -ge "$TARGET_ORDER" ]; then
   graceful_exit
 fi
 
-case "${FROM_VERSION_NORMALIZED}" in
-  2.0-alpha5)
-    logger_info "Performing upgrade from alpha5"
+case "${CUR_VERSION}" in
+  2.0.*-alpha5)
+    logger_info "Performing upgrade from 2.0-alpha5"
 
     # Repository Service changes
     rename_collections_dir
@@ -292,26 +298,21 @@ case "${FROM_VERSION_NORMALIZED}" in
     reset_index_state
     signal_reindex "${STACK_PREFIX}"
 
-    reached_version "2.0-alpha6"
+    reached_version "2.0.61-alpha6"
     ;&
-  2.0-alpha6)
-    logger_info "Performing upgrade from alpha6"
+  2.0.*-alpha6)
+    logger_info "Performing upgrade from 2.0-alpha6"
     upgrade_postgres
 
-    reached_version "2.0-alpha7"
+    reached_version "2.0.72-alpha7"
     ;&
-  2.0-alpha7)
-    logger_info "Performing upgrade from alpha7"
+  2.0.*-alpha7)
+    logger_info "Performing upgrade from 2.0-alpha7"
 
-    reached_version "2.0-alpha8"
+    reached_version "2.0.84-beta1"
     ;&
-  2.0-alpha8)
-    logger_info "Performing upgrade from alpha8"
-
-    reached_version "2.0-beta1"
-    ;&
-  2.0-beta1)
-    logger_info "Performing upgrade from beta1"
+  2.0.*-beta1)
+    logger_info "Performing upgrade from 2.0-beta1"
     # Update old port numbers in content_servers_config.txt
     update_content_servers_ports
     # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
@@ -325,12 +326,18 @@ case "${FROM_VERSION_NORMALIZED}" in
     done
     # check for upgrade to k3s
     check_k3s_version
+
+    reached_version "2.0.90-beta2"
+    ;&
+  2.0.90-beta2)
+#    logger_info "Performing upgrade from 2.0.90-beta2"
     # Remove old Openwayback directories
     check_old_openwayback_directories
+
     reached_version "${UPGRADE_TO}"
-    ;;
-  2.0-beta2)
-    logger_info "Upgrade already applied (beta2)"
+    ;&
+  2.0.91-beta2)
+    logger_info "Already upgraded to 2.0.91-beta2"
     ;;
   *)
     error_exit "Do not know how to upgrade from ${CUR_VERSION}"
