@@ -327,6 +327,9 @@ case "${CUR_VERSION}" in
     # check for upgrade to k3s
     check_k3s_version
 
+    logger_info "The next time LOCKSS is started it will create a new artifact index."
+    logger_info "This may take substantial time if you have a lot of content."
+
     logger_info "NOTE: The ports used to access LOCKSS UI and REST services have changed."
     logger_info "See section 9.5 of the LOCKSS System Manual."
     reached_version "2.0.90-beta2"
@@ -335,9 +338,6 @@ case "${CUR_VERSION}" in
 #    logger_info "Performing upgrade from 2.0.90-beta2"
     # Remove old Openwayback directories
     check_old_openwayback_directories
-
-    logger_info "The next time LOCKSS is started it will create a new artifact index."
-    logger_info "This may take substantial time if you have a lot of content."
 
     reached_version "${UPGRADE_TO}"
     ;&
