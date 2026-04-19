@@ -245,17 +245,21 @@ Check_Version_Match() {
 }
 
 Parse_Lockss_Version() {
-  CUR_VERSION="$1"
-  UPGRADE_FROM="([[:digit:]]+)\.([[:digit:]]+)\.([[:digit:]]+)(-([[:alnum:]]+))?"
+  local version="$1"
+  local RELEASE_PAT="([[:digit:]]+)\.([[:digit:]]+)\.([[:digit:]]+)(-([[:alnum:]]+))?"
 
-  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+  if [[ "${version}" =~ ${RELEASE_PAT} ]]; then
     MATCH_MAJOR=${BASH_REMATCH[1]}
     MATCH_MINOR=${BASH_REMATCH[2]}
-    MATCH_BUILD_NUM=${BASH_REMATCH[4]}
-    MATCH_SUFFIX=${BASH_REMATCH[6]}
+    MATCH_BUILD_NUM=${BASH_REMATCH[3]}
+    MATCH_SUFFIX=${BASH_REMATCH[5]}
+    if [[ -n "${MATCH_SUFFIX}" ]]; then
+      MATCH_SHORT_VERSION="${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}"
+    else
+      MATCH_SHORT_VERSION="${MATCH_MAJOR}.${MATCH_MINOR}"
+    fi
     return 0
   fi
-
   return 1
 }
 
