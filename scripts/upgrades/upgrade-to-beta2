@@ -145,7 +145,9 @@ check_k3s_version() {
     local min_version_normalized="$(Extract_K3s_Version "${K3_VERSION_MIN}")"
     if compare_versions_lt "${cur_version_normalized}" "${min_version_normalized}"; then
       err "$_0: K3s version ${cur_version} is too old. Please update your K3s installation to at least ${K3_VERSION_MIN}."
-      err_exit "$_0: Run scripts/install-lockss to upgrade your k3s installation before running this script."
+      err "$_0: Run scripts/install-lockss --install-k3s (as root), then"
+      err "$_0:     scripts/install-lockss --test-k3s (as root)"
+      err_exit "$_0: to upgrade your K3s installation, then rerun this script."
     fi
   else
     err_exit "$_0: Unable to find k3s executable. Make sure it has been installed and is on the path."
@@ -330,8 +332,10 @@ case "${CUR_VERSION}" in
     logger_info "The next time LOCKSS is started it will create a new artifact index."
     logger_info "This may take substantial time if you have a lot of content."
 
+    echo
     logger_info "NOTE: The ports used to access LOCKSS UI and REST services have changed."
-    logger_info "See section 9.5 of the LOCKSS System Manual."
+    logger_info "See the Network Ports section of the LOCKSS ${MATCH_SHORT_VERSION} System Manual."
+    echo
     reached_version "2.0.90-beta2"
     ;&
   2.0.90-beta2)
