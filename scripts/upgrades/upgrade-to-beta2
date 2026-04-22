@@ -320,9 +320,9 @@ case "${CUR_VERSION}" in
     # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
     kubectl_lockss delete pvc --all
     kubectl_lockss delete pv --all
-    # Disable group writeable permission on log directories
+    # Disable group writeable permission on log directories except postgres
     for _d in "${LOCKSS_LOGS_DIR}"/*-logs ; do
-      if [ -d "${_d}" ] ; then
+      if [[ -d "${_d}" && ! ${_d} =~ postgres ]]; then
         chmod 755 "${_d}"
       fi
     done
