@@ -669,7 +669,7 @@ build_config_file() {
     done
 
     # LCAP V3 port
-    ask_for_input "LCAP protocol port" "${LOCKSS_V3_PORT}" 9729
+    ask_for_input "LCAP port" "${LOCKSS_V3_PORT}" 9729
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_V3_PORT="${ANS}"
     fi
