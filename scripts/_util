@@ -536,7 +536,7 @@ read_config() {
   local OLD_IFS="${IFS}"
   IFS='
 '
-  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+  for A in $(sed -e '/^\s*#/d' -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
 \1=\2/' "${FILE}"); do
     eval "$A"
   done
