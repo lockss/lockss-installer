@@ -282,6 +282,9 @@ configure_migration() {
             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           fi
           V1_FILE=${V1_NATIVE_CONFIG_FILE}
+          # Same host: V2 crawler runs on the same machine as V1, no proxy needed
+          LOCKSS_PROXY_IN_MIGRATION_MODE=false
+          LOCKSS_MIGRATION_PROXY_PORT=
         else
           echo "Migrating from another host while a LOCKSS 1.x installation is present on"
           echo " this host is not supported, sorry."
@@ -364,6 +367,26 @@ configure_migration() {
           LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
         fi
         LOCKSS_SAME_HOST_MIGRATION=false
+        # Different-host migration: publishers' allowlists (and Atypon special-case
+        # lists) typically only include the LOCKSS 1.x IP, so the V2 crawler must
+        # proxy its crawl HTTP through the V1 content proxy.
+        ask_for_input "Proxy crawls through LOCKSS 1.x during migration? (recommended -- publishers may only have allowlisted the 1.x IP)" "$(to_yes_no_or_blank ${LOCKSS_PROXY_IN_MIGRATION_MODE})" Y
+        if is_yes "${ANS}"; then
+          LOCKSS_PROXY_IN_MIGRATION_MODE=true
+          PROXY_PORT_OK=N
+          until is_yes ${PROXY_PORT_OK}; do
+            ask_for_input "LOCKSS 1.x content proxy port for migration crawls" "${LOCKSS_MIGRATION_PROXY_PORT}" "8083"
+            if [[ "${ANS}" =~ ^[0-9]+$ ]] && [ "${ANS}" -ge 1025 ] && [ "${ANS}" -le 65535 ]; then
+              LOCKSS_MIGRATION_PROXY_PORT="${ANS}"
+              PROXY_PORT_OK=Y
+            else
+              echo "Port must be an integer between 1025 and 65535"
+            fi
+          done
+        else
+          LOCKSS_PROXY_IN_MIGRATION_MODE=false
+          LOCKSS_MIGRATION_PROXY_PORT=
+        fi
       fi
       debug_msg "Configuring common parameters from V1 config file."
       # section 3 common params
@@ -393,6 +416,26 @@ configure_migration() {
           PORT_OK=Y
         fi
       done
+      # Different-host migration: publishers' allowlists (and Atypon special-case
+      # lists) typically only include the LOCKSS 1.x IP, so the V2 crawler must
+      # proxy its crawl HTTP through the V1 content proxy.
+      ask_for_input "Proxy crawls through LOCKSS 1.x during migration? (recommended -- publishers may only have allowlisted the 1.x IP)" "$(to_yes_no_or_blank ${LOCKSS_PROXY_IN_MIGRATION_MODE})" Y
+      if is_yes "${ANS}"; then
+        LOCKSS_PROXY_IN_MIGRATION_MODE=true
+        PROXY_PORT_OK=N
+        until is_yes ${PROXY_PORT_OK}; do
+          ask_for_input "LOCKSS 1.x content proxy port for migration crawls" "${LOCKSS_MIGRATION_PROXY_PORT}" "8083"
+          if [[ "${ANS}" =~ ^[0-9]+$ ]] && [ "${ANS}" -ge 1025 ] && [ "${ANS}" -le 65535 ]; then
+            LOCKSS_MIGRATION_PROXY_PORT="${ANS}"
+            PROXY_PORT_OK=Y
+          else
+            echo "Port must be an integer between 1025 and 65535"
+          fi
+        done
+      else
+        LOCKSS_PROXY_IN_MIGRATION_MODE=false
+        LOCKSS_MIGRATION_PROXY_PORT=
+      fi
     fi
     LOCKSS_IN_MIGRATION_MODE=true
   fi
@@ -557,6 +600,8 @@ LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
 LOCKSS_V1_ROUTABLE_IPADDR="${LOCKSS_V1_ROUTABLE_IPADDR}"
 LOCKSS_V1_IDENTITY_IPADDR="${LOCKSS_V1_IDENTITY_IPADDR}"
 LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
+LOCKSS_PROXY_IN_MIGRATION_MODE="${LOCKSS_PROXY_IN_MIGRATION_MODE:-false}"
+LOCKSS_MIGRATION_PROXY_PORT="${LOCKSS_MIGRATION_PROXY_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
@@ -622,6 +667,8 @@ build_config_file() {
           LOCKSS_SAME_HOST_MIGRATION=false
           unset LOCKSS_MIGRATION_LCAP_PORT
           unset LOCKSS_EXTERNAL_IPADDR
+          unset LOCKSS_PROXY_IN_MIGRATION_MODE
+          unset LOCKSS_MIGRATION_PROXY_PORT
         else
           err_exit "Rerun scripts/configure-lockss with -m or --migrate"
         fi
