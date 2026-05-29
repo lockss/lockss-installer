@@ -1100,7 +1100,7 @@ load_v1_props() {
       V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
     fi
   done < $file
-  if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} != "1" ]; then
+  if [ "${V1_PROPS[LOCKSS_CONFIG_VERSION]}" != "1" ]; then
     echo "${file} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
     return 1;
   fi
