@@ -5,6 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
+    service-kind: non-lockss-content-access
   name: lockss-openwayback-service
 spec:
   ports:
@@ -13,7 +14,8 @@ spec:
     targetPort: {{OPENWB_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-openwayback-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -79,6 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-openwayback-service
+    service-kind: non-lockss-content-access
   name: lockss-openwayback-service
 spec:
   replicas: 1
@@ -94,6 +97,7 @@ spec:
         lockss-stack-id: {{STACK}}
         io.kompose.network/{{STACK}}-network: "true"
         io.kompose.service: lockss-openwayback-service
+        service-kind: non-lockss-content-access
     spec:
       containers:
       - env:

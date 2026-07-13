@@ -47,9 +47,6 @@ _D0=$(dirname "${0}")
 ##
 
 . "${_D0}/_util"
-# Source system config file
-source_config
-
 
 UPDATE_ARG=""
 WAIT_ARG=""
@@ -82,34 +79,44 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
+  cat <<- _EOF_
+Usage:
+
+  $PROGNAME [-u|--update] [-w|--wait] [-s|--services SVCS] [-a|--args ARGS]
+
+  $PROGNAME [-h|--help]
+_EOF_
 }
 
 help_message() {
   cat <<- _EOF_
-  $PROGNAME ver. $VERSION
-  "Restart a running LOCKSS stack."
+$PROGNAME version $VERSION
+Restart a running LOCKSS stack.
 
-  $(usage)
+$(usage)
 
-  Options:
-  -h, --help  Display this help message and exit.
-  -u, --update  Force update of LOCKSS docker images
-  -U, --upgrading Upgrading LOCKSS do not perform upgrade check.
-  -w, --wait Use a wait file to signal stack ready.
-  -s, --services  A semicolon seperated list of services to restart
-  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
-    Where 'ARGS_ADDITIONAL' are the arguments.
+  -h, --help                Display this help message and exit.
+  -u, --update              Force update of LOCKSS Docker images.
+  --suppress-version-check  Suppress LOCKSS version check.
+  -w, --wait                Use wait file to signal the stack is ready.
+  -s, --services SVCS       Start only services in SVCS (semicolon-separated).
+  -a, --args ARGS           Add additional runtime options ARGS.
 
 _EOF_
   return
 }
 
+# Special case without logging
+if [ $# -eq 1 ] && [ "$1" = '-h' -o "$1" = '--help' ]; then
+  help_message
+  exit 0
+fi
+
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
-
+source_config
 logger_init
 log_script_entry "${PROGNAME}"
 umask 002
@@ -125,9 +132,9 @@ while [[ $# -gt 0 ]]; do
       logger_debug "Forcing update of LOCKSS docker images"
       shift
       ;;
-    -U | --upgrading)
-      UPGRADING_LOCKSS="true"
-      logger_debug "Upgrading LOCKSS, do not check perform upgrade check."
+    --suppress-version-check)
+      SUPPRESS_VERSION_CHECK="true"
+      logger_debug "Suppressing LOCKSS version check"
       shift
       ;;
     -w | --wait)
@@ -161,12 +168,12 @@ Check_Configured
 
 init_service_arrays
 
-if [ "${UPGRADING_LOCKSS}X" == X ]; then
+if [ "${SUPPRESS_VERSION_CHECK}X" == X ]; then
   Check_Upgraded
 fi
 Check_Configured_Version
 
-if $(am_i_root); then
+if am_i_root; then
   logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 

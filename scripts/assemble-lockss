@@ -85,11 +85,10 @@ declare -a global_confs=(
   "lockss-postgresql")
 declare -a SERVICES
 
-declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "mdq" "mdx" "pol" "crawl" "soap" "repo" "solr")
+declare -a -r LOCKSS_OWNED_SERVICE=("cfg" "md" "pol" "crawl" "soap" "repo" "solr")
 declare -A -r SERVICE_CONFS=(
  [cfg]="cfg-service"
- [mdq]="mdq-service"
- [mdx]="mdx-service"
+ [md]="md-service"
  [pol]="pol-service"
  [crawl]="crawl-service"
  [repo]="repo-service"
@@ -210,17 +209,17 @@ ensure_lockss_owner() {
     if [[ " ${LOCKSS_OWNED_SERVICE[@]} " =~ " ${svc} " ]]; then
       local data_dir=${LOCKSS_DATA_DIR}/$stack-${svc}-data
       logger_debug "Checking files in $data_dir"
-      if ! find "${data_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+      if [ -n "$(find "${data_dir}" \! -user ${LOCKSS_UID})" ]; then
         logger_error_exit "${data_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
       fi
       local logs_dir=${LOCKSS_LOGS_DIR}/$stack-${svc}-logs
       logger_debug "Checking files in $logs_dir"
-      if ! find "${logs_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+      if [ -n "$(find "${logs_dir}" \! -user ${LOCKSS_UID})" ]; then
         logger_error_exit "${logs_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
       fi
       local tmp_dir=${LOCKSS_TMPDIR}/$stack-${svc}-tmp
       logger_debug "Checking files in $tmp_dir"
-      if ! find "${tmp_dir}" \! -user ${LOCKSS_UID}  >/dev/null; then
+      if [ -n "$(find "${tmp_dir}" \! -user ${LOCKSS_UID})" ]; then
         logger_error_exit "${tmp_dir} contains files not owned by user lockss. Run scripts/fix-permissions"
       fi
     fi
@@ -279,6 +278,11 @@ add_stack_shared() {
   done
 #  logger_debug "Applying storage class: local-storage from ${mk_dir}/local-storage.yaml"
 #  kubectl_cmd apply -f "${mk_dir}/local-storage.yaml" | logger_debug
+
+  logger_debug "Creating service account, role, and rolebinding for Configuration Service"
+  kubectl_cmd apply -f "${mk_dir}/lockss-rw-networkpolicies-role.yaml" | logger_debug
+  kubectl_cmd apply -f "${mk_dir}/cfgsvc-serviceaccount.yaml" | logger_debug
+  kubectl_cmd apply -f "${mk_dir}/cfgsvc-networkpolicies-rolebinding.yaml" | logger_debug
 }
 
 check_stack_solr() {
@@ -416,7 +420,16 @@ add_stack_volumes() {
   done
   add_repo_content_volumes $stack
   kubectl_lockss apply -f ${mk_dir}/lockss-persistent-volumes.yaml | logger_debug
-  # Slow, and only necessary if we rearrange users/permissions
+
+  local JAVA_GENERATED_NETWORK_POLICY_FILE="${LOCKSS_DATA_DIR}/$stack-cfg-data/lockss-network-polcy.yaml"
+  if [ -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} ]; then
+    logger_debug "Applying generated LOCKSS network policy"
+    kubectl_lockss apply -f ${JAVA_GENERATED_NETWORK_POLICY_FILE} | logger_debug
+  else
+    logger_debug "Applying default LOCKSS network policy"
+    kubectl_lockss apply -f ${mk_dir}/default-lockss-network-policy.yaml | logger_debug
+  fi
+ # Slow, and only necessary if we rearrange users/permissions
   # ensure_lockss_owner $stack
 }
 
@@ -445,7 +458,9 @@ assemble_stack() {
   cd "${DOCKER_CONFIGS_DIR}/$stack"|| logger_error_exit "Unable to cd to ${DOCKER_CONFIGS_DIR}/$stack."
   add_stack_shared ${stack}
   add_stack_volumes ${stack}
-  check_stack_solr ${stack}
+  if ${ENABLE_SOLR} && ${USE_LOCKSS_SOLR}; then
+    check_stack_solr ${stack}
+  fi
   add_stack_configs ${stack}
   popd &>/dev/null || return
 }
@@ -478,25 +493,29 @@ generate_lockss() {
     local upgrade_stack_env_file="${stack_env_file}.upgrade"
     local stack_compose_file="${STACK_CONFIG_DIR}/docker-compose.yml"
     logger_debug "Stack ${num} named ${STACK_NAME} is using port base of ${STACK_PORT_BASE}."
-    mkdir -p "${STACK_CONFIG_DIR}"
+    mkdir -p "${STACK_CONFIG_DIR}" || logger_error_exit "Unable to create stack config dir: ${STACK_CONFIG_DIR}"
 
     check_stack_poller "${STACK_NAME}"
 
     logger_debug "Generating the stack env.sh file..."
-    mo "${ENV_TMPL}" >"${stack_env_file}"
+    mo "${ENV_TMPL}" > "${stack_env_file}" || logger_error_exit "Unable to render template: ${ENV_TMPL}"
     if [[ -f "${OPT_ENV_TMPL}" ]]; then
-      mo "${OPT_ENV_TMPL}" >"${opt_stack_env_file}"
+      mo "${OPT_ENV_TMPL}" > "${opt_stack_env_file}" || logger_error_exit "Unable to render template: ${OPT_ENV_TMPL}"
     fi
     if [[ -f "${UPGRADE_ENV_TMPL}" ]]; then
-      mo "${UPGRADE_ENV_TMPL}" >"${upgrade_stack_env_file}"
+      mo "${UPGRADE_ENV_TMPL}" > "${upgrade_stack_env_file}" || logger_error_exit "Unable to render template: ${UPGRADE_ENV_TMPL}"
     fi
     # Source env.sh
     source_env "${STACK_NAME}"
 
     logger_debug "Getting node hostname..."
-    export NODE_HOSTNAME=$(kubectl_cmd get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}')
+    NODE_HOSTNAME=$(kubectl_cmd get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="Hostname")].address}') \
+      || logger_error_exit "Unable to get node hostname from kubectl"
+    export NODE_HOSTNAME
     logger_debug "Getting postgres password..."
-    export POSTGRES_PASSWD=$(kubectl_lockss get secret lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}'| base64 --decode -)
+    POSTGRES_PASSWD=$(kubectl_lockss get secret lockss-postgres-pass -o jsonpath='{.data.lockss-postgres-pass}' | base64 --decode -) \
+      || logger_error_exit "Unable to get postgres password from kubectl"
+    export POSTGRES_PASSWD
 
     # The exported variables here are used by Mustache to populate the lockss-persistent-volumes.mustache
     # and lockss-repostiory-service.mustache and establish the mapping from .../lockss-stack-repo-content
@@ -513,31 +532,35 @@ generate_lockss() {
     export REPO_NUMS
 
     logger_debug "Generating the service deployments..."
-    mkdir "${STACK_CONFIG_DIR}/svcs"
+    mkdir "${STACK_CONFIG_DIR}/svcs" || logger_error_exit "Unable to create dir: ${STACK_CONFIG_DIR}/svcs"
     for f in ${SERVICES_DIR}/*.mustache; do
       src="${f}"
       dst="${STACK_CONFIG_DIR}/svcs/$(basename "${f}" .mustache).yaml"
       logger_debug "Rendering ${src} to ${dst}..."
-      mo --allow-function-arguments "${src}" >"${dst}"
+      mo --allow-function-arguments "${src}" > "${dst}" || logger_error_exit "Unable to render template: ${src}"
     done
     logger_debug "Generating the microk8s files..."
     mk_dst="${STACK_CONFIG_DIR}/mk"
-    mkdir "${mk_dst}"
+    mkdir "${mk_dst}" || logger_error_exit "Unable to create dir: ${mk_dst}"
+    # initialize the lockss_networkpolicy array
+    IFS=';' read -r -a LOCKSS_SUBNETS <<< "${LOCKSS_ACCESS_SUBNET}"
+    export LOCKSS_SUBNETS
     #    cp "${MK_DIR}/${STORAGE_CLASS_FILE}" "${mk_dst}/${STORAGE_CLASS_FILE}"
+    cp "${MK_DIR}"/*.yaml "${mk_dst}" || logger_error_exit "Unable to copy yaml files to ${mk_dst}"
     for f in ${MK_DIR}/*.mustache; do
       src="${f}"
       dst="${mk_dst}/$(basename "${f}" .mustache).yaml"
       logger_debug "Rendering ${src} to ${dst}..."
-      mo "${src}" >"${dst}"
-      envsubst < ${dst} > ${dst}.out
-      mv ${dst}.out ${dst}
+      mo "${src}" > "${dst}" || logger_error_exit "Unable to render template: ${src}"
+      envsubst < "${dst}" > "${dst}.out" || logger_error_exit "Unable to run envsubst on ${dst}"
+      mv "${dst}.out" "${dst}"           || logger_error_exit "Unable to replace ${dst} after envsubst"
     done
     logger_debug "Generating lockss configuration files..."
     for f in ${TEMPLATES_DIR}/*.mustache; do
       src="${f}"
       dst="${STACK_CONFIG_DIR}/$(basename "${f}" .mustache)"
       logger_debug "Rendering ${src} to ${dst}..."
-      mo "${src}" >"${dst}"
+      mo "${src}" > "${dst}" || logger_error_exit "Unable to render template: ${src}"
     done
     logger_debug "Generating the user configuration file templates..."
     for f in ${USEROPTS_DIR}/templates/*_opt.mustache; do
@@ -545,7 +568,7 @@ generate_lockss() {
         src="${f}"
         dst="${STACK_CONFIG_DIR}/$(basename "${f}" _opt.mustache)-opt"
         logger_debug "Rendering ${src} to ${dst}..."
-        mo "${src}" >"${dst}"
+        mo "${src}" > "${dst}" || logger_error_exit "Unable to render template: ${src}"
       fi
     done
     logger_debug "Moving the user configuration file..."
@@ -558,12 +581,12 @@ generate_lockss() {
       fi
     done
     logger_debug "Generating the Kubernetes CronJob definitions..."
-    mkdir "${STACK_CONFIG_DIR}/cron"
+    mkdir "${STACK_CONFIG_DIR}/cron" || logger_error_exit "Unable to create dir: ${STACK_CONFIG_DIR}/cron"
     for f in "${CRON_CONFIGS_DIR}"/*.mustache; do
       src="${f}"
       dst="${STACK_CONFIG_DIR}/cron/$(basename "${f}" .mustache).yaml"
       logger_debug "Rendering ${src} to ${dst}..."
-      mo "${src}" > "${dst}"
+      mo "${src}" > "${dst}" || logger_error_exit "Unable to render template: ${src}"
     done
   done
   logger_debug "Successfully regenerated stack components."
@@ -670,7 +693,7 @@ while [[ -n $1 ]]; do
 done
 
 # Sanity checks
-if $(am_i_root); then
+if am_i_root; then
   logger_error_exit "This script should not be run as root. Run as the lockss user."
 fi
 logger_debug "Checking system..."

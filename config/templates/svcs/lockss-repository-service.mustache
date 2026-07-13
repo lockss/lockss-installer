@@ -19,7 +19,8 @@ spec:
 
   selector:
     io.kompose.service: lockss-repository-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -145,14 +146,22 @@ spec:
           value: "true"
         - name: LOCKSS_IS_REPO
           value: "true"
+        - name: USE_SOLR_INDEX
+          value: "{{USE_SOLR_INDEX}}"
         - name: LOCKSS_PRESERVATION_GROUP
           value: {{LOCKSS_PRESERVATION_GROUP}}
+{{#USE_SOLR_INDEX}}
         - name: LOCKSS_SOLR_HOST
           value: {{SOLR_HOST}}
         - name: LOCKSS_SOLR_PORT
           value: "{{SOLR_PORT}}"
         - name: LOCKSS_WAIT_FOR_PORT
           value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}} {{SOLR_HOST}}:{{SOLR_PORT}}"
+{{/USE_SOLR_INDEX}}
+{{#USE_PGSQL_INDEX}}
+        - name: LOCKSS_WAIT_FOR_PORT
+          value: "{{POSTGRES_HOST}}:{{POSTGRES_PORT}}"
+{{/USE_PGSQL_INDEX}}
         - name: TZ
           value: {{LOCKSS_TIMEZONE}}
         - name: LOCKSS_USER
@@ -199,9 +208,11 @@ spec:
         - mountPath: /run/secrets/lockss-auth
           name: lockss-auth
           subPath: lockss-auth
+{{#USE_SOLR_INDEX}}
         - mountPath: /run/secrets/solr-auth
           name: solr-auth
           subPath: solr-auth
+{{/USE_SOLR_INDEX}}
 {{#REPO_NUMS}}
         - mountPath: /content{{.}}
           name: lockss-repo-content{{.}}
@@ -254,12 +265,14 @@ spec:
           items:
           - key: lockss-auth
             path: lockss-auth
+{{#USE_SOLR_INDEX}}
       - name: solr-auth
         secret:
           secretName: solr-auth
           items:
           - key: solr-auth
             path: solr-auth
+{{/USE_SOLR_INDEX}}
 {{#REPO_NUMS}}
       - name: lockss-repo-content{{.}}
         persistentVolumeClaim:

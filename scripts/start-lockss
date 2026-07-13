@@ -46,9 +46,7 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
-# Source system config file
-source_config
+. "${_D0}/_util" || { echo "${0##*/}: failed to load _util" >&2; exit 1; }
 
 UPDATE_ARG=""
 WAIT_ARG=""
@@ -85,33 +83,47 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-	echo -e "Usage: $PROGNAME [-h|--help] [-u|--update] [-w|--wait] [-s|--services] [-a|--args ARGS_ADDITIONAL]"
+  cat <<- _EOF_
+Usage:
+
+  $PROGNAME [-u|--update] [--suppress-version-check] [-w|--wait]
+      [-s|--services SVCS] [-a|--args ARGS]
+
+  $PROGNAME [-h|--help]
+_EOF_
 }
 
 help_message() {
   cat <<- _EOF_
-  $PROGNAME ver. $VERSION
-  "Generate, Assemble and Start a running LOCKSS stack."
+$PROGNAME version $VERSION
+Start (assemble and deploy) the LOCKSS stack.
 
-  $(usage)
+$(usage)
 
-  Options:
-  -h, --help  Display this help message and exit.
-  -u, --update  force update of LOCKSS docker images
-  -U, --upgrading Upgrading LOCKSS do not perform upgrade check.
-  -w, --wait Use a wait file to signal stack ready.
-  -s, --services  A semicolon seperated list of services to start
-  -a, --args ARGS_ADDITIONAL  Add additional runtime options."
-    Where 'ARGS_ADDITIONAL' are the arguments.
+Options:
+
+  -h, --help                Display this help message and exit.
+  -u, --update              Force update of LOCKSS Docker images.
+  --suppress-version-check  Suppress LOCKSS version check.
+  -w, --wait                Use wait file to signal the stack is ready.
+  -s, --services SVCS       Start only services in SVCS (semicolon-separated).
+  -a, --args ARGS           Add additional runtime options ARGS.
 
 _EOF_
   return
 }
 
+# Special case without logging
+if [ $# -eq 1 ] && [ "$1" = '-h' -o "$1" = '--help' ]; then
+  help_message
+  exit 0
+fi
+
 # Trap signals
 trap "signal_exit TERM" TERM HUP
 trap "signal_exit INT"  INT
 
+source_config
 logger_init
 log_script_entry "${PROGNAME}"
 
@@ -119,16 +131,14 @@ ARGS_ADDITIONAL=""
 # Parse command-line
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
     -u | --update)
       UPDATE_ARG="-u"
       logger_debug "Forcing update of LOCKSS docker images"
       shift
       ;;
-    --upgrading)
-      UPGRADING_LOCKSS="true"
-      logger_debug "Forcing update of LOCKSS docker images"
+    --suppress-version-check)
+      SUPPRESS_VERSION_CHECK="true"
+      logger_debug "Suppressing LOCKSS version check"
       shift
       ;;
     -w | --wait)
@@ -138,7 +148,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -a | --args)
       export ARGS_ADDITIONAL="$2"
-      logger_info "Adding additional runtime args $ARGS_ADDITIONAL";
+      logger_info "Adding additional runtime args $ARGS_ADDITIONAL"
       shift; shift
      ;;
     -s | --services)
@@ -159,7 +169,7 @@ done
 # Main logic
 Check_Runnable
 Check_Configured
-if [ "${UPGRADING_LOCKSS}X" == X ]; then
+if [ "${SUPPRESS_VERSION_CHECK}X" == X ]; then
   Check_Upgraded
 fi
 Check_Configured_Version

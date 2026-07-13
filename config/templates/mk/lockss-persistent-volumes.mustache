@@ -85,12 +85,12 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: lockss-mdq-data-pv
+  name: lockss-md-data-pv
   labels:
     type: hostPath
     app: lockss
     lockss-stack-id: {{STACK}}
-    owner: lockss-mdq-data
+    owner: lockss-md-data
 spec:
   capacity:
     storage: 5Gi
@@ -100,7 +100,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{MK_DATA_ROOT}}/{{STACK}}-mdq-data
+    path: {{MK_DATA_ROOT}}/{{STACK}}-md-data
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -113,12 +113,12 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: lockss-mdq-logs-pv
+  name: lockss-md-logs-pv
   labels:
     type: hostPath
     app: lockss
     lockss-stack-id: {{STACK}}
-    owner: lockss-mdq-logs
+    owner: lockss-md-logs
 spec:
   capacity:
     storage: 5Gi
@@ -128,7 +128,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{MK_LOGS_ROOT}}/{{STACK}}-mdq-logs
+    path: {{MK_LOGS_ROOT}}/{{STACK}}-md-logs
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -141,12 +141,12 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: lockss-mdq-tmp-pv
+  name: lockss-md-tmp-pv
   labels:
     type: hostPath
     app: lockss
     lockss-stack-id: {{STACK}}
-    owner: lockss-mdq-tmp
+    owner: lockss-md-tmp
 spec:
   capacity:
     storage: 5Gi
@@ -156,91 +156,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: {{MK_TMP_ROOT}}/{{STACK}}-mdq-tmp
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - {{NODE_HOSTNAME}}
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: lockss-mdx-data-pv
-  labels:
-    type: hostPath
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    owner: lockss-mdx-data
-spec:
-  capacity:
-    storage: 5Gi
-  volumeMode: Filesystem
-  accessModes:
-  - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: local-storage
-  local:
-    path: {{MK_DATA_ROOT}}/{{STACK}}-mdx-data
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - {{NODE_HOSTNAME}}
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: lockss-mdx-logs-pv
-  labels:
-    type: hostPath
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    owner: lockss-mdx-logs
-spec:
-  capacity:
-    storage: 5Gi
-  volumeMode: Filesystem
-  accessModes:
-  - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: local-storage
-  local:
-    path: {{MK_LOGS_ROOT}}/{{STACK}}-mdx-logs
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - {{NODE_HOSTNAME}}
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: lockss-mdx-tmp-pv
-  labels:
-    type: hostPath
-    app: lockss
-    lockss-stack-id: {{STACK}}
-    owner: lockss-mdx-tmp
-spec:
-  capacity:
-    storage: 5Gi
-  volumeMode: Filesystem
-  accessModes:
-  - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: local-storage
-  local:
-    path: {{MK_TMP_ROOT}}/{{STACK}}-mdx-tmp
+    path: {{MK_TMP_ROOT}}/{{STACK}}-md-tmp
   nodeAffinity:
     required:
       nodeSelectorTerms:

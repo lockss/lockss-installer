@@ -1,0 +1,274 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# check-kube-routing - Check that Kubernetes networking/routing is
+# working correctly
+
+# Copyright (c) 2000-2025, Board of Trustees of Leland Stanford Jr. University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# Usage: check-port-access [-v|--verbose] [-q|--quiet] [-h|--help]
+
+# check-kube-routing - Check that Kubernetes networking/routing is
+# working correctly:
+# - external IP (8.8.8.8) reachable
+# - internal DNS working
+# - src IP of incoming packets to containers preserved (not replaced by
+#   k8s backplane IP)
+
+
+PROGNAME=${0##*/}
+VERSION="1.0"
+##
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+##
+## Load _util
+##
+
+. "${_D0}/_util"
+
+source_config
+
+LOCAL_HOSTNAME=$(uname -n)
+NC_LISTEN_PORT=1234
+NC_HOST_PORT=24601
+
+clean_up() {
+
+# Perform pre-exit housekeeping
+  logger_debug "cleaning up test pod and service..."
+  kubectl_cmd delete pod connection-test-pod --grace-period=0 --force -n lockss >/dev/null 2>&1
+  kubectl_cmd delete service connection-test-service -n lockss >/dev/null 2>&1
+  log_script_exit PROGNAME
+}
+
+error_exit() {
+  logger_fatal "${PROGNAME}: ${1:-"Unknown Error"}" >&2
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    error_exit "$PROGNAME: Terminating on unknown signal"
+    ;;
+  esac
+}
+
+# log info if VERBOSE_LOG, else debug
+log_verbose() {
+  if [[ -n "${VERBOSE_LOG}" ]]; then
+    logger_info "${1}"
+  else
+    logger_debug "${1}"
+  fi
+}
+
+# log info if not QUIET, else debug
+log_not_quiet() {
+  if [[ -z "${QUIET}" ]]; then
+    logger_info "${1}"
+  else
+    logger_debug "${1}"
+  fi
+}
+
+usage() {
+  echo -e "Usage: $PROGNAME [-v|--verbose] [-q|--quiet] [-h|--help]"
+  exit 2
+}
+
+help_message() {
+  cat <<-_EOF_
+  $PROGNAME ver. $VERSION
+  Verifies that Kubernetes networking is working as expected.
+
+  $(usage)
+
+  Options:
+  -v, --verbose  Report progress and successful tests.
+  -q, --quiet    Be extra quiet
+  -h, --help     Display this help message and exit.
+
+_EOF_
+  return
+}
+
+create_test_pod() {
+  cat <<EOF | kubectl_cmd apply -f - >/dev/null 2>&1 || logger_fatal "unable to create test pod."
+apiVersion: v1
+kind: Pod
+metadata:
+  name: connection-test-pod
+  namespace: lockss
+  labels:
+    app: connection-test
+spec:
+  containers:
+  - name: connection-test-pod
+    image: busybox
+    imagePullPolicy: IfNotPresent
+    command: [ "/bin/sh", "-c" ]
+    args: [ "nc -l -v -p ${NC_LISTEN_PORT} && while true; do sleep 3600; done;" ]
+    ports:
+    - containerPort: ${NC_LISTEN_PORT}
+      hostPort: ${NC_HOST_PORT}
+EOF
+}
+
+# Function to deploy a test pod that logs incoming connections
+create_test_service() {
+  cat <<EOF | kubectl_cmd apply -f ->/dev/null 2>&1 || logger_fatal "unable to create test service."
+apiVersion: v1
+kind: Service
+metadata:
+  name: connection-test-service
+  namespace: lockss
+spec:
+  type: NodePort
+  ports:
+  - port: ${NC_HOST_PORT}
+    targetPort: ${NC_LISTEN_PORT}
+  selector:
+    app: connection-test
+  externalTrafficPolicy: Local
+EOF
+}
+
+wait_for_pod() {
+  # Wait for deployment to be ready
+  logger_debug "Waiting for pod to be ready..."
+  kubectl_cmd wait -n lockss --for=condition=Ready pod/connection-test-pod --timeout=60s >/dev/null ||
+    error_exit "timed out waiting for test pod."
+
+}
+
+run_network_checks() {
+    log_verbose "Running network checks..."
+
+    kubectl_cmd exec -n lockss connection-test-pod -- /bin/sh -c "
+      FAILED=0
+      if nslookup kubernetes.default.svc.cluster.local >/dev/null 2>&1; then
+        ${VERBOSE_ECHO} \"* DNS resolution OK\"
+      else
+        echo \"* DNS resolution failed\"
+        FAILED=1
+      fi
+      if ping -c 3 8.8.8.8 >/dev/null 2>&1; then
+        ${VERBOSE_ECHO} \"* External connectivity OK\"
+      else
+        echo \"* External connectivity failed\"
+        FAILED=1
+      fi
+      exit $FAILED
+    " && return 0 || return 1
+}
+
+# Function to check IP preservation
+check_ip_preservation() {
+    # Test the service with curl
+    log_verbose "Checking source IP Preservation..."
+    curl -s "http://${LOCKSS_IPADDR}:${NC_HOST_PORT}"
+    # Get pod logs
+    while IFS= read -r ip; do
+      connection_ips+=("$ip")
+    done < <( kubectl_cmd logs -n lockss connection-test-pod | tail -n 10 |
+      grep -i "connect to" |
+      grep -Eo '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+
+    if [ "${#connection_ips[@]}" -gt 0 ]; then
+         last_ip="${connection_ips[${#connection_ips[@]}-1]}"
+        if [ "${last_ip}" = "${LOCKSS_IPADDR}" ] ; then
+          log_verbose "Source IP preservation OK"
+        else
+          error_exit "Source IP preservation check failed."
+        fi
+    else
+        error_exit "curl unable to reach test pod the pod."
+    fi
+}
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
+logger_init
+log_script_entry "${PROGNAME}"
+
+VERBOSE_LOG=
+QUIET=
+# The command that will be used in the container to echo, or not,
+# progress messages.  Default no-op, set to "echo" if --verbose
+VERBOSE_ECHO=":"
+
+# Parse command-line
+while [[ -n "$1" ]]; do
+  case "$1" in
+  -v | --verbose)
+    VERBOSE_LOG=1
+    VERBOSE_ECHO="echo"
+    ;;
+  -q | --quiet)
+    QUIET=1
+    ;;
+  -h | --help)
+    help_message
+    exit 2
+    ;;
+  *)
+    usage
+    ;;
+  esac
+  shift
+done
+
+Check_Runnable
+
+log_not_quiet "Checking Kubernetes networking"
+
+create_test_pod
+wait_for_pod
+create_test_service
+check_ip_preservation
+run_network_checks || error_exit "One or more network checks failed, see log."
+graceful_exit

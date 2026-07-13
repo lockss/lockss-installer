@@ -45,18 +45,14 @@ _D0=$(dirname "${0}")
 ## Load _util
 ##
 
-. "${_D0}/_util"
-
-# Source system config file
-source_config
+. "${_D0}/_util" || { echo "${0##*/}: failed to load _util" >&2; exit 1; }
 
 
 declare -a secrets=("lockss-ui-pass" "lockss-auth" "lockss-postgres-pass")
 declare -a SERVICES
 declare -A -r SERVICE_NAMES=(
  [cfg]="lockss-configuration-service"
- [mdq]="lockss-metadata-service"
- [mdx]="lockss-metadata-extraction-service"
+ [md]="lockss-metadata-service"
  [pol]="lockss-poller-service"
  [crawl]="lockss-crawler-service"
  [soap]="lockss-soap-service"
@@ -100,30 +96,30 @@ signal_exit() { # Handle trapped signals
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help]"
+  cat <<- _EOF_
+Usage:
+
+  $PROGNAME [-s|--services SVCS]
+
+  $PROGNAME [-h|--help]
+_EOF_
 }
 
 help_message() {
   cat <<-_EOF_
-  $PROGNAME ver. $VERSION
-  Stop LOCKSS stack and containers.
+$PROGNAME version $VERSION
+Stop the LOCKSS stack.
 
-  $(usage)
+$(usage)
 
-  Options:
-  -h, --help  Display this help message and exit.
-  -s, --services  A semicolon seperated list of services to stop
+Options:
+
+  -h, --help           Display this help message and exit.
+  -s, --services SVCS  Stop only service in SVCS (semicolon-separated).
 
 _EOF_
   return
 }
-
-##
-## MAIN
-##
-# Trap signals
-trap "signal_exit TERM" TERM HUP
-trap "signal_exit INT" INT
 
 undeploy_stack() {
   local stack=${STACK_PREFIX}$1
@@ -132,7 +128,7 @@ undeploy_stack() {
   logger_info "Undeploying stack $stack"
   svc_arr=()
   # if no services req get all running services and stop them.
-  if [ -z $REQ_SERVICES ]; then
+  if [ -z "$REQ_SERVICES" ]; then
     logger_info "Stopping all running services."
     services=$(kubectl_lockss get svc -o jsonpath='{.items[*].metadata.name}')
     IFS=' ' read -a svc_arr <<< "$services"
@@ -154,10 +150,11 @@ undeploy_stack() {
 	do
     podname=$(kubectl_lockss get pod -l lockss-stack-id=${stack} 2> /dev/null | grep "${svc}" )
     logger_debug "Waiting for pod $podname to exit."
-    if [ -n "${podanme}" ]; then
-      kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s | logger_debug
+    if [ -n "${podname}" ]; then
+      kubectl_lockss wait --for=delete -l lockss-stack-id=${stack} pod ${podname} --timeout=60s 2>&1 | logger_debug
     fi
   done
+
   # Delete Kubernetes CronJobs
   cronjobs_arr=()
   cronjobs=$(kubectl_lockss get cronjob -o jsonpath='{.items[*].metadata.name}')
@@ -169,7 +166,22 @@ undeploy_stack() {
   logger_info "Pod shutdown complete"
 }
 
+##
+## MAIN
+##
+
+# Special case without logging
+if [ $# -eq 1 ] && [ "$1" = '-h' -o "$1" = '--help' ]; then
+  help_message
+  exit 0
+fi
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT" INT
+
 # Source system config file
+source_config
 logger_init
 
 log_script_entry "${PROGNAME}"
@@ -180,10 +192,6 @@ STACK_NUM=0
 # Parse command-line
 while [[ -n $1 ]]; do
   case $1 in
-  -h | --help)
-    help_message
-    graceful_exit
-    ;;
   [1-9])
     STACK_NUM=$1
     ;;
@@ -220,7 +228,9 @@ if ((number_of_services > 0)); then
   echo "These LOCKSS services are now running."
   kubectl_lockss get deployments --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
 else
-  echo "All LOCKSS services are stopped."
+    kubectl_lockss delete NetworkPolicy lockss-network-policy-admin-access 2> /dev/null | logger_debug
+    kubectl_lockss delete NetworkPolicy lockss-network-policy-content-access 2> /dev/null | logger_debug
+    echo "All LOCKSS services are stopped."
 fi
 echo "========================================="
 graceful_exit

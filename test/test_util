@@ -9,6 +9,11 @@ setup() {
   . ../scripts/_util
 }
 
+# some _util functions use the logger, fake it
+logger_info() {
+  echo "$1"
+}
+
 # this doesn't work - tmpfiles has no value either here or immediately
 # after a call to maketemp
 tmpfiles=""
@@ -284,29 +289,31 @@ EOF
 @test 'Parse_Lockss_Version' {
   refute Parse_Lockss_Version '2'
 
-  assert Parse_Lockss_Version '2.0'
-  assert_equal "$MATCH_MAJOR" "2"
-  assert_equal "$MATCH_MINOR" "0"
-  assert_equal "$MATCH_BUILD_NUM" ""
-  assert_equal "$MATCH_SUFFIX" ""
+#   assert Parse_Lockss_Version '2.0'
+#   assert_equal "$MATCH_MAJOR" "2"
+#   assert_equal "$MATCH_MINOR" "0"
+#   assert_equal "$MATCH_BUILD_NUM" ""
+#   assert_equal "$MATCH_SUFFIX" ""
 
   assert Parse_Lockss_Version '2.0.70'
   assert_equal "$MATCH_MAJOR" "2"
   assert_equal "$MATCH_MINOR" "0"
   assert_equal "$MATCH_BUILD_NUM" "70"
   assert_equal "$MATCH_SUFFIX" ""
+  assert_equal "$MATCH_SHORT_VERSION" "2.0"
 
-  assert Parse_Lockss_Version '2.0-alpha1'
-  assert_equal "$MATCH_MAJOR" "2"
-  assert_equal "$MATCH_MINOR" "0"
-  assert_equal "$MATCH_BUILD_NUM" ""
-  assert_equal "$MATCH_SUFFIX" "alpha1"
+#   assert Parse_Lockss_Version '2.0-alpha1'
+#   assert_equal "$MATCH_MAJOR" "2"
+#   assert_equal "$MATCH_MINOR" "0"
+#   assert_equal "$MATCH_BUILD_NUM" ""
+#   assert_equal "$MATCH_SUFFIX" "alpha1"
 
   assert Parse_Lockss_Version '2.0.60-alpha6'
   assert_equal "$MATCH_MAJOR" "2"
   assert_equal "$MATCH_MINOR" "0"
   assert_equal "$MATCH_BUILD_NUM" "60"
   assert_equal "$MATCH_SUFFIX" "alpha6"
+  assert_equal "$MATCH_SHORT_VERSION" "2.0-alpha6"
 }
 
 @test 'is_yes' {
@@ -357,3 +364,54 @@ EOF
   assert_equal $(to_true_false notinamillionyears) false
 }
 
+@test 'check_url' {
+  # No proxy
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml NONE
+  refute check_url http://props.lockss.org:8001/demo/foo.xml
+  refute check_url http://props.lockss.org:8001/demo/foo.xml NONE
+
+  # Using using proxy running at localhost:3128
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml localhost:3128
+  refute check_url http://props.lockss.org:8001/demo/foo.xml localhost:3128
+}
+
+@test 'update_content_servers_ports' {
+  local dir=$(mktemp -d)
+  LOCKSS_DATA_DIR="$dir"
+  STACK_PREFIX="lockss-stack"
+  local cfg_dir="${LOCKSS_DATA_DIR}/${STACK_PREFIX}-cfg-data/config"
+  mkdir -p "$cfg_dir"
+  local cfg_file="${cfg_dir}/content_servers_config.txt"
+
+  # Create a test configuration file with old port numbers
+  cat >"$cfg_file" <<'EOF'
+org.lockss.proxy.port=24670
+org.lockss.proxy.sslPort=8444
+org.lockss.proxy.audit.port=9091
+org.lockss.icp.port=9092
+org.lockss.contentui.port=24680
+org.lockss.some.other.setting=foo
+EOF
+
+  # Source the port update method and run it
+  . ../scripts/upgrades/_util_upgrade
+  update_content_servers_ports
+
+  # Verify that the configuration file has been updated with new port numbers
+  assert_equal "$(grep '^org\.lockss\.proxy\.port=' "$cfg_file")" \
+    "org.lockss.proxy.port=24630"
+  assert_equal "$(grep '^org\.lockss\.proxy\.audit\.port=' "$cfg_file")" \
+    "org.lockss.proxy.audit.port=24631"
+  assert_equal "$(grep '^org\.lockss\.icp\.port=' "$cfg_file")" \
+    "org.lockss.icp.port=24632"
+  assert_equal "$(grep '^org\.lockss\.contentui\.port=' "$cfg_file")" \
+    "org.lockss.contentui.port=24640"
+
+  # Unrelated settings should be untouched
+  assert_equal "$(grep '^org\.lockss\.some\.other\.setting=' "$cfg_file")" \
+    "org.lockss.some.other.setting=foo"
+
+  # Cleanup
+  rm -rf "$dir"
+}

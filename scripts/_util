@@ -96,6 +96,10 @@ msg() {
 # source_env <stack-name>
 source_env() {
   local stack="$1"
+  local env_file="${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
+  if [ ! -f "${env_file}" ]; then
+    err_exit "source_env: ${env_file} not found. Contact support."
+  fi
   set -a
   . "${DOCKER_CONFIGS_DIR}/${stack}/env.sh"
   if [[ -f "${DOCKER_CONFIGS_DIR}/${stack}/env.sh.opt" ]]; then
@@ -169,13 +173,17 @@ Check_Stopped() {
 }
 
 Check_Configured() {
-  Check_VarDef "LOCKSS_SOLR_USER"
-  Check_VarDef "LOCKSS_SOLR_PASSWD"
-  Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  if ${ENABLE_SOLR}; then
+    Check_VarDef "LOCKSS_SOLR_USER"
+    Check_VarDef "LOCKSS_SOLR_PASSWD"
+    Check_VarDef "LOCKSS_SOLR_PASSWD_HASH"
+  fi
   Check_VarDef "LOCKSS_CONTAINER_SUBNETS"
   Check_VarDef "KUBECTL_CMD"
-  Check_Secret "lockss-solr-pass"
-  Check_Secret "solr-auth"
+  if ${ENABLE_SOLR}; then
+    Check_Secret "lockss-solr-pass"
+    Check_Secret "solr-auth"
+  fi
   Check_Secret "lockss-postgres-pass"
   Check_Secret "lockss-ui-pass"
   Check_Secret "lockss-auth"
@@ -216,6 +224,7 @@ Copy_Configured_Lockss_Version() {
 }
 
 Set_Lockss_Version() {
+  logger_debug "Updating LOCKSS version file to $1"
   echo "$1" > "${LOCKSS_DATA_DIR}/VERSION"
 }
 
@@ -236,17 +245,21 @@ Check_Version_Match() {
 }
 
 Parse_Lockss_Version() {
-  CUR_VERSION="$1"
-  UPGRADE_FROM="([[:digit:]]+)\.([[:digit:]]+)(\.([[:digit:]]+))?(-([[:alnum:]]+))?"
+  local version="$1"
+  local RELEASE_PAT="([[:digit:]]+)\.([[:digit:]]+)\.([[:digit:]]+)(-([[:alnum:]]+))?"
 
-  if [[ "$CUR_VERSION" =~ $UPGRADE_FROM ]]; then
+  if [[ "${version}" =~ ${RELEASE_PAT} ]]; then
     MATCH_MAJOR=${BASH_REMATCH[1]}
     MATCH_MINOR=${BASH_REMATCH[2]}
-    MATCH_BUILD_NUM=${BASH_REMATCH[4]}
-    MATCH_SUFFIX=${BASH_REMATCH[6]}
+    MATCH_BUILD_NUM=${BASH_REMATCH[3]}
+    MATCH_SUFFIX=${BASH_REMATCH[5]}
+    if [[ -n "${MATCH_SUFFIX}" ]]; then
+      MATCH_SHORT_VERSION="${MATCH_MAJOR}.${MATCH_MINOR}-${MATCH_SUFFIX}"
+    else
+      MATCH_SHORT_VERSION="${MATCH_MAJOR}.${MATCH_MINOR}"
+    fi
     return 0
   fi
-
   return 1
 }
 
@@ -386,7 +399,7 @@ ensure_lockss_user() {
   Linux)
     if ! id "lockss" &>/dev/null; then
       echo "${_0}: There is no 'lockss' user account."
-      ask_for_input "OK to create account for 'lockss' user?" Y
+      ask_for_input "OK to create account for 'lockss' user?" "" Y
       if is_yes "${ANS}"; then
         if useradd -s /bin/false lockss; then
           echo "Created user 'lockss'"
@@ -447,6 +460,24 @@ Get_Timezone() {
   echo ${timezone}
 }
 
+# Usage: check_url URL [PROXY] and handle its return value
+check_url() {
+    local url="$1"
+    local proxy="${2:-}"
+
+    if [[ -z "$proxy" || "$proxy" = NONE ]]; then
+        local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" || echo '999')
+    else
+        local response_code=$(curl -o /dev/null -s -w '%{http_code}' --head "$url" -x "$proxy" || echo '999')
+    fi
+
+    if (( $(echo "$response_code < 400") )); then
+        return 0
+    else
+        return 1
+    fi
+}
+
 ##
 ## function Wait_For_200
 ##
@@ -505,7 +536,7 @@ read_config() {
   local OLD_IFS="${IFS}"
   IFS='
 '
-  for A in $(sed -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
+  for A in $(sed -e '/^\s*#/d' -e '/[a-zA-Z0-9_]* *= *.*/!d' -e 's/\([a-zA-Z0-9_]*\) *= *\(.*\)/\
 \1=\2/' "${FILE}"); do
     eval "$A"
   done
@@ -690,6 +721,9 @@ setup_storage_dirs() {
   if [ "${LOCKSS_SCRIPT_LOG_DIR}" ]; then
     dirSet["${LOCKSS_SCRIPT_LOG_DIR}"]=1
   fi
+  if [ "${LOCKSS_DATA_DIR}" ]; then
+    dirSet["${LOCKSS_DATA_DIR}"]=1
+  fi
   for dir in "${!dirSet[@]}"; do
     if ! init_one_dir "${dir}" ${USER} 755; then
       echo "${dir} cannot be created or written by ${USER}." >&2
@@ -708,7 +742,7 @@ init_one_dir() {
       MODE="750"
   fi
   if [ ! -d "${DIR}" ]; then
-    ask_for_input "${DIR} does not exist; do you want to create it?" Y
+    ask_for_input "${DIR} does not exist; do you want to create it?" "" Y
     if is_yes "${ANS}"; then
       mkdir -p "${DIR}"
       if [ "X${CONFIG_USER}" != "X${USER}" ]; then
@@ -732,7 +766,7 @@ init_one_dir() {
     echo "${DIR} exists and is writable by ${USER}"
     chmod ${MODE} "${DIR}"
   else
-    ask_for_input "${DIR} is not writable; do you want to make it writable?" Y
+    ask_for_input "${DIR} is not writable; do you want to make it writable?" "" Y
     if is_yes "${ANS}"; then
       chown ${USER} "${DIR}"
       chmod ${MODE} "${DIR}"
@@ -1051,6 +1085,13 @@ init_service_arrays() {
 
 load_v1_props() {
   local file="$1"
+  if [[ ! -f "${file}" ]]; then
+    echo "${file} not found"
+    return 1
+  elif [[ ! -r "${file}" ]]; then
+    echo "${file} is not readable (owner/permissions)"
+    return 1
+  fi
   while IFS= read -r line
   do
     if [[ "$line" =~ ^[^#]*= ]]; then
@@ -1059,53 +1100,48 @@ load_v1_props() {
       V1_PROPS["$key"]=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
     fi
   done < $file
-
-#	for key in "${!V1_PROPS[@]}"
-#	do
-#    echo "$key=${V1_PROPS[$key]}"
-#	done
+  if [ "${V1_PROPS[LOCKSS_CONFIG_VERSION]}" != "1" ]; then
+    echo "${file} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
+    return 1;
+  fi
 }
-
 
 init_service_arrays_from_commandline() {
   declare -a svcs_arr
   IFS=';' read -r -a svcs_arr <<< "$REQ_SERVICES"
   for svc in "${svcs_arr[@]}"; do
     case ${svc} in
-      "cfg"|"config")
+      "configuration"|"config"|"cfg")
         SERVICES+=("cfg")
         ;;
-      "mdq")
-        SERVICES+=("mdq")
+      "metadata"|"md")
+        SERVICES+=("md")
         ;;
-      "mdx")
-        SERVICES+=("mdx")
-        ;;
-      "pol"|"poll"|"poller")
+      "poller"|"poll"|"pol")
         SERVICES+=("pol")
         ;;
-      "crawl"|"crawler")
+      "crawler"|"crawl")
         SERVICES+=("crawl")
         ;;
       "soap")
         SERVICES+=("soap")
         ;;
-      "repo")
+      "repository"|"repo")
         SERVICES+=("repo")
         ;;
-      "postgres")
+      "postgresql"|"postgres"|"pgsql")
         SERVICES+=("postgres")
         ;;
-      "solr")
-        SERVICES+=("solr")
-        ;;
-      "hdfs")
-        SERVICES+=("hdfs")
-        ;;
+#      "solr")
+#        SERVICES+=("solr")
+#        ;;
+#      "hdfs")
+#        SERVICES+=("hdfs")
+#        ;;
       "pywb")
         SERVICES+=("pywb")
         ;;
-      "openwb"|"openwayback")
+      "openwayback"|"openwb"|"owb")
         SERVICES+=("openwb")
         ;;
       *)
@@ -1120,11 +1156,8 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_CFG}; then
     SERVICES+=("cfg")
   fi
-  if ${USE_LOCKSS_MDQ}; then
-    SERVICES+=("mdq")
-  fi
-  if ${USE_LOCKSS_MDX}; then
-    SERVICES+=("mdx")
+  if ${USE_LOCKSS_MD}; then
+    SERVICES+=("md")
   fi
   if ${USE_LOCKSS_POL}; then
     SERVICES+=("pol")
@@ -1141,7 +1174,7 @@ init_service_arrays_from_config() {
   if ${USE_LOCKSS_POSTGRES}; then
     SERVICES+=("postgres")
   fi
-  if ${USE_LOCKSS_SOLR}; then
+  if ${ENABLE_SOLR} && ${USE_LOCKSS_SOLR}; then
     SERVICES+=("solr")
   fi
   if ${USE_LOCKSS_HDFS}; then

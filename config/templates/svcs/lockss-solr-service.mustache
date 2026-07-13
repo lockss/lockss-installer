@@ -5,6 +5,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
+    service-kind: non-lockss
   name: lockss-solr-service
 spec:
   ports:
@@ -13,7 +14,8 @@ spec:
     targetPort: {{SOLR_DEFAULT_PORT}}
   selector:
     io.kompose.service: lockss-solr-service
-  type: ClusterIP
+  externalTrafficPolicy: Local
+  type: NodePort
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -79,6 +81,7 @@ metadata:
     app: lockss
     lockss-stack-id: {{STACK}}
     io.kompose.service: lockss-solr-service
+    service-kind: non-lockss
   name: lockss-solr-service
 spec:
   replicas: 1

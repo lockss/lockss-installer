@@ -30,7 +30,6 @@
 # Edit the corresponding file with the "opt" suffix instead.
 
 org.lockss.ui.start=no
-org.lockss.restAuth.allowUnauthenticatedRead={{REPO_ALLOWS_NOPASS}}
 
 org.lockss.repositoryDbManager.waitForExternalSetup=false
 org.lockss.repositoryDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
@@ -40,3 +39,20 @@ org.lockss.repositoryDbManager.datasource.user={{POSTGRES_USER}}
 org.lockss.repositoryDbManager.datasource.password={{POSTGRES_PASSWD}}
 org.lockss.repositoryDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
 org.lockss.repositoryDbManager.datasource.dbcp.enabled=true
+
+{{#USE_PGSQL_INDEX}}
+org.lockss.sqlArtifactIndexDbManager.datasource.className=org.postgresql.ds.PGSimpleDataSource
+org.lockss.sqlArtifactIndexDbManager.datasource.serverName={{POSTGRES_HOST}}
+org.lockss.sqlArtifactIndexDbManager.datasource.portNumber={{POSTGRES_PORT}}
+org.lockss.sqlArtifactIndexDbManager.datasource.user={{POSTGRES_USER}}
+org.lockss.sqlArtifactIndexDbManager.datasource.password={{POSTGRES_PASSWD}}
+org.lockss.sqlArtifactIndexDbManager.datasource.schemaName={{POSTGRES_SCHEMA}}
+org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.enabled=true
+
+# Uncomment the following lines to tune the DBCP pool:
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.initialSize=0
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxTotal=100
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxIdle=8
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.minIdle=0
+# org.lockss.sqlArtifactIndexDbManager.datasource.dbcp.maxWaitMillis=-1
+{{/USE_PGSQL_INDEX}}

@@ -114,13 +114,13 @@ configure_databases() {
     ask_for_input "Port used by PostgreSQL host" "${LOCKSS_POSTGRES_PORT}" 5432
     LOCKSS_POSTGRES_PORT=${ANS}
 
-    ask_for_input "Schema for PostgreSQL service" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
+    ask_for_input "Schema for PostgreSQL database" "${LOCKSS_POSTGRES_SCHEMA}" "LOCKSS"
     LOCKSS_POSTGRES_SCHEMA=${ANS}
 
-    ask_for_input "Database name prefix for PostgreSQL service" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
+    ask_for_input "Database name prefix for PostgreSQL database" "${LOCKSS_DBNAME_PREFIX}" "Lockss"
     LOCKSS_DBNAME_PREFIX=${ANS}
 
-    ask_for_input "Login name for PostgreSQL service" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
+    ask_for_input "Login name for PostgreSQL database" "${LOCKSS_POSTGRES_USER}" "LOCKSS"
     LOCKSS_POSTGRES_USER=${ANS}
 
   fi
@@ -131,38 +131,77 @@ configure_databases() {
     Add_Secret lockss-postgres-pass "${PASSWD_CLEAR}"
   fi
 
-  #check Solr service
-  echo "You may use either the embedded Solr service or an external one"
-  echo "provided by you or your institution, in which case you will be asked for"
-  echo "its hostname and other pertinent information."
-  ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" Y
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_SOLR=true
-    LOCKSS_SOLR_HOST='lockss-solr-service'
-    LOCKSS_SOLR_PORT='8983'
-    LOCKSS_SOLR_CORE_REPO="lockss-repo"
-  else
-    USE_LOCKSS_SOLR=false
-    ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
-    LOCKSS_SOLR_HOST=${ANS}
+#  ask_for_input "Would you like to configure a Solr index for use with LOCKSS? (optional)" "$(to_yes_no_or_blank ${ENABLE_SOLR})" N
+#  if is_yes "${ANS}"; then
+#    ENABLE_SOLR=true
+#
+#    #check Solr service
+#    echo "You may use either the embedded Solr service or an external one"
+#    echo "provided by you or your institution, in which case you will be asked for"
+#    echo "its hostname and other pertinent information."
+#    ask_for_input "Use embedded LOCKSS Solr Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_SOLR})" N
+#    if is_yes "${ANS}"; then
+      USE_LOCKSS_SOLR=false
+#      LOCKSS_SOLR_HOST='lockss-solr-service'
+#      LOCKSS_SOLR_PORT='8983'
+#      LOCKSS_SOLR_CORE_REPO="lockss-repo"
+#    else
+#      USE_LOCKSS_SOLR=false
+#      ask_for_input "Fully qualified hostname (FQDN) of Solr host" "${LOCKSS_SOLR_HOST}" "${LOCKSS_HOSTNAME}"
+#      LOCKSS_SOLR_HOST=${ANS}
+#
+#      ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
+#      LOCKSS_SOLR_PORT=${ANS}
+#
+#      ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
+#      LOCKSS_SOLR_CORE_REPO=${ANS}
+#    fi
+#    # Account for solr user
+#    ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
+#    LOCKSS_SOLR_USER=${ANS}
+#
+#    ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
+#    LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
+#    if [ -n "${PASSWD_CLEAR}" ]; then
+#      LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
+#      Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
+#      Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
+#    fi
+#  else
+    ENABLE_SOLR=false
+    USE_SOLR_INDEX=false
+#  fi
+}
 
-    ask_for_input "Port used by Solr host" "${LOCKSS_SOLR_PORT}" "8983"
-    LOCKSS_SOLR_PORT=${ANS}
-
-    ask_for_input "Solr core repo name" "${LOCKSS_SOLR_CORE_REPO}" 'lockss-repo'
-    LOCKSS_SOLR_CORE_REPO=${ANS}
-  fi
-  # Account for solr user
-  ask_for_input "User name for LOCKSS Solr access" "${LOCKSS_SOLR_USER}" "${LOCKSS_ADMIN_USER}"
-  LOCKSS_SOLR_USER=${ANS}
-
-  ask_for_password "Password for LOCKSS Solr access" "${LOCKSS_SOLR_PASSWD}" "" "lockss-solr-pass"
-  LOCKSS_SOLR_PASSWD="${PASSWD_HASH}"
-  if [ -n "${PASSWD_CLEAR}" ]; then
-    LOCKSS_SOLR_PASSWD_HASH=$(${SCRIPTS_DIR}/solrpass.sh ${PASSWD_CLEAR})
-    Add_Secret solr-auth "${LOCKSS_SOLR_USER}:${PASSWD_CLEAR}"
-    Add_Secret lockss-solr-pass "${PASSWD_CLEAR}"
-  fi
+configure_artifact_index() {
+#   echo ""
+#   echo "Configuring Artifact Index..."
+#   echo ""
+#
+#   ask_for_input "Use the PostgreSQL database to index artifacts (recommended)?" "$(to_yes_no_or_blank ${USE_PGSQL_INDEX})" Y
+#   if is_yes "${ANS}"; then
+     USE_PGSQL_INDEX=true
+     USE_SOLR_INDEX=false
+#   else
+#     USE_PGSQL_INDEX=false
+#   fi
+#
+#   if ! ${USE_PGSQL_INDEX} && ${ENABLE_SOLR}; then
+#     ask_for_input "Use the Solr to index artifacts?" "$(to_yes_no_or_blank ${USE_SOLR_INDEX})" N
+#     if is_yes "${ANS}"; then
+#       USE_PGSQL_INDEX=false
+#       USE_SOLR_INDEX=true
+#     else
+#       USE_SOLR_INDEX=false
+#     fi
+#   fi
+#
+#   if ! ${USE_PGSQL_INDEX} && ! ${USE_SOLR_INDEX}; then
+#     echo "Defaulting to Apache Derby for the artifact index"
+#     USE_DERBY_INDEX=true
+#   else
+#     USE_DERBY_INDEX=false
+#   fi
 }
 
 configure_crawler_services() {
@@ -229,8 +268,7 @@ configure_migration() {
     # Look for V1 config.dat on this host, or ask if a copied one is available
     if [ -f ${V1_NATIVE_CONFIG_FILE} ]; then
       debug_msg "Found ${V1_NATIVE_CONFIG_FILE}"
-      load_v1_props "${V1_NATIVE_CONFIG_FILE}"
-      if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} = "1" ]; then
+      if load_v1_props "${V1_NATIVE_CONFIG_FILE}"; then
         # we found a v1 config file
         echo "LOCKSS 1.x installation was detected on this host."
         ask_for_input "Do you want to migrate its content to this LOCKSS 2.0 installation?" "$(to_yes_no_or_blank ${LOCKSS_SAME_HOST_MIGRATION})" Y
@@ -239,16 +277,24 @@ configure_migration() {
           LOCKSS_SAME_HOST_MIGRATION=true
           LOCKSS_V1_ROUTABLE_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           if [ -n "${LOCKSS_EXTERNAL_IPADDR}" ]; then
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
+            LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_EXTERNAL_IPADDR]}"
           else
-             LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
+            LOCKSS_V1_IDENTITY_IPADDR="${V1_PROPS[LOCKSS_IPADDR]}"
           fi
           V1_FILE=${V1_NATIVE_CONFIG_FILE}
+          # Same host: V2 crawler runs on the same machine as V1, no proxy needed
+          LOCKSS_PROXY_IN_MIGRATION_MODE=false
+          LOCKSS_MIGRATION_PROXY_PORT=
         else
           echo "Migrating from another host while a LOCKSS 1.x installation is present on"
           echo " this host is not supported, sorry."
           exit 1
         fi
+      else
+        echo "There appears to be a LOCKSS 1.x installation on this host but its"
+        echo "  configuration file can't be read or is invalid.  To proceed, please"
+        echo "  either make that file readable, or delete or rename it."
+        exit 1
       fi
     fi
     if ! is_true "$LOCKSS_SAME_HOST_MIGRATION"; then
@@ -263,16 +309,9 @@ configure_migration() {
           ask_for_input "Location of copied LOCKSS 1.x config.dat file" "${V1_COPIED_CONFIG_FILE}" ""
           if [ "X${ANS}" != X ]; then
             filename="$(normalize_path ${ANS})"
-            if [ -f ${filename} ]; then
-              load_v1_props "${filename}"
-              if [ ${V1_PROPS[LOCKSS_CONFIG_VERSION]} == "1" ]; then
-                FILE_OK=Y
-                V1_FILE=${filename}
-              else
-                echo "${V1_FILE} does not appear to be a LOCKSS 1.x config.dat (LOCKSS_CONFIG_VERSION should be 1)."
-              fi
-            else
-              echo "${filename} not found."
+            if load_v1_props "${filename}"; then
+              FILE_OK=Y
+              V1_FILE=${filename}
             fi
           fi
         done
@@ -328,6 +367,26 @@ configure_migration() {
           LOCKSS_MIGRATION_LCAP_PORT=${V1_PROPS[LOCKSS_V3_PORT]}
         fi
         LOCKSS_SAME_HOST_MIGRATION=false
+        # Different-host migration: publishers' allowlists (and Atypon special-case
+        # lists) typically only include the LOCKSS 1.x IP, so the V2 crawler must
+        # proxy its crawl HTTP through the V1 content proxy.
+        ask_for_input "Proxy crawls through LOCKSS 1.x during migration? (recommended -- publishers may only have allowlisted the 1.x IP)" "$(to_yes_no_or_blank ${LOCKSS_PROXY_IN_MIGRATION_MODE})" Y
+        if is_yes "${ANS}"; then
+          LOCKSS_PROXY_IN_MIGRATION_MODE=true
+          PROXY_PORT_OK=N
+          until is_yes ${PROXY_PORT_OK}; do
+            ask_for_input "LOCKSS 1.x content proxy port for migration crawls" "${LOCKSS_MIGRATION_PROXY_PORT}" "8083"
+            if [[ "${ANS}" =~ ^[0-9]+$ ]] && [ "${ANS}" -ge 1025 ] && [ "${ANS}" -le 65535 ]; then
+              LOCKSS_MIGRATION_PROXY_PORT="${ANS}"
+              PROXY_PORT_OK=Y
+            else
+              echo "Port must be an integer between 1025 and 65535"
+            fi
+          done
+        else
+          LOCKSS_PROXY_IN_MIGRATION_MODE=false
+          LOCKSS_MIGRATION_PROXY_PORT=
+        fi
       fi
       debug_msg "Configuring common parameters from V1 config file."
       # section 3 common params
@@ -357,6 +416,26 @@ configure_migration() {
           PORT_OK=Y
         fi
       done
+      # Different-host migration: publishers' allowlists (and Atypon special-case
+      # lists) typically only include the LOCKSS 1.x IP, so the V2 crawler must
+      # proxy its crawl HTTP through the V1 content proxy.
+      ask_for_input "Proxy crawls through LOCKSS 1.x during migration? (recommended -- publishers may only have allowlisted the 1.x IP)" "$(to_yes_no_or_blank ${LOCKSS_PROXY_IN_MIGRATION_MODE})" Y
+      if is_yes "${ANS}"; then
+        LOCKSS_PROXY_IN_MIGRATION_MODE=true
+        PROXY_PORT_OK=N
+        until is_yes ${PROXY_PORT_OK}; do
+          ask_for_input "LOCKSS 1.x content proxy port for migration crawls" "${LOCKSS_MIGRATION_PROXY_PORT}" "8083"
+          if [[ "${ANS}" =~ ^[0-9]+$ ]] && [ "${ANS}" -ge 1025 ] && [ "${ANS}" -le 65535 ]; then
+            LOCKSS_MIGRATION_PROXY_PORT="${ANS}"
+            PROXY_PORT_OK=Y
+          else
+            echo "Port must be an integer between 1025 and 65535"
+          fi
+        done
+      else
+        LOCKSS_PROXY_IN_MIGRATION_MODE=false
+        LOCKSS_MIGRATION_PROXY_PORT=
+      fi
     fi
     LOCKSS_IN_MIGRATION_MODE=true
   fi
@@ -408,20 +487,12 @@ configure_services() {
 
   configure_crawler_services
 
-  # Metadata query service
-  ask_for_input "Use LOCKSS Metadata Query Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDQ})" Y
+  # Metadata service
+  ask_for_input "Use LOCKSS Metadata Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MD})" Y
   if is_yes "${ANS}"; then
-    USE_LOCKSS_MDQ=true
+    USE_LOCKSS_MD=true
   else
-    USE_LOCKSS_MDQ=false
-  fi
-
-  # Metadata extraction service
-  ask_for_input "Use LOCKSS Metadata Extraction Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_MDX})" Y
-  if is_yes "${ANS}"; then
-    USE_LOCKSS_MDX=true
-  else
-    USE_LOCKSS_MDX=false
+    USE_LOCKSS_MD=false
   fi
 
   # SOAP service
@@ -444,7 +515,6 @@ configure_services() {
   #    fi
 
   # Pywb
-  echo "You can use Pywb and/or Openwayback for content replay..."
   ask_for_input "Use LOCKSS Pywb Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_PYWB})" N
   if is_yes "${ANS}"; then
     USE_LOCKSS_PYWB=true
@@ -455,14 +525,7 @@ configure_services() {
   # OpenWayback
   ask_for_input "Use LOCKSS OpenWayback Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_OPENWB})" N
   if is_yes "${ANS}"; then
-    echo "Currently OpenWayback requires unauthenticated access to the LOCKSS Repository."
-    ask_for_input "Okay to disable authentication for read-only requests to LOCKSS Repository Service?" "$(to_yes_no_or_blank ${USE_LOCKSS_OPENWB})" Y
-    if is_yes "${ANS}"; then
-      USE_LOCKSS_OPENWB=true
-    else
-      echo "Not enabling OpenWayback Service."
-      USE_LOCKSS_OPENWB=false
-    fi
+    USE_LOCKSS_OPENWB=true
   else
     USE_LOCKSS_OPENWB=false
   fi
@@ -537,11 +600,12 @@ LOCKSS_SAME_HOST_MIGRATION="${LOCKSS_SAME_HOST_MIGRATION:-false}"
 LOCKSS_V1_ROUTABLE_IPADDR="${LOCKSS_V1_ROUTABLE_IPADDR}"
 LOCKSS_V1_IDENTITY_IPADDR="${LOCKSS_V1_IDENTITY_IPADDR}"
 LOCKSS_MIGRATION_LCAP_PORT="${LOCKSS_MIGRATION_LCAP_PORT}"
+LOCKSS_PROXY_IN_MIGRATION_MODE="${LOCKSS_PROXY_IN_MIGRATION_MODE:-false}"
+LOCKSS_MIGRATION_PROXY_PORT="${LOCKSS_MIGRATION_PROXY_PORT}"
 PREV_CNI0_SUBNET="${CNI0_SUBNET}"
 KUBECTL_CMD="${KUBECTL_CMD}"
 USE_LOCKSS_CFG="${USE_LOCKSS_CFG:-true}"
-USE_LOCKSS_MDQ="${USE_LOCKSS_MDQ}"
-USE_LOCKSS_MDX="${USE_LOCKSS_MDX}"
+USE_LOCKSS_MD="${USE_LOCKSS_MD}"
 USE_LOCKSS_POL="${USE_LOCKSS_POL:-true}"
 USE_LOCKSS_CRAWL="${USE_LOCKSS_CRAWL}"
 USE_LOCKSS_SOAP="${USE_LOCKSS_SOAP}"
@@ -551,6 +615,10 @@ USE_LOCKSS_SOLR="${USE_LOCKSS_SOLR}"
 USE_LOCKSS_HDFS="${USE_LOCKSS_HDFS:-false}"
 USE_LOCKSS_PYWB="${USE_LOCKSS_PYWB}"
 USE_LOCKSS_OPENWB="${USE_LOCKSS_OPENWB}"
+ENABLE_SOLR="${ENABLE_SOLR}"
+USE_DERBY_INDEX="${USE_DERBY_INDEX}"
+USE_PGSQL_INDEX="${USE_PGSQL_INDEX}"
+USE_SOLR_INDEX="${USE_SOLR_INDEX}"
 EOF
   OS_NAME="$(os_release_name)"
   if [ -n "${OS_NAME}" ]; then
@@ -563,6 +631,7 @@ write_k8s_cfg() {
 K8S_FLAVOR="${K8S_FLAVOR}"
 K8S_VERSION="${K8S_VERSION}"
 KUBECTL_CMD="${KUBECTL_CMD}"
+KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER="${KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER}"
 EOF
   if [ -n "${K3S_VERSION}" ]; then
     echo "K3S_VERSION=\"${K3S_VERSION}\"" >>"${1}"
@@ -598,6 +667,8 @@ build_config_file() {
           LOCKSS_SAME_HOST_MIGRATION=false
           unset LOCKSS_MIGRATION_LCAP_PORT
           unset LOCKSS_EXTERNAL_IPADDR
+          unset LOCKSS_PROXY_IN_MIGRATION_MODE
+          unset LOCKSS_MIGRATION_PROXY_PORT
         else
           err_exit "Rerun scripts/configure-lockss with -m or --migrate"
         fi
@@ -637,7 +708,7 @@ build_config_file() {
     fi
     SUBNET_OK=N
     until is_yes ${SUBNET_OK}; do
-      ask_for_input "Initial subnet(s) for admin UI access" "${LOCKSS_ACCESS_SUBNET}"
+      ask_for_input "Initial subnet(s) for admin UI access, separated by ';'" "${LOCKSS_ACCESS_SUBNET}"
       if valid_subnet_list "${ANS}"; then
         LOCKSS_ACCESS_SUBNET="${ANS}"
         SUBNET_OK=Y
@@ -645,7 +716,7 @@ build_config_file() {
     done
 
     # LCAP V3 port
-    ask_for_input "LCAP protocol port" "${LOCKSS_V3_PORT}" 9729
+    ask_for_input "LCAP port" "${LOCKSS_V3_PORT}" 9729
     if [ "X${ANS}" != "X" ]; then
       LOCKSS_V3_PORT="${ANS}"
     fi
@@ -718,29 +789,48 @@ build_config_file() {
     done
 
     # Props URL
-    ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/daemon/lockss.xml"
-    LOCKSS_PROPS_URL="${ANS}"
-    if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
-      if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
-        LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
-      else
-        LOCKSS_PROPS_AUTHENTICATE_SERVER=N
+    PROPS_OK=N
+    until is_yes ${PROPS_OK}; do
+      ask_for_input "Configuration URL" "${LOCKSS_PROPS_URL}" "http://props.lockss.org:8001/daemon/lockss.xml"
+      LOCKSS_PROPS_URL="${ANS}"
+      if echo ${LOCKSS_PROPS_URL} | grep -Eis "^https:" >/dev/null; then
+        if [[ -n ${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE} ]]; then
+          LOCKSS_PROPS_AUTHENTICATE_SERVER=Y
+        else
+          LOCKSS_PROPS_AUTHENTICATE_SERVER=N
+        fi
+        ask_for_input "Verify configuration server authenticity?" "${LOCKSS_PROPS_AUTHENTICATE_SERVER}"
+        if is_yes "${ANS}"; then
+          ask_for_input "Server certificate keystore" "${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" "lockss-ca"
+          LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
+        else
+          unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
+        fi
       fi
-      ask_for_input "Verify configuration server authenticity?" "${LOCKSS_PROPS_AUTHENTICATE_SERVER}"
-      if is_yes "${ANS}"; then
-        ask_for_input "Server certificate keystore" "${LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE}" "lockss-ca"
-        LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE="${ANS}"
-      else
-        unset LOCKSS_PROPS_SERVER_AUTHENTICATE_KEYSTORE
-      fi
-    fi
 
-    # Props proxy
-    ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
-    LOCKSS_PROPS_PROXY="${ANS}"
+      # Props proxy
+      ask_for_input "Configuration proxy (host:port)" "${LOCKSS_PROPS_PROXY}" "NONE"
+      LOCKSS_PROPS_PROXY="${ANS}"
+
+      # Can't ask questions if in replay mode, and shouldn't need to
+      # check the props URL as it's already been checked
+      if is_replay; then
+        PROPS_OK=Y
+      else
+        # Test configuration URL access (via proxy, if configured)
+        if check_url "${LOCKSS_PROPS_URL}" "${LOCKSS_PROPS_PROXY}"; then
+          PROPS_OK=Y
+        else
+          ask_for_input "WARNING: Could not fetch configuration URL; ignore and continue?" "" N
+          if is_yes "${ANS}"; then
+            PROPS_OK=Y
+          fi
+        fi
+      fi
+    done
 
     # Preservation group(s)
-    ask_for_input "Preservation group(s)" "${LOCKSS_PRESERVATION_GROUP}" "prod"
+    ask_for_input "Preservation group(s), separated by ';'" "${LOCKSS_PRESERVATION_GROUP}" "prod"
     LOCKSS_PRESERVATION_GROUP="${ANS}"
     # Admin UI user/pass
     USER_OK=N
@@ -793,24 +883,10 @@ build_config_file() {
       fi
     done
 
-    HAD_DATA_DIR=
-    if [ "X${LOCKSS_DATA_DIR}" != X ]; then
-      HAD_DATA_DIR=Y
-    fi
-    # Data storage base
-    DATA_PATHS_OK=N
-    until is_yes ${DATA_PATHS_OK}; do
-      ask_for_input "Root path for state data storage" "${LOCKSS_DATA_DIR}"
-      if [ "X${ANS}" != X ]; then
-        LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
-        DATA_PATHS_OK=Y
-      fi
-    done
-
-    # Content storage base(s)
+    # Content storage areas
     CONTENT_PATHS_OK=N
     until is_yes ${CONTENT_PATHS_OK}; do
-      ask_for_input "Root paths for content storage" "${LOCKSS_REPO_HOST_DIRS}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Paths of the content storage areas, separated by ';'" "${LOCKSS_REPO_HOST_DIRS}"
       if [ "X${ANS}" != X ]; then
         tmp_repo_host_dirs="${ANS}"
         IFS=';' read -r -a newPaths <<<"${tmp_repo_host_dirs}"
@@ -819,25 +895,40 @@ build_config_file() {
           repoDirs[i]="/content$i"
         done
         new_repo_vols=$( IFS=';' ; echo "${newPaths[*]}" )
-        [ "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ] || echo "If you have removed any data storage directories you must run repo cache updater."
+        [[ -z "${LOCKSS_REPO_HOST_DIRS}" || "$new_repo_vols" = "${LOCKSS_REPO_HOST_DIRS}" ]] || \
+            echo "Content storage areas have changed. Artifact reindexing may be needed; see manual."
         LOCKSS_REPO_HOST_DIRS="${new_repo_vols}"
         LOCKSS_REPO_CONTAINER_DIRS=$( IFS=';' ; echo "${repoDirs[*]}" )
         CONTENT_PATHS_OK=Y
       fi
     done
 
-    # Log dir base
+    # State data storage area
+    HAD_DATA_DIR=
+    if [ "X${LOCKSS_DATA_DIR}" != X ]; then
+      HAD_DATA_DIR=Y
+    fi
+    DATA_PATHS_OK=N
+    until is_yes ${DATA_PATHS_OK}; do
+      ask_for_input "Path of the state data storage area" "${LOCKSS_DATA_DIR}" "${LOCKSS_REPO_HOST_DIRS[0]}"
+      if [ "X${ANS}" != X ]; then
+        LOCKSS_DATA_DIR="$(normalize_path ${ANS})"
+        DATA_PATHS_OK=Y
+      fi
+    done
+
+    # Log storage area
     LOG_PATHS_OK=N
     until is_yes ${LOG_PATHS_OK}; do
-      ask_for_input "Root path for log data storage" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
+      ask_for_input "Path of the log storage area" "${LOCKSS_LOGS_DIR}" "${LOCKSS_DATA_DIR}"
       if [ "X${ANS}" != X ]; then
         LOCKSS_LOGS_DIR="$(normalize_path ${ANS})"
         LOG_PATHS_OK=Y
       fi
     done
 
-    # Tempdir dir base
-    ask_for_input "Root path for temporary data storage (local storage preferred)" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
+    # Temporary storage area
+    ask_for_input "Path of the temporary storage area" "${LOCKSS_TMPDIR}" "${LOCKSS_DATA_DIR}"
     LOCKSS_TMPDIR="$(normalize_path ${ANS})"
 #    if [ "X${LOCKSS_SCRIPT_LOG_DIR}" = X ]; then
 #      LOCKSS_SCRIPT_LOG_DIR="${LOCKSS_DATA_DIR}/lockss-script-logs"
@@ -849,6 +940,8 @@ build_config_file() {
     LOCKSS_SCRIPT_LOG_DIR=${LOCKSS_LOGS_DIR}/lockss-script-logs
     # Configure databases
     configure_databases
+    # Configure artifact index for Repository Service
+    configure_artifact_index
     # Configure the individual services
     configure_services
 
@@ -866,7 +959,7 @@ build_config_file() {
       CONFIG_OK=Y
       BYPASS_MAIL=Y
     else
-      ask_for_input "OK to store this configuration?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
+      ask_for_input "OK to proceed?" "${OK_TO_STORE_WITHOUT_CONFIRMATION}" Y
       if is_yes "${ANS}"; then
         # Backup previous config if it exists
         if [[ -f ${1} ]]; then
@@ -875,63 +968,67 @@ build_config_file() {
           fi
         fi
         if ! cp ${TMP_CONFIG} ${1}; then
-          echo "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
-          exit 1
+          err_exit "Config couldn't be copied to permanent file (probable permission problem); left in ${TMP_CONFIG}"
         fi
         rm -f ${TMP_CONFIG}
-        Store_All_Secrets
         echo "Configuration stored"
-      fi
-    fi
-    local STORAGE_ERRORS=
-    setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
-    CONFIG_OK=Y
 
-    FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
-    grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
-    mail_sent=""
-    if [ $(command -v mail) ] >/dev/null; then
-      if [ -z "${BYPASS_MAIL}" ]; then
-        if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
-          mail_sent=1
+        Store_All_Secrets
+        local STORAGE_ERRORS=
+        setup_storage_dirs ${SYSTEM_CONF_FILE} ${CONFIG_USER} || STORAGE_ERRORS=1
+        CONFIG_OK=Y
+        FILT_CONFIG=$(mktemp /tmp/filtconfig.XXXXXX)
+        grep -Esv 'PASSW(OR)?D.*=' <${1} >>${FILT_CONFIG}
+        mail_sent=""
+        if command -v mail >/dev/null; then
+          if [ -z "${BYPASS_MAIL}" ]; then
+            if mail -s "Config for ${2}@${LOCKSS_HOSTNAME}" ${LOCKSS_EMAIL} ${LOCKSS_TEAM} <${FILT_CONFIG}; then
+              mail_sent=1
+            else
+              echo "The attempt to mail configuration failed.  Please check your mail configuration."
+            fi
+          fi
         else
-          echo "The attempt to mail configuration failed.  Please check your mail configuration."
+          echo "The 'mail' command isn't installed (or isn't on the PATH)."
         fi
+        if [ -z "${mail_sent}" ]; then
+          UNSENT_FILE=/tmp/unsent-lockss-config
+          cp ${FILT_CONFIG} ${UNSENT_FILE}
+          echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
+        fi
+        rm -f ${FILT_CONFIG}
+      else
+        echo "Starting over, using your previous answers as defaults"
       fi
-    else
-      echo "The 'mail' command isn't installed (or isn't on the PATH)."
     fi
-    if [ -z "${mail_sent}" ]; then
-      UNSENT_FILE=/tmp/unsent-lockss-config
-      cp ${FILT_CONFIG} ${UNSENT_FILE}
-      echo "Please send ${UNSENT_FILE} to ${LOCKSS_TEAM}."
-    fi
-    rm -f ${FILT_CONFIG}
+
   done
   if [ -n "${STORAGE_ERRORS}" ]; then
     echo
-    echo "Storage directories have not been set up correctly.  Please either"
-    echo " fix the ownership/permission problems then run scripts/setup-storage, or"
-    echo " rerun scripts/configure-lockss and specify different directories."
+    echo "Storage directories have not been set up correctly. Either fix the"
+    echo "ownership/permission problems then run scripts/configure-lockss -r,"
+    echo "or re-run scripts/configure-lockss and specify different directories."
     return 1
   fi
 }
 
 setup_k8s_cmd() {
-  Check_K8s_Command
-  KUBCTL_OK=false
-  until is_yes ${KUBCTL_OK}; do
-    ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
-    local first_word=$(echo "${ANS}" | awk '{print $1}')
-    if [ $(command -v ${first_word}) ] >/dev/null; then
-      KUBECTL_CMD="${ANS}"
-      KUBCTL_OK=Y
-    fi
-  done
-  echo "Kubectl command alias set to $KUBECTL_CMD"
-  KUBECTL="${KUBECTL_CMD}"
-  K8S_VERSION=$($KUBECTL_CMD version --short=true | grep 'Server Version:' | awk '{print $3}')
-  write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  if [[ -z "${KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER}" ]]; then
+    Check_K8s_Command
+    KUBCTL_OK=false
+    until is_yes ${KUBCTL_OK}; do
+      ask_for_input "Command to use to execute kubectl commands" "${KUBECTL_CMD}"
+      local first_word=$(echo "${ANS}" | awk '{print $1}')
+      if [ $(command -v ${first_word}) ] >/dev/null; then
+        KUBECTL_CMD="${ANS}"
+        KUBCTL_OK=Y
+      fi
+    done
+    echo "Kubectl command alias set to $KUBECTL_CMD"
+    KUBERNETES_INSTALLED_BY_LOCKSS_INSTALLER=true
+    K8S_VERSION=$($KUBECTL_CMD version | grep 'Server Version:' | awk '{print $3}')
+    write_k8s_cfg ${K8S_CONF_FILE} || err_exit "Attempt to write ${K8S_CONF_FILE} failed."
+  fi
 }
 
 usage() {
@@ -966,8 +1063,13 @@ while [[ -n "$1" ]]; do
   shift
 done
 
-if [ -n "$IS_V1_MIGRATION" -a -n "$IS_REPLAY" ]; then
-  err_exit "Error: Replay may not be used with migration setup"
+if [[ -n "${IS_REPLAY}" ]]; then
+  if is_true "${LOCKSS_IN_MIGRATION_MODE}"; then
+    err_exit "Error: Replay may not be used while in migration mode"
+  fi
+  if [[ -n "${IS_V1_MIGRATION}" ]]; then
+    err_exit "Error: Replay may not be used with migration setup"
+  fi
 fi
 
 CONFIG_LOGFILE="./lockss-configure.log"
@@ -981,7 +1083,7 @@ Log_Std "${CONFIG_LOGFILE}"
 ###
 CONFIG_USER=$(whoami)
 
-if $(am_i_root); then
+if am_i_root; then
   err_exit "This script should not be run as root. Run as the lockss user."
 fi
 
