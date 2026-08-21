@@ -785,12 +785,80 @@ init_one_dir() {
   fi
 }
 
-# Creates "reindex artifacts" signal for LOCKSS repository
+# Returns the LOCKSS repository artifact index state dir for a stack
+# repo_index_state_dir <stack-name>
+repo_index_state_dir() {
+  local STACK=$1
+  echo "${LOCKSS_DATA_DIR}/${STACK}-repo-data/state/index"
+}
+
+# Returns the LOCKSS repository WARC datastore state dir for a stack
+# repo_store_state_dir <stack-name>
+repo_store_state_dir() {
+  local STACK=$1
+  echo "${LOCKSS_DATA_DIR}/${STACK}-repo-data/state/store"
+}
+
+# Removes the unrotated "reindexed-warcs" ledger for a stack, so that a
+# requested reindex re-reads every WARC.
+#
+# The repository appends one row per successfully reindexed WARC to
+# state/store/reindexed-warcs, and a full reindex consults it to resume without
+# re-reading what an interrupted pass already did. It is rotated to
+# reindexed-warcs.<timestamp> when a run finishes, so a plain file left behind
+# means some earlier run died before finishing. A reindex requested by the
+# operator must not silently skip the WARCs that run happened to reach, so the
+# stale ledger is removed first.
+#
+# Only the unrotated file is removed; reindexed-warcs.<timestamp> are the audit
+# record of completed runs and are kept.
+#
+# clear_reindex_ledger <stack-name>
+clear_reindex_ledger() {
+  local STACK=$1
+  local LEDGER="$(repo_store_state_dir "${STACK}")/reindexed-warcs"
+  if [ -f "${LEDGER}" ]; then
+    rm -f "${LEDGER}" || return 1
+  fi
+  return 0
+}
+
+# Creates "reindex artifacts" signal for LOCKSS repository.
+# The repository service looks for a file named "reindex" in its index
+# state dir (BaseLockssRepository.REINDEXING_STATE_FILE); it was named
+# "reindex" in older versions of the service.
 signal_reindex() {
   local STACK=$1
-  local REPO_INDEX_STATE_DIR=${LOCKSS_DATA_DIR}/${STACK}-repo-data/state/index
+  local REPO_INDEX_STATE_DIR=$(repo_index_state_dir "${STACK}")
   mkdir -p "${REPO_INDEX_STATE_DIR}"
   touch "${REPO_INDEX_STATE_DIR}"/reindex
+}
+
+# Extracts, from a V2 migration error report, the AUIDs of the AUs whose
+# migration failed with
+#   Task failed: Finish bulk <AU name>: ...
+#     Attempt to finishBulkStore of AU not in bulk store mode: lockss, <auid>
+# which is the one error class recoverable by reindexing the AU.
+#
+# The report accumulates across migration runs and carries several other
+# error classes (notably "java.io.IOException: Aborted", which is not
+# recoverable this way), so the two markers are matched as substrings: the
+# "Task failed:" line has a leading space and the message appears both as
+# "Message: Attempt to ..." and bare "Attempt to ...".
+#
+# The AUID is taken from the "AU ID: " line preceding the failure rather
+# than from the copy embedded in the exception message, which may be
+# followed by ". HTTP response code: 500".
+#
+# extract_reindex_auids <report-file>
+# Writes the sorted, unique AUIDs to stdout, one per line.
+extract_reindex_auids() {
+  local REPORT="$1"
+  awk '
+    /^AU ID: /                                                { auid = substr($0, 8); next }
+    /Task failed: Finish bulk/ &&
+    /Attempt to finishBulkStore of AU not in bulk store mode/  { if (auid != "") print auid }
+  ' "${REPORT}" | sort -u
 }
 
 # check_writable (dir, user)

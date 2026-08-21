@@ -353,7 +353,7 @@ check_stack_solr() {
     mkdir -p ${INDEX_STATE_DIR}/solr
 
     # Signal to the repository that a reindex is needed
-    touch ${INDEX_STATE_DIR}/reindex
+    signal_reindex "${stack}"
   fi
 
   src_plugin_file="${STACK_CONFIG_DIR}/${SOLR_SECURITY_PLUGIN}"

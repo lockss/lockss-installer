@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
 #
@@ -42,4 +42,11 @@ _D0=$(dirname "${0}")
 source_config
 
 STACK_PREFIX="lockss-stack"
+
+# Drop any unrotated reindexed-warcs ledger first. A run that died before
+# finishing leaves one behind, and the reindex being requested here would
+# otherwise honour it and silently skip those WARCs -- doing less than asked.
+clear_reindex_ledger "${STACK_PREFIX}" ||
+  err_exit "Could not remove the stale reindexed-warcs ledger; reindex not signalled."
+
 signal_reindex ${STACK_PREFIX}

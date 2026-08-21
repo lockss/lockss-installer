@@ -1,0 +1,83 @@
+===================================================
+  V2 Migration Error Report - 08/12/25 09:11:02 PDT
+  Copying from delta1.lockss.org (1.78.6) to devbig1.lockss.org (2.0.90-beta2)
+---------------------------------------------------
+
+Errors in AU: Neuroradiology Volume 8
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0028-3940&volume_name~8
+ Attempt to check v2 AU configuration failed: Neuroradiology Volume 8: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null
+
+Errors in AU: Pflügers Archiv European Journal of Physiology Volume 381
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0031-6768&volume_name~381
+ Task failed: Finish bulk Pflügers Archiv European Journal of Physiology Volume 381: org.lockss.laaws.client.ApiException: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null
+
+Errors in AU: Geologische Rundschau Volume 68
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0016-7835&volume_name~68
+ Error: Target has versions that source doesn't have: 1 of http://www.springerlink.com/content/f227u0808454r031/fulltext.pdf in: Geologische Rundschau Volume 68
+ Error: Target has versions that source doesn't have: 1 of http://www.springerlink.com/content/f2751w476123wv02/about/ in: Geologische Rundschau Volume 68
+
+Errors in AU: Planta Volume 155
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0032-0935&volume_name~155
+ Task failed: Finish bulk Planta Volume 155: org.lockss.laaws.client.ApiException: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null
+
+===================================================
+  V2 Migration Error Report - 08/13/25 14:19:35 PDT
+  Copying from delta1.lockss.org (1.78.6) to devbig1.lockss.org (2.0.90-beta2)
+---------------------------------------------------
+
+Errors in AU: Journal of Molecular Evolution Volume 16
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0022-2844&volume_name~16
+ Task failed: Finish bulk Journal of Molecular Evolution Volume 16: org.lockss.laaws.client.ApiException: Message: Attempt to finishBulkStore of AU not in bulk store mode: lockss, org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0022-2844&volume_name~16
+
+Errors in AU: European Journal of Clinical Pharmacology Volume 10
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0031-6970&volume_name~10
+ Task failed: Finish bulk European Journal of Clinical Pharmacology Volume 10: org.lockss.laaws.client.ApiException: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null
+
+Errors in AU: Clinical Child and Family Psychology Review Volume 3
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~1096-4037&volume_name~3
+ Task failed: Finish bulk Clinical Child and Family Psychology Review Volume 3: org.lockss.laaws.client.ApiException: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null
+
+===================================================
+  V2 Migration Error Report - 08/14/25 13:20:26 PDT
+  Copying from delta1.lockss.org (1.78.6) to devbig1.lockss.org (2.0.90-beta2)
+---------------------------------------------------
+
+Errors in AU: Journal of Materials Science Volume 40
+AU ID: org|lockss|plugin|springer|link|SpringerLinkJournalsPlugin&base_url~http%3A%2F%2Flink%2Espringer%2Ecom%2F&download_url~http%3A%2F%2Fdownload%2Espringer%2Ecom%2F&journal_eissn~1573-4803&volume_name~40
+ Task failed: Finish bulk Journal of Materials Science Volume 40: org.lockss.laaws.client.ApiException: Attempt to finishBulkStore of AU not in bulk store mode: lockss, org|lockss|plugin|springer|link|SpringerLinkJournalsPlugin&base_url~http%3A%2F%2Flink%2Espringer%2Ecom%2F&download_url~http%3A%2F%2Fdownload%2Espringer%2Ecom%2F&journal_eissn~1573-4803&volume_name~40. HTTP response code: 500
+ Error: Target is missing 8 versions: (8, 7, 6, 5, 4, 3, 2, 1) of http://link.springer.com/article/10.1007/s10853-005-6325-6 in: Journal of Materials Science Volume 40
+
+Errors in AU: The Journal of Medicine and Philosophy Volume 36
+AU ID: org|lockss|plugin|highwire|oup|OUPDrupalPlugin&base_url~http%3A%2F%2Fjmp%2Eoxfordjournals%2Eorg%2F&journal_id~jmp&volume_name~36
+ Warning: Metadata mismatch: The Journal of Medicine and Philosophy Volume 36, url: http://jmp.oxfordjournals.org/publisher/css/hw-publisher-page-toc.css, ver: 1, Collection date: V1: 01/24/2016 23:59:03.579, V2: 05/08/2013 18:42:55.976
+
+Errors in AU: Common Law World Review Volume 38
+AU ID: org|lockss|plugin|atypon|sage|SageAtyponJournalsPlugin&base_url~http%3A%2F%2Fjournals%2Esagepub%2Ecom%2F&journal_id~clwb&volume_name~38
+ Task failed: Finish bulk Common Law World Review Volume 38: org.lockss.laaws.client.ApiException: Attempt to finishBulkStore of AU not in bulk store mode: lockss, org|lockss|plugin|atypon|sage|SageAtyponJournalsPlugin&base_url~http%3A%2F%2Fjournals%2Esagepub%2Ecom%2F&journal_id~clwb&volume_name~38. HTTP response code: 500
+ Error: Target is missing version 1 of http://journals.sagepub.com/wro/1128773~product.js in: Common Law World Review Volume 38
+
+Errors in AU: Journal of Molecular Evolution Volume 16
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0022-2844&volume_name~16
+ Task failed: Finish bulk Journal of Molecular Evolution Volume 16: org.lockss.laaws.client.ApiException: Message: Attempt to finishBulkStore of AU not in bulk store mode: lockss, org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0022-2844&volume_name~16
+
+Errors in AU: Journal of the Academy of Marketing Science Volume 24
+AU ID: org|lockss|plugin|springer|SpringerLinkPlugin&base_url~http%3A%2F%2Fwww%2Espringerlink%2Ecom%2F&journal_issn~0092-0703&volume_name~24
+ Task failed: Finish bulk Journal of the Academy of Marketing Science Volume 24: org.lockss.laaws.client.ApiException: Message: java.io.IOException: Aborted
+HTTP response code: 0
+HTTP response body: null
+HTTP response headers: null

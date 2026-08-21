@@ -1,0 +1,283 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# extract-reindex-auids - "Build the targeted reindex list from the V2
+#                          migration error report."
+
+# Copyright (c) 2000-2023, Board of Trustees of Leland Stanford Jr. University
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+# Usage: extract-reindex-auids [-h|--help] [-f|--force]
+# Revision history:
+# ---------------------------------------------------------------------------
+PROGNAME=${0##*/}
+VERSION="1.0"
+
+#
+## Relative paths
+##
+_0=$(basename "${0}")
+_D0=$(dirname "${0}")
+
+##
+## Load _util
+##
+
+. "${_D0}/_util" || { echo "${0##*/}: failed to load _util" >&2; exit 1; }
+
+# The AUID of the "Migration Reports" named AU in the internal namespace, and
+# the URL of the error report artifact within it.
+REPORT_AUID='org|lockss|plugin|NamedPlugin&handle~Migration+Reports'
+REPORT_URL="v2migration.err"
+REPORT_NAMESPACE="internal"
+
+# Name of the list read by the repository service at startup
+AUIDS_FILE="auids-to-reindex"
+
+FORCE=""
+TMP_REPORT=""
+TMP_AUIDS=""
+TMP_OUT=""
+
+clean_up() { # Perform pre-exit housekeeping
+  [ -n "${TMP_REPORT}" ] && rm -f "${TMP_REPORT}"
+  [ -n "${TMP_AUIDS}" ] && rm -f "${TMP_AUIDS}"
+  [ -n "${TMP_OUT}" ] && rm -f "${TMP_OUT}"
+  log_script_exit "${PROGNAME}"
+}
+
+logger_error_exit() {
+  logger_error "${1:-"Unknown Error"}"
+  clean_up
+  exit 1
+}
+
+graceful_exit() {
+  clean_up
+  exit
+}
+
+signal_exit() { # Handle trapped signals
+  case $1 in
+  INT)
+    logger_error_exit "Program interrupted by user"
+    ;;
+  TERM)
+    logger_error "Program terminated"
+    graceful_exit
+    ;;
+  *)
+    logger_error_exit "Terminating on unknown signal"
+    ;;
+  esac
+}
+
+usage() {
+  cat <<- _EOF_
+Usage:
+
+  $PROGNAME [-f|--force]
+
+  $PROGNAME [-h|--help]
+_EOF_
+}
+
+help_message() {
+  cat <<- _EOF_
+$PROGNAME version $VERSION
+Fetch the V2 migration error report from the repository service and write the
+list of AUs that must be reindexed to recover from the "not in bulk store
+mode" migration failure.
+
+The list is written to
+  <LOCKSS_DATA_DIR>/<stack>-repo-data/state/index/${AUIDS_FILE}
+as one AUID per line.  The repository service reads it at startup, so the
+repository service must be restarted for the reindex to run.
+
+$(usage)
+
+Options:
+
+  -h, --help   Display this help message and exit.
+  -f, --force  Overwrite an existing ${AUIDS_FILE} file.
+
+_EOF_
+  return
+}
+
+# Special case without logging
+if [ $# -eq 1 ] && [ "$1" = '-h' -o "$1" = '--help' ]; then
+  help_message
+  exit 0
+fi
+
+# Trap signals
+trap "signal_exit TERM" TERM HUP
+trap "signal_exit INT"  INT
+
+source_config
+logger_init
+log_script_entry "${PROGNAME}"
+umask 002
+
+# Parse command-line
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -f | --force)
+      FORCE="true"
+      logger_debug "Will overwrite an existing ${AUIDS_FILE} file"
+      shift
+      ;;
+    -* | --*)
+      usage
+      logger_error_exit "Unknown option $1" ;;
+    *)
+      logger_trace "Argument $1 to process..."
+      shift
+      ;;
+  esac
+done
+
+# Main logic
+Check_Runnable
+Check_Configured
+
+if am_i_root; then
+  logger_error_exit "This script should not be run as root. Run as the lockss user."
+fi
+
+STACK_PREFIX="lockss-stack"
+source_env "${STACK_PREFIX}"
+
+if [ -z "${REPO_REST_PORT}" ]; then
+  logger_error_exit "REPO_REST_PORT is not set; run scripts/configure-lockss."
+fi
+if [ -z "${LOCKSS_IPADDR}" ]; then
+  logger_error_exit "LOCKSS_IPADDR is not set; run scripts/configure-lockss."
+fi
+
+REPO_URL="http://${LOCKSS_IPADDR}:${REPO_REST_PORT}"
+logger_debug "Using repository service at ${REPO_URL}"
+
+INDEX_STATE_DIR=$(repo_index_state_dir "${STACK_PREFIX}")
+AUIDS_PATH="${INDEX_STATE_DIR}/${AUIDS_FILE}"
+
+# Refuse to clobber an existing list before doing any work
+if [ -e "${AUIDS_PATH}" ] && [ -z "${FORCE}" ]; then
+  logger_error "${AUIDS_PATH} already exists."
+  logger_error "The repository service may not yet have processed it."
+  logger_error_exit "Move it aside, or re-run with --force to overwrite it."
+fi
+
+# Credentials.  The lockss-auth secret is stored in "user:password" form, ready
+# for curl -u.  (LOCKSS_ADMIN_PASSWD in system.cfg is a SHA-256 hash and cannot
+# be used here.)
+Check_Secret "lockss-auth"
+LOCKSS_AUTH=$(kubectl_lockss get secret lockss-auth \
+    -o jsonpath='{.data.lockss-auth}' | base64 --decode -) ||
+  logger_error_exit "Unable to get lockss-auth from kubectl."
+if [ -z "${LOCKSS_AUTH}" ]; then
+  logger_error_exit "The lockss-auth kubernetes secret is empty."
+fi
+
+# Find the report artifact.  The AUID contains '&' and '+', so every query
+# parameter is percent-encoded by curl rather than built by hand.
+logger_info "Looking for the migration error report in the repository..."
+ARTIFACTS_JSON=$(curl --silent --show-error --fail -u "${LOCKSS_AUTH}" -G \
+    --data-urlencode "namespace=${REPORT_NAMESPACE}" \
+    --data-urlencode "auid=${REPORT_AUID}" \
+    --data-urlencode "url=${REPORT_URL}" \
+    --data-urlencode "version=latest" \
+    "${REPO_URL}/artifacts") ||
+  logger_error_exit "Unable to query ${REPO_URL}/artifacts. Is the repository service running?"
+
+# Pull the artifact uuid out of the response.  jq is not assumed to be present
+# anywhere in the installer, so this is a deliberately narrow match.  "uuid"
+# appears only in the artifact objects of the response, not in its pageInfo.
+UUIDS=$(echo "${ARTIFACTS_JSON}" |
+  grep -o '"uuid"[[:space:]]*:[[:space:]]*"[^"]*"' |
+  sed 's/.*"\([^"]*\)"$/\1/')
+NUM_UUIDS=$(echo "${UUIDS}" | grep -c '.')
+
+if [ "${NUM_UUIDS}" -eq 0 ]; then
+  logger_error "No artifact named '${REPORT_URL}' was found in namespace"
+  logger_error "'${REPORT_NAMESPACE}' under AU '${REPORT_AUID}'."
+  logger_error_exit "The migration may not have uploaded an error report."
+fi
+if [ "${NUM_UUIDS}" -gt 1 ]; then
+  logger_error "Found ${NUM_UUIDS} candidate artifacts for '${REPORT_URL}';"
+  logger_error_exit "expected exactly one. Refusing to guess."
+fi
+UUID="${UUIDS}"
+logger_debug "Migration error report artifact uuid ${UUID}"
+
+# Fetch the report itself
+TMP_REPORT=$(mktemp "${TMPDIR:-/tmp}/${PROGNAME}.report.XXXXXX") ||
+  logger_error_exit "Unable to create temporary file."
+curl --silent --show-error --fail -u "${LOCKSS_AUTH}" -G \
+    --data-urlencode "namespace=${REPORT_NAMESPACE}" \
+    "${REPO_URL}/artifacts/${UUID}/payload" -o "${TMP_REPORT}" ||
+  logger_error_exit "Unable to fetch the migration error report payload."
+
+# Extract the recoverable AUIDs
+TMP_AUIDS=$(mktemp "${TMPDIR:-/tmp}/${PROGNAME}.auids.XXXXXX") ||
+  logger_error_exit "Unable to create temporary file."
+extract_reindex_auids "${TMP_REPORT}" > "${TMP_AUIDS}" ||
+  logger_error_exit "Unable to extract AUIDs from the migration error report."
+
+NUM_AUIDS=$(grep -c '.' "${TMP_AUIDS}")
+if [ "${NUM_AUIDS}" -eq 0 ]; then
+  logger_info "The migration error report contains no AUs that can be recovered"
+  logger_info "by reindexing. Nothing to do; no ${AUIDS_FILE} file was written."
+  graceful_exit
+fi
+
+# Write the list atomically: the temp file lives in the destination directory
+# so the rename cannot cross filesystems and the service can never observe a
+# partially written file.
+mkdir -p "${INDEX_STATE_DIR}" ||
+  logger_error_exit "Unable to create ${INDEX_STATE_DIR}"
+TMP_OUT=$(mktemp "${INDEX_STATE_DIR}/${AUIDS_FILE}.XXXXXX") ||
+  logger_error_exit "Unable to create a temporary file in ${INDEX_STATE_DIR}"
+{
+  echo "# AUs to reindex, extracted from ${REPORT_URL} by ${PROGNAME}"
+  echo "# $(date +'%Y-%m-%dT%H:%M:%S%z')"
+  echo "# Namespace: lockss"
+  cat "${TMP_AUIDS}"
+} > "${TMP_OUT}" ||
+  logger_error_exit "Unable to write ${TMP_OUT}"
+chmod 664 "${TMP_OUT}" ||
+  logger_error_exit "Unable to set permissions on ${TMP_OUT}"
+mv "${TMP_OUT}" "${AUIDS_PATH}" ||
+  logger_error_exit "Unable to install ${AUIDS_PATH}"
+TMP_OUT=""
+
+logger_info "Wrote ${NUM_AUIDS} AUID(s) to ${AUIDS_PATH}"
+logger_info "Restart the LOCKSS stack for the reindex to run:"
+logger_info "  scripts/restart-lockss"
+
+graceful_exit
