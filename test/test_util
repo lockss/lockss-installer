@@ -415,3 +415,84 @@ EOF
   # Cleanup
   rm -rf "$dir"
 }
+
+@test 'signal_reindex' {
+  local dir=$(mktemp -d)
+  LOCKSS_DATA_DIR="$dir"
+  local stack="lockss-stack"
+  local index_dir="${LOCKSS_DATA_DIR}/${stack}-repo-data/state/index"
+
+  assert_equal "$(repo_index_state_dir "${stack}")" "${index_dir}"
+
+  signal_reindex "${stack}"
+
+  # The repository service looks for "reindexing", not the old "reindex"
+  assert [ -f "${index_dir}/reindexing" ]
+  refute [ -e "${index_dir}/reindex" ]
+
+  # Cleanup
+  rm -rf "$dir"
+}
+
+@test 'clear_reindex_ledger' {
+  local dir=$(mktemp -d)
+  LOCKSS_DATA_DIR="$dir"
+  local stack="lockss-stack"
+  local store_dir="${LOCKSS_DATA_DIR}/${stack}-repo-data/state/store"
+
+  assert_equal "$(repo_store_state_dir "${stack}")" "${store_dir}"
+
+  # A missing ledger is not an error -- the ordinary case.
+  run clear_reindex_ledger "${stack}"
+  assert_success
+
+  mkdir -p "${store_dir}"
+  echo 'start,end,num_indexed,warc_file' > "${store_dir}/reindexed-warcs"
+  # Rotated ledgers are the audit record of completed runs and must survive.
+  echo 'rotated' > "${store_dir}/reindexed-warcs.20260819T101500"
+  # The failure report of an earlier run is likewise not ours to remove.
+  echo 'warc_file,error' > "${store_dir}/reindex-failures"
+
+  run clear_reindex_ledger "${stack}"
+  assert_success
+
+  refute [ -e "${store_dir}/reindexed-warcs" ]
+  assert [ -f "${store_dir}/reindexed-warcs.20260819T101500" ]
+  assert [ -f "${store_dir}/reindex-failures" ]
+
+  # Cleanup
+  rm -rf "$dir"
+}
+
+@test 'extract_reindex_auids' {
+  local fixture="fixtures/v2migration-excerpt.err"
+  local out=$(extract_reindex_auids "${fixture}")
+
+  # Exactly three distinct AUs are recoverable by reindexing; the Journal of
+  # Molecular Evolution AU appears in two of the report's run sections and
+  # must be reported only once.
+  assert_equal "$(echo "${out}" | grep -c '.')" 3
+
+  # Both message variants are matched: "Message: Attempt to ..." ...
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0022-2844&volume_name~16')" 1
+  # ... and the bare "Attempt to ... . HTTP response code: 500" form
+  assert_equal "$(echo "${out}" | grep -c 'journal_eissn~1573-4803&volume_name~40')" 1
+  assert_equal "$(echo "${out}" | grep -c 'journal_id~clwb&volume_name~38')" 1
+
+  # No false positives from the other error classes in the report:
+  # "Task failed: ... java.io.IOException: Aborted" ...
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0031-6768&volume_name~381')" 0
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0032-0935&volume_name~155')" 0
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0031-6970&volume_name~10')" 0
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~1096-4037&volume_name~3')" 0
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0092-0703&volume_name~24')" 0
+  # ... "Attempt to check v2 AU configuration failed" ...
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0028-3940&volume_name~8')" 0
+  # ... "Error: Target has versions that source doesn't have" ...
+  assert_equal "$(echo "${out}" | grep -c 'journal_issn~0016-7835&volume_name~68')" 0
+  # ... and "Warning: Metadata mismatch"
+  assert_equal "$(echo "${out}" | grep -c 'journal_id~jmp&volume_name~36')" 0
+
+  # Output is sorted and unique
+  assert_equal "${out}" "$(echo "${out}" | sort -u)"
+}
