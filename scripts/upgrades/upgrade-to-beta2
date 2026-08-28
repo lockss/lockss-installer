@@ -317,9 +317,6 @@ case "${CUR_VERSION}" in
     logger_info "Performing upgrade from 2.0-beta1"
     # Update old port numbers in content_servers_config.txt
     update_content_servers_ports
-    # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
-    kubectl_lockss delete pvc --all
-    kubectl_lockss delete pv --all
     # Disable group writeable permission on log directories except postgres
     for _d in "${LOCKSS_LOGS_DIR}"/*-logs ; do
       if [[ -d "${_d}" && ! ${_d} =~ postgres ]]; then
@@ -328,7 +325,6 @@ case "${CUR_VERSION}" in
     done
     # check for upgrade to k3s
     check_k3s_version
-
     logger_info "The next time LOCKSS is started it will create a new artifact index."
     logger_info "This may take substantial time if you have a lot of content."
 
@@ -342,7 +338,10 @@ case "${CUR_VERSION}" in
 #    logger_info "Performing upgrade from 2.0.90-beta2"
     # Remove old Openwayback directories
     check_old_openwayback_directories
-
+    logger_info "Removing Kubernetes Persistent Volume Claims and Persistent Volumes"
+    # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
+    kubectl_lockss delete pvc --all
+    kubectl_lockss delete pv --all
     reached_version "${UPGRADE_TO}"
     ;&
   2.0.91-beta2)
