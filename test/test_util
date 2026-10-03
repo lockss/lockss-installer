@@ -371,9 +371,10 @@ EOF
   refute check_url http://props.lockss.org:8001/demo/foo.xml
   refute check_url http://props.lockss.org:8001/demo/foo.xml NONE
 
-  # Using using proxy running at localhost:3128
-  assert check_url http://props.lockss.org:8001/demo/lockss.xml localhost:3128
-  refute check_url http://props.lockss.org:8001/demo/foo.xml localhost:3128
+  local pport=${PROXY_PORT:-3128}
+  # Using using proxy running at localhost:${pport}
+  assert check_url http://props.lockss.org:8001/demo/lockss.xml localhost:${pport}
+  refute check_url http://props.lockss.org:8001/demo/foo.xml localhost:${pport}
 }
 
 @test 'update_content_servers_ports' {
