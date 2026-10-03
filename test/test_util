@@ -426,9 +426,9 @@ EOF
 
   signal_reindex "${stack}"
 
-  # The repository service looks for "reindexing", not the old "reindex"
-  assert [ -f "${index_dir}/reindexing" ]
-  refute [ -e "${index_dir}/reindex" ]
+  # The repository service looks for "reindex", not "reindexing"
+  assert [ -f "${index_dir}/reindex" ]
+  refute [ -f "${index_dir}/reindexing" ]
 
   # Cleanup
   rm -rf "$dir"
