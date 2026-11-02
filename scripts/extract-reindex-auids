@@ -240,7 +240,7 @@ TMP_REPORT=$(mktemp "${TMPDIR:-/tmp}/${PROGNAME}.report.XXXXXX") ||
   logger_error_exit "Unable to create temporary file."
 curl --silent --show-error --fail -u "${LOCKSS_AUTH}" -G \
     --data-urlencode "namespace=${REPORT_NAMESPACE}" \
-    "${REPO_URL}/artifacts/${UUID}/payload" -o "${TMP_REPORT}" ||
+    "${REPO_URL}/artifacts/${UUID}/payload?includeContent=ALWAYS" -o "${TMP_REPORT}" ||
   logger_error_exit "Unable to fetch the migration error report payload."
 
 # Extract the recoverable AUIDs
