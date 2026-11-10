@@ -36,10 +36,10 @@
 # ---------------------------------------------------------------------------
 
 PROGNAME=${0##*/}
-VERSION="1.0"
+VERSION="1.1"
 
 #UPGRADE_FROM="2\.0(?:\.(\d))?-alpha6"
-UPGRADE_TO="2.0.91-beta2"
+UPGRADE_TO="2.0.92-beta2"
 
 ## Relative paths
 ##
@@ -342,10 +342,14 @@ case "${CUR_VERSION}" in
     # Remove Kubernetes Persistent Volume Claims and Persistent Volumes
     kubectl_lockss delete pvc --all
     kubectl_lockss delete pv --all
-    reached_version "${UPGRADE_TO}"
+    reached_version "2.0.91-beta2"
     ;&
   2.0.91-beta2)
-    logger_info "Already upgraded to 2.0.91-beta2"
+    logger_info "Performing upgrade from 2.0.91-beta2"
+    reached_version "2.0.92-beta2"
+    ;;
+  2.0.92-beta2)
+    logger_info "Already upgraded to 2.0.92-beta2"
     ;;
   *)
     error_exit "Do not know how to upgrade from ${CUR_VERSION}"
