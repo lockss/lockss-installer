@@ -175,9 +175,9 @@ version_order() {
     2.0.*-alpha7) echo 3 ;;
     2.0.*-alpha8) echo 4 ;;
     2.0.*-beta1)  echo 5 ;;
-    2.0.90-beta2)  echo 6 ;;
-    2.0.91-beta2)  echo 7 ;;
-    2.0.92-beta2)  echo 8 ;;
+    2.0.90-beta2) echo 6 ;;
+    2.0.91-beta2) echo 7 ;;
+    2.0.92-beta2) echo 8 ;;
     *) echo -1 ;;
   esac
 }
