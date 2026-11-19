@@ -356,3 +356,4 @@ case "${CUR_VERSION}" in
     error_exit "Do not know how to upgrade from ${CUR_VERSION}"
     ;;
 esac
+
